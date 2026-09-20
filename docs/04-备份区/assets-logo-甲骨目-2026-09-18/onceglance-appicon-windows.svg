@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="一目 Onceglance 应用图标（Windows）">
+<title>一目 Onceglance 应用图标（Windows）</title>
+  <rect x="0" y="0" width="512" height="512" rx="40" fill="#FF3B30"/>
+  <g transform="translate(256 256) scale(9.6) translate(-24 -24)">
+    <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+    <path d="M24 19.2V28.8" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+  </g>
+</svg>

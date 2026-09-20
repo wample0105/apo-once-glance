@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一目 · 中文名第四批 10 案</title>
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F7F7F8; --bg3:#EFEFF1;
+  --tx:#1D1D21; --tx2:#5C5C66; --tx3:#8E8E99;
+  --bd:#E4E4E8; --bd2:#D2D2D8;
+  --accent:#FF3B30;
+  --ok:#0F6E56; --okbg:#E1F5EE;
+  --warn:#854F0B; --warnbg:#FAEEDA;
+  --risk:#A32D2D; --riskbg:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg3); color:var(--tx);
+  font-family:-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+  font-size:14px; line-height:1.7;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:40px 24px 80px}
+header.top{
+  background:var(--bg); border-radius:16px; padding:36px 40px;
+  border:1px solid var(--bd); margin-bottom:28px;
+}
+h1{font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:.5px}
+.sub{color:var(--tx2); font-size:15px; margin:0 0 20px}
+.note{
+  background:var(--bg2); border-radius:var(--r); padding:16px 18px;
+  font-size:13px; color:var(--tx2); margin-top:18px;
+}
+.note b{color:var(--tx); font-weight:600}
+section{
+  background:var(--bg); border-radius:16px; padding:32px 40px;
+  border:1px solid var(--bd); margin-bottom:24px;
+}
+h2{
+  font-size:19px; font-weight:600; margin:0 0 6px;
+  padding-bottom:14px; border-bottom:1px solid var(--bd);
+}
+h2 .num{color:var(--accent); font-weight:600; margin-right:8px}
+h3{font-size:15px; font-weight:600; margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{color:var(--tx2); font-size:13.5px; margin:14px 0 22px}
+
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{
+  text-align:left; font-weight:600; color:var(--tx2); font-size:12px;
+  letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--bd2);
+  background:var(--bg2);
+}
+td{padding:10px; border-bottom:1px solid var(--bd); vertical-align:top}
+td.kill{color:var(--risk); font-weight:600; white-space:nowrap}
+td.keep{color:var(--ok); font-weight:600; white-space:nowrap}
+td.rev{color:var(--warn); font-weight:600; white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--tx2)}
+
+.card{
+  border:1px solid var(--bd); border-radius:14px; padding:28px 30px;
+  margin-bottom:20px; background:var(--bg);
+}
+.card.pick{border:2px solid var(--accent)}
+.chead{display:flex; align-items:center; gap:16px; margin-bottom:6px; flex-wrap:wrap}
+.nm{font-size:30px; font-weight:600; letter-spacing:4px; line-height:1.2}
+.py{font-size:13px; color:var(--tx3); letter-spacing:.6px; margin-left:2px}
+.tag{
+  font-size:11.5px; padding:3px 9px; border-radius:20px;
+  background:var(--bg3); color:var(--tx2); letter-spacing:.3px;
+}
+.tag.pick{background:var(--accent); color:#fff; font-weight:600}
+.tag.ok{background:var(--okbg); color:var(--ok)}
+.tag.warn{background:var(--warnbg); color:var(--warn)}
+.tag.risk{background:var(--riskbg); color:var(--risk)}
+.quote{
+  border-left:3px solid var(--accent); padding:10px 0 10px 16px;
+  margin:16px 0; color:var(--tx); font-size:13.5px; line-height:1.8;
+}
+.quote cite{display:block; color:var(--tx3); font-size:12px; font-style:normal; margin-top:6px; letter-spacing:.3px}
+.map{width:100%; border-collapse:collapse; margin:16px 0; font-size:13px}
+.map td{border:1px solid var(--bd); padding:9px 12px}
+.map td:first-child{background:var(--bg2); color:var(--tx2); width:34%; font-size:12.5px}
+.map td:last-child{color:var(--tx)}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.box{background:var(--bg2); border-radius:var(--r); padding:14px 16px; font-size:13px}
+.box h3{font-size:12.5px; color:var(--tx2); letter-spacing:.4px; margin-bottom:8px}
+.box ul{margin:0; padding-left:17px; color:var(--tx)}
+.box li{margin-bottom:5px}
+.box li:last-child{margin-bottom:0}
+.foot{
+  margin-top:18px; padding-top:14px; border-top:1px solid var(--bd);
+  font-size:12.5px; color:var(--tx2);
+}
+.foot b{color:var(--tx); font-weight:600}
+
+/* 四类来源 */
+.srcgrid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:20px 0 6px}
+.src{border:1px solid var(--bd); border-radius:14px; padding:18px 20px}
+.src h3{font-size:14px; margin-bottom:4px}
+.src .why{font-size:12.5px; color:var(--tx2); margin-bottom:12px}
+.chips{display:flex; flex-wrap:wrap; gap:7px}
+.chip{
+  font-size:13px; padding:4px 11px; border-radius:20px;
+  background:var(--bg2); color:var(--tx2); border:1px solid var(--bd);
+}
+.chip.new{background:#FFF1F0; color:var(--accent); border-color:#FFD5D2; font-weight:600}
+.srcA{border-top:3px solid var(--accent)}
+.srcB{border-top:3px solid var(--ok)}
+.srcC{border-top:3px solid var(--warn)}
+.srcD{border-top:3px solid var(--tx3)}
+
+/* 收口路线 */
+.route{
+  border:1px solid var(--bd); border-radius:14px; padding:22px 24px;
+  margin-bottom:14px; display:flex; gap:18px; align-items:flex-start;
+}
+.route.pick{border:2px solid var(--accent); background:#FFF9F9}
+.rk{
+  flex:0 0 40px; height:40px; border-radius:11px; background:var(--bg3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; font-weight:600; color:var(--tx2);
+}
+.route.pick .rk{background:var(--accent); color:#fff}
+.rb{flex:1}
+.rb h3{margin-bottom:6px; font-size:15.5px}
+.rb p{margin:0; font-size:13px; color:var(--tx2)}
+.rb p+p{margin-top:8px}
+.figcap{font-size:12.5px; color:var(--tx2); margin-top:6px; line-height:1.75}
+.figcap b{color:var(--tx)}
+ol.steps{padding-left:20px; margin:12px 0 0}
+ol.steps li{margin-bottom:9px; font-size:13.5px}
+ol.steps li b{font-weight:600}
+code{
+  background:var(--bg2); border:1px solid var(--bd); border-radius:5px;
+  padding:1px 6px; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>再挑十个：从古人"记录一件事"的方式里挖</h1>
+  <p class="sub">中文名第四批 · 10 个候选，全部过了公开渠道初筛</p>
+  <p style="margin:0;color:var(--tx2);font-size:13.5px">
+    前三批找的是"把东西取下来"的手艺。这一轮我换了四个方向去挖——怎么复制、怎么留凭据、拿什么当载体、用什么姿势看。一共试了 25 个名字，<b>当场淘汰 8 个</b>（有的直接撞第9类，有的撞的是同赛道的 OCR／截图工具），下面这 10 个是还能站住的。
+  </p>
+  <div class="note">
+    <b>说清楚这轮筛到什么程度：</b>下面每个名字我都跑了公开渠道（阿里云商标、启信宝、爱企查、标库网这些）的第 9 类检索。没查到的写"未见占用"，查到障碍的写清楚撞到谁。<b>但这不等于能注册</b>——公开渠道有盲查期、有更新延迟，最终必须去商标局官网自己查一遍，或者花钱让代理出书面意见。这一步谁也替不了。
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span>先看这轮被淘汰的 8 个，你就不用再想了</h2>
+  <p class="lead">你可能会想到的名字，大概率就在这张表里。它们不是不好，是"已经有了"。</p>
+
+  <table>
+    <thead>
+      <tr><th style="width:16%">名字</th><th style="width:52%">撞到谁（公开渠道检索结果）</th><th style="width:32%">结论</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>在目</b><span class="mono"><br>zài mù</span></td>
+        <td>第9类 <span class="mono">25858802</span> 已注册，商品项含 <b>0901 可下载的计算机应用软件</b>、计算机、智能手机、摄像机、电子监控装置</td>
+        <td class="kill">硬障碍，淘汰</td>
+      </tr>
+      <tr>
+        <td><b>白描</b><span class="mono"><br>bái miáo</span></td>
+        <td>北京优零科技的"白描"就是<b>取字／OCR 工具</b>，跟你同一个赛道；另有第9类 <span class="mono">27268274</span></td>
+        <td class="kill">硬障碍，淘汰</td>
+      </tr>
+      <tr>
+        <td><b>秦镜</b><span class="mono"><br>qín jìng</span></td>
+        <td>第9类 <span class="mono">19474414</span> 已注册，含可下载的计算机应用软件</td>
+        <td class="kill">硬障碍，淘汰</td>
+      </tr>
+      <tr>
+        <td><b>烛照</b><span class="mono"><br>zhú zhào</span></td>
+        <td>中科烛照（北京）第9类 <span class="mono">49978772</span> 已注册；另有武汉、南京烛照系企业</td>
+        <td class="kill">硬障碍，淘汰</td>
+      </tr>
+      <tr>
+        <td><b>谛视</b><span class="mono"><br>dì shì</span></td>
+        <td>北京谛视科技第9类 <span class="mono">77435373</span> 已注册（2025-02-07）；另有上海谛视文化传媒</td>
+        <td class="kill">硬障碍，淘汰</td>
+      </tr>
+      <tr>
+        <td><b>犀照</b><span class="mono"><br>xī zhào</span></td>
+        <td>上海、深圳、杭州各有"犀照科技"在营</td>
+        <td class="kill">淘汰</td>
+      </tr>
+      <tr>
+        <td><b>尺素</b><span class="mono"><br>chǐ sù</span></td>
+        <td>上海尺素信息技术已注册在营</td>
+        <td class="kill">淘汰</td>
+      </tr>
+      <tr>
+        <td><b>冰鉴</b><span class="mono"><br>bīng jiàn</span></td>
+        <td>上海冰鉴第9类 <span class="mono">18499183</span>；另有拉卡拉系"冰鉴"信用产品</td>
+        <td class="kill">淘汰</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="cols">
+    <div class="box">
+      <h3>还有 3 个"半个障碍"，我没放进十个里</h3>
+      <ul>
+        <li><b>法眼</b>——北京法眼科技、广西法眼科技都在营；好在它第9类那件（<span class="mono">70233307</span>）状态是<b>无效</b>，十堰法眼那件也已在 2023-12-27 被公告无效。障碍变弱了，但"法眼"是常用词，怕还有别的在先标。想吃这条得专门再查一轮。</li>
+        <li><b>寓目</b>——中文没查到占用，但拼音 YIMU 在第16、20类已被杭州一目展示用品注册，而且读音离"一目"很近，起不到区隔作用。</li>
+        <li><b>印可</b>——深圳乐文纸业有"印可 YINKE PAPER"、上海印可智能科技在营，跟"印"字相关的公司在营的有好几家。</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>这轮试过但放弃的思考方向</h3>
+      <ul>
+        <li><b>"眼睛类"的词</b>（谛视、烛照、明视、洞观）——全部撞在第9类，因为 AI 公司特别爱用"看"相关的词做商标。这是最挤的一条路。</li>
+        <li><b>"镜子类"的词</b>（秦镜、冰鉴、鉴影）——冰鉴、秦镜都撞了，这条也基本封死。</li>
+        <li><b>单纯的"看"字组合</b>——只要是不带专业背景的常用词，几乎一定有公司拿它注册过第9类软件项。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="foot">
+    结论：<b>越像"看"、越像"截图"的词，越注不了。</b>这跟第二批、第三批查出来的规律完全一致。所以这一轮我把网撒到了更偏的地方——古人是<b>怎么把一件东西原样留下来</b>的。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>这轮往哪挖：四类"记录"的老办法</h2>
+  <p class="lead">上一轮我用的是"把东西取下来"这一个方向。这一轮拆成四类，覆盖面更宽。</p>
+
+  <div class="srcgrid">
+    <div class="src srcA">
+      <h3>A · 复制的手艺</h3>
+      <p class="why">核心动作：把原件的样子，一分不差搬到另一张纸上</p>
+      <div class="chips">
+        <span class="chip new">响拓</span>
+        <span class="chip new">写样</span>
+        <span class="chip new">描红</span>
+        <span class="chip">粉本</span>
+        <span class="chip">影抄</span>
+        <span class="chip">摹本</span>
+      </div>
+    </div>
+    <div class="src srcB">
+      <h3>B · 留下来的凭据</h3>
+      <p class="why">核心动作：原件归你，另外存一份能查、能用的</p>
+      <div class="chips">
+        <span class="chip new">存照</span>
+        <span class="chip new">录副</span>
+        <span class="chip new">定本</span>
+        <span class="chip new">副墨</span>
+        <span class="chip">样张</span>
+        <span class="chip">朱记</span>
+      </div>
+    </div>
+    <div class="src srcC">
+      <h3>C · 载体：一小片东西该写在哪</h3>
+      <p class="why">核心动作：给"一块小小的载体"取个古称</p>
+      <div class="chips">
+        <span class="chip new">赫蹄</span>
+        <span class="chip">留真</span>
+        <span class="chip">书影</span>
+      </div>
+    </div>
+    <div class="src srcD">
+      <h3>D · 看的方式</h3>
+      <p class="why">核心动作：横着看、量着看、对着光看</p>
+      <div class="chips">
+        <span class="chip new">长卷</span>
+        <span class="chip new">界画</span>
+        <span class="chip">双钩</span>
+        <span class="chip">取象</span>
+      </div>
+    </div>
+  </div>
+  <p class="figcap"><b>红色 = 这一批新挖的 10 个。</b>灰色是前几批已经给过你的，列在这里是为了让你看清它们各属于哪一支。有些名字会横跨两类（比如"响拓"既在 A 也在 D），这正常——它本来就同时是"手艺"和"看的方式"。</p>
+</section>
+
+<section>
+  <h2><span class="num">03</span>十个候选，一个一个说</h2>
+  <p class="lead">每个都给你：出处、跟这个产品怎么对上、公开渠道查到什么、好在哪、短板在哪。红框的三个是我自己排前面的。</p>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">响拓</span><span class="py">xiǎng tà</span>
+      <span class="tag pick">第一梯队</span><span class="tag ok">公开渠道未见占用</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px;margin:0">古人复制书法真迹最讲究的一招</p>
+
+    <div class="quote">
+      "响拓"又叫"向拓"：把薄纸覆在真迹上，对着光看清楚每一笔的走向，先用细线把轮廓双钩下来，再往里填墨。武则天万岁通天二年（697），王方庆进献王氏家族墨迹，武则天命人用这个办法摹写，留下的《万岁通天帖》到今天还是研究王羲之的第一等材料。唐人管这活的人叫"拓书人"，是正经官职——为什么叫"响"？因为得凑着光看，光透过来，笔画才"响"。
+      <cite>出处：唐代宫廷摹书制度；"响拓"摹本历来被称为"下真迹一等"</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>语义怎么对上</td><td>不就是把屏幕上的东西，一模一样"拓"下来吗。而且"响拓"这个词天生带一个"看"的动作——<b>凑着光看</b>。你的产品叫"一目"，眼睛本来就在看，这个动作是闭着环的。</td></tr>
+      <tr><td>为什么可能是它</td><td>这一个的语义贴合度是十个里最高的：<b>既讲"取下来"，又讲"看得清"，还讲"跟原件一样"</b>。三层意思正好对上一个截图工具该有的三层。</td></tr>
+      <tr><td>短板</td><td>"拓"在这里读 <b>tà</b>，不读 tuò。第一次见的人八成会念错，得靠你解释一次。另外"拓"字在前面几批里出现过（朱拓、双钩），同源感有点重。</td></tr>
+      <tr><td>英文名备选</td><td class="mono">Rubbing</td></tr>
+    </table>
+  </div>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">长卷</span><span class="py">cháng juàn</span>
+      <span class="tag pick">第一梯队</span><span class="tag ok">公开渠道未见占用</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px;margin:0">十个里最好懂的一个</p>
+
+    <div class="quote">
+      中国书画的装裱形制之一。横幅长卷，右边卷起、左边展开，一边卷一边看，可长到几米甚至十几米。看的人不是站在画前，是<b>跟着画面往前走</b>——《千里江山图》《清明上河图》都是这个看法。
+      <cite>出处：中国书画装裱形制；长卷的观看方式叫"移步换景"</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>语义怎么对上</td><td>"长截图"这三个字，本身就是"长卷"的白话版。一个滚不到底的网页、一段越拉越长的聊天记录，截下来就是一条长卷。而且长卷的<b>看法</b>也对：一边滚一边看，滚到哪看到哪——跟你长截图"滚到哪截到哪"的交互一模一样。</td></tr>
+      <tr><td>为什么可能是它</td><td>不用解释。跟任何一个中国人说"长卷"，他脑子里立刻有画面。<b>这是十个里传播成本最低的一个</b>，也是唯一一个不用讲典故就能自己站住的。</td></tr>
+      <tr><td>短板</td><td>覆盖不了"普通截图"，只讲清了长截图那一块。气质偏文气、偏静，少了点工具的利落。另外"卷"字多音（juàn／juǎn），口语里可能被念成 juǎn。</td></tr>
+      <tr><td>英文名备选</td><td class="mono">Scroll</td></tr>
+    </table>
+  </div>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">描红</span><span class="py">miáo hóng</span>
+      <span class="tag pick">第一梯队</span><span class="tag ok">公开渠道未见第9类占用</span><span class="tag warn">需自查</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px;margin:0">跟一目红唯一闭环的一个</p>
+
+    <div class="quote">
+      传统蒙学写字法。字帖上先把字用红印出来，学童拿毛笔蘸墨，照着红字一笔一笔描上去。描完，红底子就压在墨底下看不见了——<b>别人看到的是你的字，红是垫在下面的</b>。
+      <cite>出处：传统蒙学"描红"；由此延伸出的字帖叫"描红本"</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>语义怎么对上</td><td>三层全对上了。"<b>描</b>"是对着原样描（截图）；"<b>红</b>"是一目红；还有一层：<b>红垫在下面，墨字是你的</b>——你操作，工具把过程描下来，最后交给 Agent 写成文章，署名是你的。这是十个名字里，唯一能一句话讲清"工具和人各干哪一半"的。</td></tr>
+      <tr><td>为什么可能是它</td><td>好念、好写、好记，跟品牌色闭环，还自带一个"学写字"的场景——你的用户很多就是要学操作、写教程的人。这层联想不是硬凑的，是天然长出来的。</td></tr>
+      <tr><td>短板</td><td>"描红"是常用词，<b>第16类（字帖、文具、印刷品）大概率有在先注册</b>，虽然不挡第9类软件，但整体布局时要留意。<b>这个必须去官方查一遍。</b>另外它有被误读成"练字 App"的风险，需要在产品语境里把含义掰正。</td></tr>
+      <tr><td>英文名备选</td><td class="mono">Trace</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">副墨</span><span class="py">fù mò</span>
+      <span class="tag">第二梯队</span><span class="tag ok">公开渠道未见占用</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px;margin:0">出处最硬的一个</p>
+
+    <div class="quote">
+      《庄子·大宗师》里，南伯子葵向女偊问道，女偊说自己的学问是从一串"人"那儿传下来的，头一个就叫"副墨之子"。唐人成玄英注："副墨，文字也。"后来"副墨"就用来指传抄下来的副本、文字流传之物。
+      <cite>出处：《庄子·大宗师》；成玄英疏"副墨，文字也"</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>语义怎么对上</td><td>原件是"正"，带走的这份是"副"。你屏幕上发生的事是正本，工具把它留下来、再交给 Agent 写成的东西，就是<b>副墨</b>。而且"墨"字本身就带"书写"——副墨不只是留下来了，<b>它是写下来的</b>，这一点比"录副"更进一步。</td></tr>
+      <tr><td>为什么可能是它</td><td>出处够硬、够冷门，公开渠道几乎没人用它做第9类品牌，独占性很强。跟做内容／教程的人聊起来，这个故事很值得讲。</td></tr>
+      <tr><td>短板</td><td>"副"字在中文里天然带点"次要、次等"的意味，容易被读成"这是个附属功能"。两个字的声调也偏沉（fù mò），念起来不够亮。</td></tr>
+      <tr><td>英文名备选</td><td class="mono">Codex</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">存照</span><span class="py">cún zhào</span>
+      <span class="tag">第二梯队</span><span class="tag ok">公开渠道未见占用</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px;margin:0">成语打底，不用解释</p>
+
+    <div class="quote">
+      旧时契约、文书末尾的收尾话——"立此为据，各执一纸存照"。今天还在用："立此存照"。意思是<b>把这个当下的样子留一份下来，作为凭据</b>。
+      <cite>出处：明清契约文书常用语，今语"立此存照"仍通用</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>语义怎么对上</td><td>截图最本分的用途就是"立此存照"——留个凭据。这一层不需要任何解释，任何年龄、任何行业的人都懂。</td></tr>
+      <tr><td>为什么可能是它</td><td>成语打底，认知成本接近零；"照"字天然带"影像"的意思，也覆盖了"截图"这个动作本身。</td></tr>
+      <tr><td>短板</td><td>气质偏法律、偏凭据，少了点轻盈和 AI 感。另外"存照"很容易被理解成相机／相册工具，丢掉"Agent 帮你写"那一层。字面太平，做不出一眼记住的记号。</td></tr>
+      <tr><td>英文名备选</td><td class="mono">Record</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">写样</span><span class="py">xiě yàng</span>
+      <span class="tag">第二梯队</span><span class="tag ok">公开渠道未见占用</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px;margin:0">工序感最强，跟"从素材到成品"完全同构</p>
+
+    <div class="quote">
+      雕版印刷的头道工序。刻字之前，先由"写样"的工匠把全书用工整楷书一字一字写在薄纸上，校对无误之后，再把纸<b>反贴</b>到木板上，才动刀刻。一本书长什么样，是写样师傅定的。
+      <cite>出处：中国传统雕版印刷工序；做这活的人叫"写样先生"，也叫"书手"</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>语义怎么对上</td><td>"先有样，后有书。"屏幕上抓到的东西是<b>样</b>，Agent 写出来的文章是<b>书</b>。这个链路跟你的产品一模一样：先有素材，再成稿。</td></tr>
+      <tr><td>为什么可能是它</td><td>"写样"这个名字本身就把"写"字带上了，天然沾 AI 写东西这一层，不用你另外去解释。工序感强，跟做内容的人的日常经验能对上。</td></tr>
+      <tr><td>短板</td><td>生僻。十个人里有九个没听过这个词，第一次都得解释一遍。而且"写样"在现代中文里容易被理解成"写个样例／写份样本"，指向不明。</td></tr>
+      <tr><td>英文名备选</td><td class="mono">Model</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">界画</span><span class="py">jiè huà</span>
+      <span class="tag">第三梯队</span><span class="tag ok">公开渠道未见占用</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px;margin:0">把"准"写进名字里</p>
+
+    <div class="quote">
+      中国画的一个专门画科。用"界尺"引线来画楼台、屋木、舟车、桥梁，讲究比例折算一丝不差。《清明上河图》里那些规规矩矩的房子，《营造法式》里画出来的图样，都是这个路子。明清画论把画分"十三科"，界画是单独一科。
+      <cite>出处：中国画"十三科"之一；元汤垕《画鉴》"世俗论画，必曰画有十三科……界画打底"</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>语义怎么对上</td><td>截图这件事，最讲究的就是一个"准"：像素对齐、坐标不能飘、分块 bbox 要能指回原图。界画是中国传统里<b>最讲"量得准"</b>的画科，这一层气质直接对上了。</td></tr>
+      <tr><td>为什么可能是它</td><td>把"专业、精确"写进了名字，跟"随便截个图"划清界限。你的坐标是第一公民这套设计，正好可以借这个名字讲出来。</td></tr>
+      <tr><td>短板</td><td>"界"字冷硬，念起来不像个工具名。"界画"是画种，别人容易以为你在做绘画软件——指向既有偏差又有门槛。</td></tr>
+      <tr><td>英文名备选</td><td class="mono">Ruled</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">定本</span><span class="py">dìng běn</span>
+      <span class="tag">第三梯队</span><span class="tag ok">公开渠道未见占用</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px;margin:0">直接讲"可信"</p>
+
+    <div class="quote">
+      校勘学的说法。同一个东西传下来会有好几个版本，互相比对、把错的地方改正之后，最后定下来的那一本，叫"定本"。定本是<b>可以放心引用</b>的那一本。
+      <cite>出处：中国传统校勘学；如"定本《史记》"即指校勘定稿之本</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>语义怎么对上</td><td>Agent 把一堆零散截图校成一篇稿子，出来的就是<b>定本</b>——不是随手记的草稿，是能拿去用的那一版。</td></tr>
+      <tr><td>为什么可能是它</td><td>对做教程、写文档、出报告的人来说，"定本"两个字就是承诺。你做培训，学员最怕的是素材零散、说不到点子上；"定本"正好接住这个焦虑。</td></tr>
+      <tr><td>短板</td><td>字面太平直，看不出跟"屏幕"有任何关系，品牌的画面感弱。另外"定本"是出版／学术圈常用词，第16类、第41类可能存在在先注册，需要一并查。</td></tr>
+      <tr><td>英文名备选</td><td class="mono">Canon</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">录副</span><span class="py">lù fù</span>
+      <span class="tag">第三梯队</span><span class="tag ok">公开渠道未见占用</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px;margin:0">自带"制度感"，故事最好讲</p>
+
+    <div class="quote">
+      清代军机处的规矩。各地奏折送进宫，皇帝看完之后，军机处要<b>抄一份副本存档</b>，这份抄件就叫"录副奏折"。原件或发还、或留存，抄本进档房。留存至今的录副奏折，是清史研究里体量最大的一宗档案。
+      <cite>出处：清代军机处文书制度；"录副奏折"为中国第一历史档案馆主要馆藏之一</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>语义怎么对上</td><td>原件归你，工具另留一份能查、能用的抄本。这跟"截图存在你本地、同时生成一份结构化数据给 Agent 读"是同一个动作。</td></tr>
+      <tr><td>为什么可能是它</td><td>"录副"天生带"制度、可靠、有据可查"的气质，跟你在 PRD 里定的那套东西对得上：零上传、本地落盘、带 manifest、衍生图永不覆盖原图——<b>你本来就是按"录副"的规矩在做产品</b>。</td></tr>
+      <tr><td>短板</td><td>听起来像档案管理软件，工具感偏重、偏闷。两个字声调都是仄声（lù fù），念着不够顺口。</td></tr>
+      <tr><td>英文名备选</td><td class="mono">Archive</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">赫蹄</span><span class="py">hè tí</span>
+      <span class="tag">第三梯队</span><span class="tag ok">公开渠道未见占用</span><span class="tag ok">独占性最强</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px;margin:0">冷门到极致，几乎不可能撞</p>
+
+    <div class="quote">
+      "赫蹄"是古代对纸的别称，意思是<b>薄薄的小纸片</b>。《汉书》里出现过这个词，唐人颜师古注引孟康的说法："赫蹄，薄小纸也。"
+      <cite>出处：《汉书》颜师古注引孟康："赫蹄，薄小纸也"</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>语义怎么对上</td><td>字面确实冷，但意思很贴：<b>一小片薄薄的、可以承载东西的纸</b>。屏幕上游走的那一块选区，不就是一小片赫蹄吗。</td></tr>
+      <tr><td>为什么可能是它</td><td><b>独占性十个里最强</b>。这个词冷到几乎没有人会拿它做第9类品牌，撞车概率极低，过了就是稳稳的。而且"一个几乎没人认识的古词"本身就构成记忆点——别人问"这名什么意思"，就是一次传播机会。</td></tr>
+      <tr><td>短板</td><td>代价也很直接：看不懂。两个字的读音都不好记（hè tí），第一眼完全没有信息量，需要长期靠品牌教育去填。适合你愿意花力气讲故事的情况，不适合"要让人一眼懂"的情况。</td></tr>
+      <tr><td>英文名备选</td><td class="mono">Slip</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span>十个放一起看</h2>
+  <p class="lead">一张表看完：谁干净、谁好懂、谁的气质离这个工具更近。</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:11%">名字</th>
+        <th style="width:9%">读音</th>
+        <th style="width:20%">一句话出处</th>
+        <th style="width:13%">注册洁净度</th>
+        <th style="width:12%">好懂程度</th>
+        <th style="width:35%">一句话点评</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>响拓</b></td><td class="mono">xiǎng tà</td>
+        <td>唐宫摹书，覆纸向光双钩填墨</td>
+        <td class="keep">未见占用</td><td class="rev">要靠解释</td>
+        <td>语义贴合度最高：取下来、看得清、跟原件一样，三层全中</td>
+      </tr>
+      <tr>
+        <td><b>长卷</b></td><td class="mono">cháng juàn</td>
+        <td>中国书画横卷，边卷边看的看法</td>
+        <td class="keep">未见占用</td><td class="keep">不用解释</td>
+        <td>传播成本最低，但只讲清了长截图那一块</td>
+      </tr>
+      <tr>
+        <td><b>描红</b></td><td class="mono">miáo hóng</td>
+        <td>蒙学写字：红底墨字，照着描</td>
+        <td class="rev">需自查第16类</td><td class="keep">不用解释</td>
+        <td>唯一跟一目红闭环的，且能一句讲清"人和工具各干哪一半"</td>
+      </tr>
+      <tr>
+        <td><b>副墨</b></td><td class="mono">fù mò</td>
+        <td>《庄子》"副墨之子"，成玄英注"文字也"</td>
+        <td class="keep">未见占用</td><td class="rev">要靠解释</td>
+        <td>出处最硬，且"墨"字把"写下来"这层带上了</td>
+      </tr>
+      <tr>
+        <td><b>存照</b></td><td class="mono">cún zhào</td>
+        <td>契约文书"立此存照"</td>
+        <td class="keep">未见占用</td><td class="keep">不用解释</td>
+        <td>认知成本接近零，但容易只被当成相机／相册</td>
+      </tr>
+      <tr>
+        <td><b>写样</b></td><td class="mono">xiě yàng</td>
+        <td>雕版印刷头道工序，写在薄纸上再上板</td>
+        <td class="keep">未见占用</td><td class="rev">要靠解释</td>
+        <td>工序感跟"从素材到成品"完全同构，自带"写"字</td>
+      </tr>
+      <tr>
+        <td><b>界画</b></td><td class="mono">jiè huà</td>
+        <td>画"十三科"之一，界尺引线，毫厘不差</td>
+        <td class="keep">未见占用</td><td class="rev">要靠解释</td>
+        <td>把"准"写进名字，但容易让人以为是绘画软件</td>
+      </tr>
+      <tr>
+        <td><b>定本</b></td><td class="mono">dìng běn</td>
+        <td>校勘学：校完定稿、可放心引用之本</td>
+        <td class="keep">未见占用</td><td class="rev">要靠解释</td>
+        <td>直接讲"可信"，但看不出跟屏幕有关系</td>
+      </tr>
+      <tr>
+        <td><b>录副</b></td><td class="mono">lù fù</td>
+        <td>清代军机处抄存副本的制度</td>
+        <td class="keep">未见占用</td><td class="rev">要靠解释</td>
+        <td>气质就是你 PRD 里那套本地留档的规矩，但偏闷</td>
+      </tr>
+      <tr>
+        <td><b>赫蹄</b></td><td class="mono">hè tí</td>
+        <td>《汉书》注"赫蹄，薄小纸也"</td>
+        <td class="keep">未见占用</td><td class="risk">基本看不懂</td>
+        <td>独占性最强，撞车概率极低；代价是完全没有第一眼信息量</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">05</span>如果让我收口，我会这么排</h2>
+  <p class="lead">把这批跟前面三批合起来，一共 22 个候选。按"能不能一眼记住 + 干不干净 + 气质对不对"三条一起看，我会这么排。</p>
+
+  <div class="route pick">
+    <div class="rk">1</div>
+    <div class="rb">
+      <h3>第一序列（六个，建议从这里挑一个去注册）</h3>
+      <p><b>朱拓 · 留真 · 粉本 · 响拓 · 长卷 · 描红</b></p>
+      <p>这六个的共同点：公开渠道查不到硬障碍，语义都能对上"把屏幕原样取下来交给 Agent"这件事，也都能在不解释的情况下先站住一会儿。<b>其中"长卷"和"描红"是最好懂的，"响拓"和"朱拓"是语义最贴的，"留真"和"粉本"是出处最有讲头的。</b></p>
+      <p>如果一定要我选三个去跑官方检索，我选：<b>响拓、长卷、描红</b>。理由是三样不同：响拓赢在语义、长卷赢在传播、描红赢在跟品牌色的闭环。</p>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rk">2</div>
+    <div class="rb">
+      <h3>第二序列（格调够高，接受"要解释一遍"）</h3>
+      <p><b>副墨 · 存照 · 写样 · 叙录 · 影抄 · 摹本 · 样张 · 朱记 · 定本</b></p>
+      <p>这些要么出处硬但偏冷，要么意思对但气质偏闷。<b>如果你打算走"讲得出故事的品牌"这条路，副墨和叙录是最值得拿出来讲的；如果你打算走"一眼就懂"这条路，它们就不是最优解。</b></p>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rk">3</div>
+    <div class="rb">
+      <h3>第三序列（冷门到极致，独占性最强）</h3>
+      <p><b>赫蹄 · 录副 · 界画</b></p>
+      <p>这三个撞车概率最低，基本可以说"只要官方查干净，就是你的"。但代价是品牌教育成本很高，第一眼没有任何信息量。<b>适合的情况：你已经想清楚要做一件长期的事，愿意花几年把这个词讲明白。</b></p>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:22px">
+    <b>两个不受换名影响的事，再确认一遍：</b><br>
+    1. <b>Logo 不用重做。</b>"印章 · 甲骨目"是图形标，跟中文名没关系。换名字不碰这枚章，也不用改 <code>assets/logo/</code> 里那 14 个 SVG 和 29 个 PNG。注册的时候图形标和中文名是分开申请的，各报各的。<br>
+    2. <b>英文名建议继续用 Onceglance 不变。</b>中文商标冲突管不到英文名；英文名还能保住域名、代码仓库名、npm 包名这些已经铺开的地方。中文名换了，英文名不动，两套名字反而更好分开排查。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">06</span>下一步：官方查一遍，别信我这张表</h2>
+  <p class="lead">我这张表是公开渠道初筛，能把"明显撞车的"剔掉，但剔不干净。真正算数的是商标局官网。</p>
+
+  <ol class="steps">
+    <li><b>上官网。</b>打开中国商标网 <code>sbj.cnipa.gov.cn</code>，进"商标查询"→"商标近似查询"。先把 <b>响拓、长卷、描红</b> 这三个跑一遍。</li>
+    <li><b>守住类别。</b>至少查 <b>第9类</b>（软件本体）、<b>第42类</b>（软件服务）、<b>第35类</b>（销售／推广）、<b>第16类</b>（教程、印刷品）。查的时候重点看对方商品项里有没有 <b>0901</b> 那一组——"计算机程序（可下载软件）""可下载的计算机应用软件""计算机软件（已录制）"，有这三样里的任何一样，就是实打实的障碍。</li>
+    <li><b>图形标单独查。</b>你那枚印章要单独走"图形"查询——商标局 2026 年 5 月 22 日上线了以图搜图，直接传图就能查近似。图样用 png / jpg / jpeg，不超过 2M。</li>
+    <li><b>留意盲查期。</b>最近 3 个月左右刚递交的申请可能还没进库，官网查不到不代表没有。这条谁也绕不过，只能等，或者让代理帮你判断。</li>
+    <li><b>花几百块买一份书面意见。</b>这一步别省。让商标局备案的代理机构就你选定的那一个名字、那几个类别出一份正式的检索报告和可注册性判断——他们会看音、形、义和商品类似关系，比你自己逐条比对准得多。几百块换掉一次驳回（驳回官费不退、还要再等一年），很划算。</li>
+  </ol>
+
+  <div class="foot">
+    <b>一句话交底：</b>这 10 个里没有一个我能拍胸脯说"保证能注册"。公开渠道的初筛只能帮你把明显的坑排掉，剩下那点灰色地带，只有商标局和代理能给你答案。<b>你先把三个候选的名字定下来，我陪你把官方检索跑完，再看要不要调整。</b>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

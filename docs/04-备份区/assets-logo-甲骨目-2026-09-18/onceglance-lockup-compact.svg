@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 64" width="132" height="64" role="img" aria-label="一目 Onceglance 精简字标">
+<title>一目 Onceglance 精简字标</title>
+  <g transform="translate(8 8)">
+    <rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/>
+    <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+    <path d="M24 19.2V28.8" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+  </g>
+  <text x="67.2" y="44" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif" font-size="27" font-weight="500" letter-spacing="1.6" fill="#1D1D21">一目</text>
+</svg>

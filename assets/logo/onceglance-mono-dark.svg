@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="定影 Onceglance 单色深">
+<title>定影 Onceglance 单色深</title>
+  <defs>
+    <mask id="cutDY_D">
+      <rect width="48" height="48" fill="#fff"/>
+      <g transform="rotate(35 24 24)" stroke="#000000" stroke-width="4.2" stroke-linecap="round" fill="none"><path d="M13 17.4h22"/><path d="M14.25 24h19.5"/><path d="M15.5 30.6h17"/></g>
+    </mask>
+  </defs>
+  <rect x="4" y="4" width="40" height="40" rx="10" fill="#1D1D21" mask="url(#cutDY_D)"/>
+</svg>

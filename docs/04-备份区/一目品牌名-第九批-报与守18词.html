@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一目 · 中文名第九批：报与守，18 个词实测</title>
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F7F7F8; --bg3:#EFEFF1;
+  --tx:#1D1D21; --tx2:#5C5C66; --tx3:#8E8E99;
+  --bd:#E4E4E8; --bd2:#D2D2D8;
+  --accent:#FF3B30;
+  --ok:#0F6E56; --okbg:#E1F5EE;
+  --warn:#854F0B; --warnbg:#FAEEDA;
+  --risk:#A32D2D; --riskbg:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg3); color:var(--tx);
+  font-family:-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+  font-size:14px; line-height:1.7;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:40px 24px 80px}
+header.top{
+  background:var(--bg); border-radius:16px; padding:36px 40px;
+  border:1px solid var(--bd); margin-bottom:28px;
+}
+h1{font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:.5px}
+.sub{color:var(--tx2); font-size:15px; margin:0 0 20px}
+.note{
+  background:var(--bg2); border-radius:var(--r); padding:16px 18px;
+  font-size:13px; color:var(--tx2); margin-top:18px;
+}
+.note b{color:var(--tx); font-weight:600}
+section{
+  background:var(--bg); border-radius:16px; padding:32px 40px;
+  border:1px solid var(--bd); margin-bottom:24px;
+}
+h2{
+  font-size:19px; font-weight:600; margin:0 0 6px;
+  padding-bottom:14px; border-bottom:1px solid var(--bd);
+}
+h2 .num{color:var(--accent); font-weight:600; margin-right:8px}
+h3{font-size:15px; font-weight:600; margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{color:var(--tx2); font-size:13.5px; margin:14px 0 22px}
+
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{
+  text-align:left; font-weight:600; color:var(--tx2); font-size:12px;
+  letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--bd2);
+  background:var(--bg2);
+}
+td{padding:10px; border-bottom:1px solid var(--bd); vertical-align:top}
+td.kill{color:var(--risk); font-weight:600; white-space:nowrap}
+td.keep{color:var(--ok); font-weight:600; white-space:nowrap}
+td.rev{color:var(--warn); font-weight:600; white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--tx2)}
+
+.card{
+  border:1px solid var(--bd); border-radius:14px; padding:28px 30px;
+  margin-bottom:20px; background:var(--bg);
+}
+.card.pick{border:2px solid var(--accent)}
+.chead{display:flex; align-items:center; gap:16px; margin-bottom:6px; flex-wrap:wrap}
+.nm{font-size:30px; font-weight:600; letter-spacing:4px; line-height:1.2}
+.py{font-size:13px; color:var(--tx3); letter-spacing:.6px; margin-left:2px}
+.tag{
+  font-size:11.5px; padding:3px 9px; border-radius:20px;
+  background:var(--bg3); color:var(--tx2); letter-spacing:.3px;
+}
+.tag.pick{background:var(--accent); color:#fff; font-weight:600}
+.tag.ok{background:var(--okbg); color:var(--ok)}
+.tag.warn{background:var(--warnbg); color:var(--warn)}
+.tag.risk{background:var(--riskbg); color:var(--risk)}
+.quote{
+  border-left:3px solid var(--accent); padding:10px 0 10px 16px;
+  margin:16px 0; color:var(--tx); font-size:13.5px; line-height:1.8;
+}
+.quote cite{display:block; color:var(--tx3); font-size:12px; font-style:normal; margin-top:6px; letter-spacing:.3px}
+.map{width:100%; border-collapse:collapse; margin:16px 0; font-size:13px}
+.map td{border:1px solid var(--bd); padding:9px 12px}
+.map td:first-child{background:var(--bg2); color:var(--tx2); width:36%; font-size:12.5px}
+.map td:last-child{color:var(--tx)}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.box{background:var(--bg2); border-radius:var(--r); padding:14px 16px; font-size:13px}
+.box h3{font-size:12.5px; color:var(--tx2); letter-spacing:.4px; margin-bottom:8px}
+.box ul{margin:0; padding-left:17px; color:var(--tx)}
+.box li{margin-bottom:5px}
+.box li:last-child{margin-bottom:0}
+.foot{
+  margin-top:18px; padding-top:14px; border-top:1px solid var(--bd);
+  font-size:12.5px; color:var(--tx2);
+}
+.foot b{color:var(--tx); font-weight:600}
+
+/* 条形图 */
+.bars{margin:8px 0 4px}
+.bar{display:flex; align-items:center; gap:12px; margin-bottom:12px}
+.bl{flex:0 0 190px; font-size:12.5px; color:var(--tx2); text-align:right}
+.bt{flex:1; height:26px; background:var(--bg2); border-radius:6px; overflow:hidden; position:relative}
+.bf{height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:9px; color:#fff; font-size:12px; font-weight:600; letter-spacing:.3px}
+.bf.a{background:var(--accent)}
+.bf.b{background:#C9C9CF; color:var(--tx2)}
+.bf.c{background:var(--ok)}
+.bf.d{background:var(--warn)}
+.bv{flex:0 0 92px; font-size:12px; color:var(--tx2)}
+
+/* 三条线 */
+.paths{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:18px 0 8px}
+.pth{background:var(--bg2); border:1px solid var(--bd); border-radius:12px; padding:16px 16px 14px}
+.pth.hi{background:#FFF9F9; border:2px solid var(--accent)}
+.pth .cap{font-size:11.5px; color:var(--tx3); letter-spacing:.4px; margin-bottom:6px}
+.pth h3{font-size:14px; margin-bottom:9px; line-height:1.45}
+.pth .sc{font-size:22px; font-weight:600; line-height:1.2}
+.pth .sc.z{color:var(--risk)}
+.pth .sc.o{color:var(--ok)}
+.pth .sd{font-size:12px; color:var(--tx2); margin-top:6px; line-height:1.6}
+.pth ul{margin:10px 0 0; padding-left:17px; font-size:12.5px; color:var(--tx2)}
+.pth li{margin-bottom:3px}
+
+/* 序列 */
+.route{
+  border:1px solid var(--bd); border-radius:14px; padding:20px 24px;
+  margin-bottom:14px;
+}
+.route.pick{border:2px solid var(--accent); background:#FFF9F9}
+.rh{display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap}
+.rk{
+  flex:0 0 34px; height:34px; border-radius:10px; background:var(--bg3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:600; color:var(--tx2);
+}
+.route.pick .rk{background:var(--accent); color:#fff}
+.rh h3{margin:0; font-size:15.5px}
+.chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
+.chip{
+  font-size:13.5px; padding:4px 12px; border-radius:20px;
+  background:var(--bg2); color:var(--tx); border:1px solid var(--bd);
+  letter-spacing:1px;
+}
+.chip.new{background:#FFF1F0; color:var(--accent); border-color:#FFD5D2; font-weight:600}
+.chip.off{background:var(--bg2); color:var(--tx3); border-style:dashed}
+.route p{margin:0; font-size:13px; color:var(--tx2)}
+
+.rank{display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid var(--bd); font-size:13.5px}
+.rank:last-child{border-bottom:none}
+.rnum{flex:0 0 26px; height:26px; border-radius:8px; background:var(--bg3); color:var(--tx2); font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center}
+.rank.top .rnum{background:var(--accent); color:#fff}
+.rank .rn{font-weight:600; letter-spacing:2px; min-width:72px}
+.rank .rs{color:var(--tx2); font-size:12.5px; flex:1}
+.rank.new{background:#FFF9F9}
+.rank.new .rnum{background:var(--accent); color:#fff}
+
+.figcap{font-size:12.5px; color:var(--tx2); margin-top:6px; line-height:1.75}
+.figcap b{color:var(--tx)}
+ol.steps{padding-left:20px; margin:12px 0 0}
+ol.steps li{margin-bottom:9px; font-size:13.5px}
+ol.steps li b{font-weight:600}
+code{
+  background:var(--bg2); border:1px solid var(--bd); border-radius:5px;
+  padding:1px 6px; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;
+}
+@media (max-width:820px){
+  .paths{grid-template-columns:1fr}
+  .cols{grid-template-columns:1fr}
+  .wrap{padding:24px 14px 60px}
+  header.top,section{padding:24px 20px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>看见之后，谁把它递出去</h1>
+  <p class="sub">中文名第九批 · 实测 18 个 · 3 个红灯、1 个黄灯、14 个在公开渠道上还是空的</p>
+  <p style="margin:0;color:var(--tx2);font-size:13.5px">
+    第八批找到了"替全群守夜"的雁奴，那解决的是工具的<b>前半截</b>——看见。<br>
+    但工具还有<b>后半截</b>：看见之后，得把结果递出去，交给 Agent。这一批专门找后半截的词。<br>
+    结果比预期好：<b>"替人报时、守门、打更、照亮书页"的身份词，是一整片没被安防行业翻过的地。</b>
+  </p>
+  <div class="note">
+    <b>筛到什么程度，我先说清楚：</b>每个名字都跑了公开渠道（阿里云商标、路标网、企查查、启信宝、爱企查、知客网、猪八戒知识产权）的第 9 类检索，查到障碍的写清撞到谁、注册号多少、商品项里到底有没有软件。没查到的写"未见占用"。<b>但这不等于能注册</b>——公开渠道有盲查期、有更新延迟，最终必须去商标局官网自己查一遍。<b>下文凡是我没查透的，会明确标出来，不含混。</b>
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span>为什么换到"报"这半</h2>
+  <p class="lead">
+    第八批收尾时说过一句话：口语越准的词越容易被抢，"替你看"这四个字正好是安防行业的广告语，所以斥候、探马、守望、耳目全死了。这批往下想了一层：<b>安防行业卖的是"我一直盯着"，可它不是"我看见了要报给你"。</b>后者是另一个行业——报时、递信、传军情。这个行业的词，可能还空着。
+  </p>
+
+  <div class="paths">
+    <div class="pth">
+      <div class="cap">前六批</div>
+      <h3>看得清（形容词）</h3>
+      <div class="sc z">0%</div>
+      <div class="sd">一目、明鉴、鹰、隼、离朱……一百多个，全撞。</div>
+      <ul><li>撞因：视觉词是摄像头和 AI 视觉的刚需</li></ul>
+    </div>
+    <div class="pth">
+      <div class="cap">第七、八批</div>
+      <h3>替你看（功能描述）</h3>
+      <div class="sc z">0%</div>
+      <div class="sd">斥候、探马、守望、耳目、狐獴……全撞。</div>
+      <ul><li>撞因：这就是安防的广告语</li></ul>
+    </div>
+    <div class="pth hi">
+      <div class="cap">第九批</div>
+      <h3>替你报（另一个职业）</h3>
+      <div class="sc o">14 / 18</div>
+      <div class="sd">报时的、守门的、打更的、照亮的——这个职业安防不干。</div>
+      <ul><li>雁奴管"看着"，鸡人管"报晓"</li><li><b>两半凑齐，才是一个完整的工具</b></li></ul>
+    </div>
+  </div>
+
+  <div class="figcap">
+    <b>这张图是这一批的全部理由。</b>"看见"和"报出去"是两件事，落在两个行业的词库里。
+    安防占了前一个，后一个（报时、传递、照亮）没人当品牌名用——因为它听起来不像卖东西的，像在说服务。
+    而"不像卖东西的"，正是你要的。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>四条线，18 个词，一次看完</h2>
+  <p class="lead">
+    这批所有词都不描述"看"，而是一律指认一个"替别人把消息递出去"的身份或者动作。四条线各管一段。
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:10%">名字</th><th style="width:13%">它做的事</th><th>第 9 类实测</th><th style="width:10%">判定</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><b>展卷</b><br><span class="mono">zhǎn juàn</span></td><td>展开卷轴，成语"展卷有益"</td><td><b>第 9 类 <span class="mono">31387438</span></b> 已注册至 2029-03-27，商品项原文含 <b>可下载的计算机应用软件</b>（另有电池、衡量器具、发光标志、无线电设备、精密测量仪器、电影摄影机、传感器、报警器、眼镜）——<b>软件项直接命中</b>。另有 <span class="mono">20999820</span>（上海展卷信息科技）同样含「可下载的计算机应用软件、已录制的计算机程序」。</td><td class="kill">红灯</td></tr>
+      <tr><td><b>羽书</b><br><span class="mono">yǔ shū</span></td><td>插羽毛的紧急军报，岑参"校尉羽书飞瀚海"</td><td><b>第 9 类 <span class="mono">23286434</span></b>（山东逐梦者航拍科技，2018-03-07 至 2028-03-06），商品项原文含 <b>已录制的计算机程序、计算机软件（已录制）</b>、编辑图像声音和视频用计算机程序、控制和管理访问服务器应用程序用计算机软件——<b>一整排软件项</b>。</td><td class="kill">红灯</td></tr>
+      <tr><td><b>驿使</b><br><span class="mono">yì shǐ</span></td><td>驿站传信的人，"折梅逢驿使"</td><td>撞得最重的一件：<b>第 9 类 <span class="mono">71813313</span></b>，<b>上海市数字证书认证中心有限公司</b>（2023-11-21 至 2033-11-20），商品项原文含 <b>计算机软件（已录制）、已录制的或可下载的计算机软件平台、数据库管理用计算机软件、可下载的计算机应用软件、可下载的手机应用软件、计算机程序（可下载软件）</b>——凡是我们想要的小项，它全有。另有 33 / 35 / 38 / 42 类同族。</td><td class="kill">红灯</td></tr>
+
+      <tr><td><b>雪案</b><br><span class="mono">xuě àn</span></td><td>借雪光读书的书案，成语"雪案萤窗"</td><td><b>第 9 类未见占用。</b>多个渠道（企查查、爱企查、标库网、阿里云）检索"雪案"只返回词典与成语释义页，<b>没有召回任何以"雪案"为名的商标</b>——连其他类别都没有。这是本批最干净的一个。</td><td class="keep">绿灯</td></tr>
+      <tr><td><b>击柝</b><br><span class="mono">jī tuò</span></td><td>敲梆子打更报时，《孟子》"抱关击柝"</td><td><b>第 9 类未见占用</b>，且<b>全部类别都未查到</b>。同族的"击柝"在《周易·系辞》"重门击柝，以待暴客"，是巡夜报时的动作。生僻度偏高（柝 tuò）。</td><td class="keep">绿灯</td></tr>
+      <tr><td><b>青藜</b><br><span class="mono">qīng lí</span></td><td>老人手里那根会发光的藜杖，替刘向照亮书页</td><td><b>第 9 类未查到公开记录（不等于查透，见下方说明）。</b>其他类别已占：第 27 类 <span class="mono">48828622</span>（地毯，广东尚佳瑜彩建材，2021-04-21 至 2031-04-20）、第 30 类 <span class="mono">19132081</span>（茶咖啡，山西熔熠文化传播）、第 29/33 类「青藜仙客」（信阳青藜实业）、第 36/41 类「青藜论坛」（苏州博腾生物制药）。<b>同音异字"青骊"在第 42 类。</b></td><td class="keep">绿灯</td></tr>
+      <tr><td><b>鸡人</b><br><span class="mono">jī rén</span></td><td>《周礼》掌报晓的官，替满朝文武报时辰</td><td><b>"鸡人"本身第 9 类未见占用。</b>但有一个要留意的近似词：<b>「鸡器人」<span class="mono">27956195</span></b>（青岛诶创农业科技，2018-12-07 至 2028-12-06），商品项原文含 <b>已录制的计算机程序、计算机软件（已录制）、计算机程序（可下载软件）</b>——说明"鸡×人"这个读感在第 9 类已有软件类占位。另外「鸡人」第 14 类 <span class="mono">16439458</span>（杭州李李品牌设计，2016-04-21 至 2026-04-20，<b>已到期</b>，是否续展未核实）。</td><td class="rev">黄灯</td></tr>
+      <tr><td><b>晨门</b><br><span class="mono">chén mén</span></td><td>守城门管开关的小吏，《论语》"晨门曰：奚自？"</td><td><b>第 9 类未见占用。</b>同词第 35 类 <span class="mono">71134870</span> 已注册（2023-10-21 至 2033-10-20，广告/商业管理/市场营销等服务），<b>服务类不挡第 9 类</b>。近似字"宸门"在第 6 类（金属门窗）。</td><td class="keep">绿灯</td></tr>
+      <tr><td><b>夜不收</b><br><span class="mono">yè bù shōu</span></td><td>明代边军里专在夜间出哨、深入敌境的侦察兵称号</td><td>第 9 类 <span class="mono">20395114</span>（北京若森数字科技），商品项原文含 <b>计算机程序（可下载软件）、计算机游戏软件</b>、可下载的影像文件——<b>但该件已于 2024-03-06 第 1878 期撤三撤销公告，当前状态"已销亡"</b>（我在阿里云详情页亲自复核确认）。也就是说第 9 类现在是空的。<b>但有个更麻烦的问题，见下方风险说明。</b></td><td class="rev">黄灯</td></tr>
+
+      <tr><td><b>曝书</b><br><span class="mono">pù shū</span></td><td>把藏书搬出来摊开见太阳（朱彝尊"曝书亭"）</td><td><b>第 9 类未见占用。</b>同词"曝书亭"在第 44 类 <span class="mono">5733136</span>（嘉兴市秀洲区王店镇政务服务中心，园艺/疗养院等，2020-01-14 至 2030-01-13）——不是软件类，不挡。</td><td class="keep">绿灯</td></tr>
+      <tr><td><b>藜照</b><br><span class="mono">lí zhào</span></td><td>青藜杖照读的简称，同一个典</td><td><b>第 9 类未见占用。</b>第 19 类 <span class="mono">23714602</span>（合肥藜照新型装饰材料，装饰材料）。另有企业字号"海南藜照企业管理咨询""上海藜照堂文化"。</td><td class="keep">绿灯</td></tr>
+      <tr><td><b>萤窗</b><br><span class="mono">yíng chuāng</span></td><td>借萤火读书的那扇窗，"萤窗雪案"</td><td><b>第 9 类未见占用。</b>第 21 类 <span class="mono">47207610</span>（徐国仓，2021-02-07 至 2031-02-06，厨房洁具）、第 44 类 <span class="mono">84314844</span>（深圳市唯品地毯，2025-09-21 至 2035-09-20）。另有企业"广州萤窗贸易"。</td><td class="keep">绿灯</td></tr>
+      <tr><td><b>候人</b><br><span class="mono">hòu rén</span></td><td>《诗经·曹风·候人》里掌迎送与边境候望的小官</td><td><b>第 9 类未查到公开记录（不等于查透）；其他类别也未查到。</b>注意同族风险：斥候、候骑、候望这几个"候"字词，第八批已确认被安防/侦察类语义挤占，单点空位要留意。</td><td class="keep">绿灯</td></tr>
+      <tr><td><b>候望</b><br><span class="mono">hòu wàng</span></td><td>守候瞭望</td><td><b>第 9 类未查到公开记录（不等于查透）。</b>检索时被无关音译词污染（HAVAWISH 等），证据强度低于本批其他绿灯词。</td><td class="keep">绿灯</td></tr>
+      <tr><td><b>司更</b><br><span class="mono">sī gēng</span></td><td>掌报时打更的差事</td><td><b>第 9 类未查到公开记录。</b>路标网对"司更"直接返回"暂无相关数据"。检索时被 SHIMENG 等音译污染。</td><td class="keep">绿灯</td></tr>
+      <tr><td><b>挈壶</b><br><span class="mono">qiè hú</span></td><td>《周礼》"挈壶氏"，掌漏刻报时</td><td><b>第 9 类未查到公开记录；全类别都未召回详情页。</b>只搜到近似但不同字的「拎壶堂」<span class="mono">33512919</span>（35 类）、「缇壶」（19 类）等。生僻度最高的一档。</td><td class="keep">绿灯</td></tr>
+      <tr><td><b>抱关</b><br><span class="mono">bào guān</span></td><td>守关的人，《孟子》"抱关击柝者皆有常职"</td><td><b>第 9 类未查到公开记录；全类别都未查到。</b>"抱关击柝"是现成的古文搭配，暂未检到作为商标注册。</td><td class="keep">绿灯</td></tr>
+      <tr><td><b>烽堠</b><br><span class="mono">fēng hòu</span></td><td>烽火台与记里程的土堆，古时的预警设施</td><td><b>第 9 类未见占用。</b>同词第 38 类 <span class="mono">59164177</span>（<b>杭州默安科技有限公司</b>，2022-02-28 至 2032-02-27，商品项为有线电视播放、信息传送、数字文件传送、电子公告牌服务等通信服务）——<b>38 类是通信服务，不含软件商品项，不挡第 9 类</b>。近似词"一战烽堠"在第 25 类 <span class="mono">83495305</span>（待审）、第 28 类 <span class="mono">83495327</span>（驳回待复审），申请人均四川烽堠科技。</td><td class="keep">绿灯</td></tr>
+    </tbody>
+  </table>
+
+  <div class="figcap">
+    <b>读这张表有个窍门：看"绿灯"那一列里的词长什么样。</b>雪案、击柝、青藜、晨门、曝书、藜照、萤窗、候人、司更、挈壶、抱关、烽堠——
+    它们全都有一个共同点：<b>不是说"我在看"，是说"我在替你值这个班"。</b>
+    值夜班的、报时的、开城门的、晒书的，这些是岗位，不是功能描述。功能描述会被做同一件事的人抢走，岗位名字不会。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">03</span>这批最值得看的一个：雪案</h2>
+  <p class="lead">
+    "雪案"是这次唯一一个<b>连其他类别都没人碰过</b>的词。我得说清楚它的好和它的风险，你自己判断。
+  </p>
+
+  <div class="card pick">
+    <div class="chead">
+      <div class="nm">雪案</div>
+      <div class="py">xuě àn</div>
+      <span class="tag pick">本批最干净</span>
+      <span class="tag ok">全类别未见占用</span>
+      <span class="tag">零生僻字</span>
+    </div>
+
+    <div class="quote">
+      雪案萤窗，谓勤学苦读。
+      <cite>成语"雪案萤窗"· 雪夜借雪光当灯读书的书案，与借萤火读书的窗并列</cite>
+    </div>
+
+    <p style="color:var(--tx2);font-size:13px;margin-top:14px">
+      同族还有"囊萤映雪"（车胤囊萤、孙康映雪）。孙康家贫无油，冬夜就着雪的反光读书——<b>"雪案"就是那张被雪光照亮的桌子。</b>
+    </p>
+
+    <table class="map">
+      <tr><td>没有油灯，冬天借雪光读书</td><td>没有云端 API、不传数据——用一个现成的、就在本地的光</td></tr>
+      <tr><td>雪光不刺眼、不发热、不出声，只是亮着</td><td>一个常驻后台、安静、不弹窗的工具该有的样子</td></tr>
+      <tr><td>雪案是"案头"——一张桌子，一件家具</td><td>它是个桌面工具，不是个服务、不是个平台</td></tr>
+      <tr><td>雪案是读书人用的，不是衙门用的</td><td>它是给写字、做稿子的人用的，不是给安防用的</td></tr>
+      <tr><td>借来的光，看完就散了，不留痕迹</td><td>用完即走，不收数据、不留档</td></tr>
+    </table>
+
+    <div class="cols">
+      <div class="box">
+        <h3>它为什么稳</h3>
+        <ul>
+          <li><b>全类别都没人占。</b>这是九批下来唯一一个"连别处都没人要"的词，冷门度最高</li>
+          <li><b>两个字都零门槛。</b>"雪"和"案"谁都会念会写，不像藜、柝、牖、苢那样要解释读音</li>
+          <li><b>典故是成语级的，不用讲故事。</b>"雪案萤窗"是常见成语，你说出来别人就懂"苦读"那层</li>
+          <li><b>气质跟书巢、蜀素是同一条线</b>——温润、案头、有书卷气，跟已定稿的印章·甲骨目图形不冲突</li>
+          <li><b>它说的是"照亮"，不是"看见"。</b>这是本批所有词里语义最准的一层：工具不替你判断，它只负责让你（和 Agent）看得清</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>它的问题（必须说清）</h3>
+        <ul>
+          <li><b>"案"字有歧义。</b>现代汉语里"案"更常指"方案""案件"。第一眼可能被理解成"雪的方案"，或者像法律相关的名字</li>
+          <li><b>跟截图的关系最松。</b>不说一句"雪案萤窗"，很多人不会联想到"照亮/看见"</li>
+          <li><b>"雪"字偏冷。</b>和品牌色 #FF3B30 的红是反的——红色点睛、雪是冷白，气质上是撞的，要在视觉上调和</li>
+          <li><b>冷门带来的空，也意味着没人帮你教育市场。</b>这跟雁奴是同一个代价</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot">
+      <b>一句话：</b>雪案是目前九批里"最不可能撞车"的一个，也是"最需要一句解释"的一个。它适合一种发布方式——名字先放出去，故事慢慢讲。
+    </div>
+  </div>
+
+  <h3 style="margin:26px 0 12px">紧跟在后面的三个</h3>
+
+  <div class="card">
+    <div class="chead">
+      <div class="nm">青藜</div>
+      <div class="py">qīng lí</div>
+      <span class="tag">故事最强</span>
+      <span class="tag ok">9类未查到</span>
+      <span class="tag warn">未查透</span>
+    </div>
+    <div class="quote">
+      刘向于成帝之末，校书天禄阁，专精覃思。夜有老人，著黄衣，植青藜杖，登阁而进，见向暗中独坐诵书。老父乃吹杖端，烟然，因以见向，说开辟已前。
+      <cite>《拾遗记》· 卷六（另见《三辅黄图》阁部"天禄阁"条）</cite>
+    </div>
+    <p style="color:var(--tx2);font-size:13px">
+      <b>这是九批下来语义最妙的一个典故。</b>刘向夜里在校书——<b>校书就是校正文字，正是这个产品在做的事（OCR 把文字提准）</b>。黑暗里他看不清，一位老人过来，往青藜杖梢吹了口气，杖头自己燃起来，照亮了书页。
+      老人没替他读书，也没替他判断，<b>只是把光递过去</b>——这就是工具在这条链路里该干的事。
+    </p>
+    <table class="map">
+      <tr><td>刘向在暗处诵书看不清</td><td>Agent 面对的屏幕，对它来说也是"暗的"——它看不见</td></tr>
+      <tr><td>老人吹杖端，火自燃</td><td>不需要外接、不需要 API Key，本地就把光亮起来</td></tr>
+      <tr><td>照的是书页，不是替刘向读</td><td>只做感知与记录，理解与成文交给 Agent</td></tr>
+      <tr><td>青藜是"藜"——烧火用的野草秆</td><td>朴素、廉价、随手可得，跟"极短路径"的产品性格一致</td></tr>
+    </table>
+    <div class="foot">
+      <b>问题：</b>① "藜"字略生僻，要解释读音（lí）；② <b>第 9 类是我没查透的</b>——我和子代理都只召回分类科普页，未取到详情页证据，属于"没查到"而不是"查干净"；③ 其他类别已有 6 处以上占用（27/30/29/33/36/41），说明"青藜"这词在文创、茶饮、地毯圈子有人用，"青藜论坛"还挂着生物制药公司。
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <div class="nm">击柝</div>
+      <div class="py">jī tuò</div>
+      <span class="tag ok">全类别未见</span>
+      <span class="tag warn">字生僻</span>
+    </div>
+    <div class="quote">
+      重门击柝，以待暴客，盖取诸豫。
+      <cite>《周易·系辞下》</cite>
+      <br><br>
+      抱关击柝者，皆有常职以食于上。
+      <cite>《孟子·万章下》</cite>
+    </div>
+    <p style="color:var(--tx2);font-size:13px">
+      "柝"是打更用的木梆子，"击柝"就是敲它报时兼巡夜。这个动作把两件事合成了一件事：<b>一边守着，一边把时间报给全城。</b>跟这个产品"一边盯着屏幕、一边把结果报给 Agent"是两个一对一的动作。
+      <b>而且它是本批第二个"全类别未见"的词</b>（另一个是雪案）。
+    </p>
+    <div class="foot">
+      <b>问题：</b>"柝"（tuò）绝大多数人不认识，第一眼读不出来。对工具名来说这是硬伤——名字要能口口相传，读不出的字传不了。
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <div class="nm">晨门</div>
+      <div class="py">chén mén</div>
+      <span class="tag">9类未见</span>
+      <span class="tag">《论语》出处</span>
+    </div>
+    <div class="quote">
+      子路宿于石门。晨门曰：「奚自？」子路曰：「自孔氏。」曰：「是知其不可而为之者与？」
+      <cite>《论语·宪问》</cite>
+    </div>
+    <p style="color:var(--tx2);font-size:13px">
+      "晨门"是管城门开关的小吏——<b>全城人进出都要过他那一关，而他自己不进城</b>。这个位置跟工具的位置几乎一样：所有从屏幕出去的东西都要经过它，它自己不做判断。
+      那段《论语》对话里的晨门还是个隐士，一眼看穿孔子"知其不可而为之"——有点冷眼旁观的味道，很适合一个安静待在角落的工具。
+    </p>
+    <div class="foot">
+      <b>问题：</b>① 第 35 类已被占（71134870），虽然不挡第 9 类，但说明"晨门"在做服务类生意；② 语感上偏"门"不偏"看"，跟截图动作隔一层；③ 有企业叫"晨门企业管理咨询"（上海），同名不同业务，品牌层面会有点混。
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <div class="nm">夜不收</div>
+      <div class="py">yè bù shōu</div>
+      <span class="tag warn">9类已销亡（空出）</span>
+      <span class="tag risk">角色名风险</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px">
+      这是明代辽东边军里的一个专门称号——<b>夜里也不收队的哨探</b>，专在天黑后出哨、深入敌境看动静。三个字，画面感极强，而且"不收"两个字有股狠劲。<b>第 9 类那件（20395114）已在 2024-03-06 因连续三年不使用被撤销，现在第 9 类是空的。</b>
+    </p>
+    <div class="foot">
+      <b>但这个不能直接推荐，原因很重要：</b>原注册人是<b>北京若森数字科技股份有限公司</b>——就是做《画江湖》系列动画的那家。"夜不收"极可能是它某部作品里的角色名或组织名。这意味着两件事：① 就算第 9 类商标空出来了，你还可能踩到<b>作品名称/角色名称的在先权益</b>；② 一家动画公司在用的名字，你很难独占。<b>建议：先确认"夜不收"是不是若森的动画角色，是的话就放弃。</b>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span>这批的收获不止是几个名字</h2>
+  <p class="lead">
+    九批测下来，有一件事越来越清楚：<b>你反复问的这个"意像"，本质不是一个词的问题，是这个产品在链路里的位置问题。</b>
+  </p>
+
+  <div class="cards" style="display:grid;gap:14px">
+    <div class="box" style="padding:18px 20px">
+      <h3>规律一 · 岗位名字比功能描述活得下来</h3>
+      <p style="margin:8px 0 0;color:var(--tx2);font-size:13px">
+        第八批测"替你看"（功能描述）→ 0%。这一批测"替你值这个班"（岗位/角色）→ 14/18。
+        鸡人、晨门、击柝、司更、挈壶、抱关，全是岗位。<b>岗位是别人的牌子抢不走的，因为牌子不做那份工作。</b>
+      </p>
+    </div>
+    <div class="box" style="padding:18px 20px">
+      <h3>规律二 · 越不像卖东西的词，越空</h3>
+      <p style="margin:8px 0 0;color:var(--tx2);font-size:13px">
+        雪案、击柝、抱关、抄胥——这些词读起来像在说一件旧事，不像一个产品。正因为不像产品，做产品的人没往这儿取名字。
+        <b>"不像"在这里是优势。</b>
+      </p>
+    </div>
+    <div class="box" style="padding:18px 20px">
+      <h3>规律三 · "看见"和"报出去"要配成一对</h3>
+      <p style="margin:8px 0 0;color:var(--tx2);font-size:13px">
+        雁奴管看着，鸡人/击柝/司更管报时，青藜管照亮，驿使/羽书管递出去。
+        <b>你想讲完整的产品故事，最好同时有一个"看"的字和一个"报"的字</b>——名字上只用一个，故事里可以用一对。
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span>九批合并收口</h2>
+  <p class="lead">前面各批的序列保留不动，本批新增第九序列。总排序按"第 9 类洁净度 + 语义对位度 + 上口度"三项合看。</p>
+
+  <div class="route pick">
+    <div class="rh"><div class="rk">九</div><h3>报与守序列（本批新增）</h3><span class="tag pick">新增</span></div>
+    <p>四条线各出一两个代表：照亮书页的、打更报时的、守城门的、递军报的。</p>
+    <div class="chips">
+      <span class="chip new">雪案 ★★★</span>
+      <span class="chip new">青藜 ★★★</span>
+      <span class="chip new">击柝 ★★☆</span>
+      <span class="chip new">晨门 ★★☆</span>
+      <span class="chip new">曝书 ★★☆</span>
+      <span class="chip off">夜不收 ★★☆（有角色名风险）</span>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">八</div><h3>动物哨兵序列</h3></div>
+    <div class="chips">
+      <span class="chip">雁奴 ★★★</span>
+      <span class="chip off">狐獴 / 司晨 / 斥候 / 探马 / 守望 / 耳目</span>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">七</div><h3>Agent 的眼睛序列</h3></div>
+    <div class="chips">
+      <span class="chip">代瞩</span><span class="chip">窥牖</span><span class="chip">寄目</span>
+      <span class="chip">袭明</span><span class="chip">分灯</span><span class="chip">司明</span>
+    </div>
+  </div>
+
+  <h3 style="margin:22px 0 10px">跨九批总排序（前十二）</h3>
+  <div>
+    <div class="rank top"><div class="rnum">1</div><div class="rn">书巢</div><div class="rs">干净、好念、意象温润；陆游《书巢记》南宋真人真事；靠"存放与整理"打，不靠"看"</div></div>
+    <div class="rank top"><div class="rnum">2</div><div class="rn">蜀素</div><div class="rs">干净、雅；与截图动作关联最松，需要讲故事</div></div>
+    <div class="rank top"><div class="rnum">3</div><div class="rn">雁奴</div><div class="rs">语义对位最好的"看"字；典故硬（元好问/陆游）；短板是"奴"字与词义偏冷</div></div>
+    <div class="rank new"><div class="rnum">4</div><div class="rn">雪案</div><div class="rs"><b>本批新进。</b>九批里唯一"全类别都没人占"的词；零生僻字、成语级典故；短板是"案"字歧义</div></div>
+    <div class="rank new"><div class="rnum">5</div><div class="rn">青藜</div><div class="rs"><b>本批新进。</b>九批里典故最妙的一个（替黑暗中的校书人吹亮杖头）；9 类未查透，需官网复核</div></div>
+    <div class="rank"><div class="rnum">6</div><div class="rn">代瞩</div><div class="rs">第七批首选，语义准；自造词，无典故支撑</div></div>
+    <div class="rank"><div class="rnum">7</div><div class="rn">剪烛</div><div class="rs">李商隐典，画面感强；与截图动作隔一层</div></div>
+    <div class="rank"><div class="rnum">8</div><div class="rn">窥牖</div><div class="rs">"透过小窗看"，与取景框最像；"窥"有偷看味、字偏生僻</div></div>
+    <div class="rank"><div class="rnum">9</div><div class="rn">洗砚</div><div class="rs">干净、有画面；与"看"无关，属气质路线</div></div>
+    <div class="rank"><div class="rnum">10</div><div class="rn">击柝</div><div class="rs"><b>本批新进。</b>全类别未见，动作词兼岗位；"柝"字读不出，传播吃亏</div></div>
+    <div class="rank"><div class="rnum">11</div><div class="rn">寄目</div><div class="rs">"把眼寄出去"，语义准确；jì mù 与"祭墓"同音，不吉利</div></div>
+    <div class="rank"><div class="rnum">12</div><div class="rn">晨门</div><div class="rs"><b>本批新进。</b>9 类干净、《论语》出处；35 类被占，语感偏"门"</div></div>
+  </div>
+
+  <div class="figcap" style="margin-top:14px">
+    <b>排序到第九批，前四名已经分成两种完全不同的性格：</b>
+    书巢、蜀素、雪案是<b>"案头派的雅"</b>——好听好看，靠气质打动人，但跟"截图"的关联都要靠一句解释；
+    雁奴、青藜、代瞩是<b>"讲清楚它是干什么的"</b>——语义百分百对位，但各自带着一个短板（奴字 / 生僻 / 自造）。
+    <br><b>这不是选不出来，是这条路只有这两种走法。</b>你要定的其实是这一层：这个产品对外的第一句话，是"一个很好看的桌面小工具"，还是"让 Agent 看见你的屏幕"。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">06</span>交付前，你要自己做的两件事</h2>
+  <ol class="steps">
+    <li>
+      <b>把你想定的那一个拿去官网查。</b>入口：中国商标网 <code>sbj.cnipa.gov.cn</code> → 商标网上查询 → 商标近似查询，输入名字，国际分类选第 9 类。
+      判据只有三条——看到商品项里出现 <code>计算机程序（可下载软件）</code>、<code>可下载的计算机应用软件</code>、<code>计算机软件（已录制）</code> 里任何一个，就是硬障碍。雷达、导航、电缆、显示器、眼镜、监控装置这些硬件项不挡你。
+    </li>
+    <li>
+      <b>本批有两个词我明确没查透，别当干净词用：</b>
+      ① <b>青藜</b>——我和检索代理都只召回商标分类科普页，没取到第 9 类详情页证据；② <b>候望、司更、挈壶、抱关</b>——属于"未查到"而非"查干净"，检索时还被无关音译词污染过。
+      这几个词要用，必须先去官网自己查一遍。<b>雪案、击柝这两个的"未见占用"证据比较扎实</b>（多平台交叉检索都只返回成语/词典页，连其他类别都没有）。
+    </li>
+    <li>
+      <b>夜不收要先查它是不是别人的动画角色。</b>原注册人是做《画江湖》的若森数字科技。如果"夜不收"是该公司的作品角色名或组织名，即使第 9 类商标空着，也不建议用——角色名有独立的在先权益，跟商标是两套东西。
+    </li>
+  </ol>
+
+  <div class="note" style="margin-top:20px">
+    <b>一句话总结这一批：</b>你说"继续找，10 个以上"——这批给了 18 个，其中 14 个在公开渠道上是空的，而且空得比前八批都整齐。
+    原因就一句话：<b>前面八批一直在"谁在看"里找，这批换成了"谁在报"。</b>看这件事被安防行业占满了，报这件事还没有人要。
+  </div>
+</section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 208 64" width="208" height="64" role="img" aria-label="一目 Onceglance">
+<title>一目 Onceglance</title>
+  <g transform="translate(8 8)">
+    <rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/>
+    <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+    <path d="M24 19.2V28.8" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+  </g>
+  <text x="67.2" y="33" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif" font-size="27" font-weight="500" letter-spacing="1.6" fill="#1D1D21">一目</text>
+  <text x="68" y="48" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif" font-size="11" font-weight="400" letter-spacing="2.6" fill="#1D1D21" opacity="0.62">Onceglance</text>
+</svg>

@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一目 · 中文名第八批：替 Agent 看，有没有更好的词</title>
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F7F7F8; --bg3:#EFEFF1;
+  --tx:#1D1D21; --tx2:#5C5C66; --tx3:#8E8E99;
+  --bd:#E4E4E8; --bd2:#D2D2D8;
+  --accent:#FF3B30;
+  --ok:#0F6E56; --okbg:#E1F5EE;
+  --warn:#854F0B; --warnbg:#FAEEDA;
+  --risk:#A32D2D; --riskbg:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg3); color:var(--tx);
+  font-family:-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+  font-size:14px; line-height:1.7;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:40px 24px 80px}
+header.top{
+  background:var(--bg); border-radius:16px; padding:36px 40px;
+  border:1px solid var(--bd); margin-bottom:28px;
+}
+h1{font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:.5px}
+.sub{color:var(--tx2); font-size:15px; margin:0 0 20px}
+.note{
+  background:var(--bg2); border-radius:var(--r); padding:16px 18px;
+  font-size:13px; color:var(--tx2); margin-top:18px;
+}
+.note b{color:var(--tx); font-weight:600}
+section{
+  background:var(--bg); border-radius:16px; padding:32px 40px;
+  border:1px solid var(--bd); margin-bottom:24px;
+}
+h2{
+  font-size:19px; font-weight:600; margin:0 0 6px;
+  padding-bottom:14px; border-bottom:1px solid var(--bd);
+}
+h2 .num{color:var(--accent); font-weight:600; margin-right:8px}
+h3{font-size:15px; font-weight:600; margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{color:var(--tx2); font-size:13.5px; margin:14px 0 22px}
+
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{
+  text-align:left; font-weight:600; color:var(--tx2); font-size:12px;
+  letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--bd2);
+  background:var(--bg2);
+}
+td{padding:10px; border-bottom:1px solid var(--bd); vertical-align:top}
+td.kill{color:var(--risk); font-weight:600; white-space:nowrap}
+td.keep{color:var(--ok); font-weight:600; white-space:nowrap}
+td.rev{color:var(--warn); font-weight:600; white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--tx2)}
+
+.card{
+  border:1px solid var(--bd); border-radius:14px; padding:28px 30px;
+  margin-bottom:20px; background:var(--bg);
+}
+.card.pick{border:2px solid var(--accent)}
+.chead{display:flex; align-items:center; gap:16px; margin-bottom:6px; flex-wrap:wrap}
+.nm{font-size:30px; font-weight:600; letter-spacing:4px; line-height:1.2}
+.py{font-size:13px; color:var(--tx3); letter-spacing:.6px; margin-left:2px}
+.tag{
+  font-size:11.5px; padding:3px 9px; border-radius:20px;
+  background:var(--bg3); color:var(--tx2); letter-spacing:.3px;
+}
+.tag.pick{background:var(--accent); color:#fff; font-weight:600}
+.tag.ok{background:var(--okbg); color:var(--ok)}
+.tag.warn{background:var(--warnbg); color:var(--warn)}
+.tag.risk{background:var(--riskbg); color:var(--risk)}
+.quote{
+  border-left:3px solid var(--accent); padding:10px 0 10px 16px;
+  margin:16px 0; color:var(--tx); font-size:13.5px; line-height:1.8;
+}
+.quote cite{display:block; color:var(--tx3); font-size:12px; font-style:normal; margin-top:6px; letter-spacing:.3px}
+.map{width:100%; border-collapse:collapse; margin:16px 0; font-size:13px}
+.map td{border:1px solid var(--bd); padding:9px 12px}
+.map td:first-child{background:var(--bg2); color:var(--tx2); width:32%; font-size:12.5px}
+.map td:last-child{color:var(--tx)}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.box{background:var(--bg2); border-radius:var(--r); padding:14px 16px; font-size:13px}
+.box h3{font-size:12.5px; color:var(--tx2); letter-spacing:.4px; margin-bottom:8px}
+.box ul{margin:0; padding-left:17px; color:var(--tx)}
+.box li{margin-bottom:5px}
+.box li:last-child{margin-bottom:0}
+.foot{
+  margin-top:18px; padding-top:14px; border-top:1px solid var(--bd);
+  font-size:12.5px; color:var(--tx2);
+}
+.foot b{color:var(--tx); font-weight:600}
+
+/* 条形图 */
+.bars{margin:8px 0 4px}
+.bar{display:flex; align-items:center; gap:12px; margin-bottom:12px}
+.bl{flex:0 0 200px; font-size:12.5px; color:var(--tx2); text-align:right}
+.bt{flex:1; height:26px; background:var(--bg2); border-radius:6px; overflow:hidden; position:relative}
+.bf{height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:9px; color:#fff; font-size:12px; font-weight:600; letter-spacing:.3px}
+.bf.a{background:var(--accent)}
+.bf.b{background:#C9C9CF; color:var(--tx2)}
+.bf.c{background:var(--ok)}
+.bf.d{background:var(--warn)}
+.bv{flex:0 0 92px; font-size:12px; color:var(--tx2)}
+.bf.lite{background:#F0F0F2; color:var(--tx3); padding-right:0; padding-left:9px; justify-content:flex-start}
+
+/* 三条路对比 */
+.paths{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:18px 0 8px}
+.pth{background:var(--bg2); border:1px solid var(--bd); border-radius:12px; padding:16px 16px 14px}
+.pth.hi{background:#FFF9F9; border:2px solid var(--accent)}
+.pth .cap{font-size:11.5px; color:var(--tx3); letter-spacing:.4px; margin-bottom:6px}
+.pth h3{font-size:14px; margin-bottom:9px; line-height:1.45}
+.pth .sc{font-size:22px; font-weight:600; line-height:1.2}
+.pth .sc.z{color:var(--risk)}
+.pth .sc.o{color:var(--ok)}
+.pth .sd{font-size:12px; color:var(--tx2); margin-top:6px; line-height:1.6}
+.pth ul{margin:10px 0 0; padding-left:17px; font-size:12.5px; color:var(--tx2)}
+.pth li{margin-bottom:3px}
+
+/* 序列 */
+.route{
+  border:1px solid var(--bd); border-radius:14px; padding:20px 24px;
+  margin-bottom:14px;
+}
+.route.pick{border:2px solid var(--accent); background:#FFF9F9}
+.rh{display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap}
+.rk{
+  flex:0 0 34px; height:34px; border-radius:10px; background:var(--bg3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:600; color:var(--tx2);
+}
+.route.pick .rk{background:var(--accent); color:#fff}
+.rh h3{margin:0; font-size:15.5px}
+.chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
+.chip{
+  font-size:13.5px; padding:4px 12px; border-radius:20px;
+  background:var(--bg2); color:var(--tx); border:1px solid var(--bd);
+  letter-spacing:1px;
+}
+.chip.new{background:#FFF1F0; color:var(--accent); border-color:#FFD5D2; font-weight:600}
+.chip.off{background:var(--bg2); color:var(--tx3); border-style:dashed}
+.route p{margin:0; font-size:13px; color:var(--tx2)}
+
+.rank{display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid var(--bd); font-size:13.5px}
+.rank:last-child{border-bottom:none}
+.rnum{flex:0 0 26px; height:26px; border-radius:8px; background:var(--bg3); color:var(--tx2); font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center}
+.rank.top .rnum{background:var(--accent); color:#fff}
+.rank .rn{font-weight:600; letter-spacing:2px; min-width:72px}
+.rank .rs{color:var(--tx2); font-size:12.5px; flex:1}
+.rank.new{background:#FFF9F9}
+.rank.new .rnum{background:var(--accent); color:#fff}
+
+.figcap{font-size:12.5px; color:var(--tx2); margin-top:6px; line-height:1.75}
+.figcap b{color:var(--tx)}
+ol.steps{padding-left:20px; margin:12px 0 0}
+ol.steps li{margin-bottom:9px; font-size:13.5px}
+ol.steps li b{font-weight:600}
+code{
+  background:var(--bg2); border:1px solid var(--bd); border-radius:5px;
+  padding:1px 6px; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;
+}
+@media (max-width:820px){
+  .paths{grid-template-columns:1fr}
+  .cols{grid-template-columns:1fr}
+  .wrap{padding:24px 14px 60px}
+  header.top,section{padding:24px 20px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>替 Agent 看，有没有更好的词</h1>
+  <p class="sub">中文名第八批 · 实测 9 个 · 一个绿灯、两个黄灯、六个红灯</p>
+  <p style="margin:0;color:var(--tx2);font-size:13.5px">
+    有。<b>这个词是「雁奴」</b>——而且它不在"眼睛"那条线上，它在"守夜"那条线上。
+    上一批我们换主语换对了（从"我看得清"换成"它替我看"），这一批往动物界里找了一遍，
+    发现汉语其实早就为"替大家看着"这件事取好了一个现成的名字，只是它藏在雁群里。
+  </p>
+  <div class="note">
+    <b>筛到什么程度，我先说清楚：</b>每个名字都跑了公开渠道（阿里云商标、路标网、启信宝、爱企查、企查查、猪八戒知识产权）的第 9 类检索，查到障碍的写清撞到谁、注册号多少、商品项里有没有软件。没查到的写"未见占用"。<b>但这不等于能注册</b>——公开渠道有盲查期、有更新延迟，最终必须去商标局官网自己查一遍。这一步谁也替不了。
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span>先纠一个方向：动物界里，别看"谁眼睛好"</h2>
+  <p class="lead">
+    你问"动物界有没有更好的意象"。我先验了最容易想到的那条路——找视力最好的动物。结果发现这条路是错的，而且是错在最根上的：<b>"看得清"是个器官，而"替别人看"是个行为。</b>器官类的词，前六批测了一百多个，第 9 类洁净率 0%。
+  </p>
+
+  <div class="paths">
+    <div class="pth">
+      <div class="cap">路 A · 前六批走的路</div>
+      <h3>谁的眼睛最好</h3>
+      <div class="sc z">0 / 4</div>
+      <div class="sd">鹰、隼、离朱、明眸这一类。语义漂亮，但全是红灯。</div>
+      <ul>
+        <li>撞的都是同一批人：海康、视科、安防</li>
+        <li>原因：摄像头、监控、智能眼镜、AI 视觉全挤在第 9 类</li>
+        <li><b>"看得清"对它们是刚需</b></li>
+      </ul>
+    </div>
+    <div class="pth">
+      <div class="cap">路 B · 本轮试的路</div>
+      <h3>替看这件事，汉语里叫什么</h3>
+      <div class="sc z">0 / 4</div>
+      <div class="sd">斥候、探马、守望、耳目。语义最准，但全军覆没。</div>
+      <ul>
+        <li>这四个词说的就是"我在替你看家"</li>
+        <li>而这句话，正好是安防行业的广告词</li>
+        <li><b>行业早把它们当取名词库用光了</b></li>
+      </ul>
+    </div>
+    <div class="pth hi">
+      <div class="cap">路 C · 本轮走通的路</div>
+      <h3>替全群守夜的那种动物，它自己叫什么</h3>
+      <div class="sc o">1 / 3 绿灯</div>
+      <div class="sd">雁奴、狐獴、司晨。唯一活口是雁奴。</div>
+      <ul>
+        <li>动物名太文学，不在安防的取名习惯里</li>
+        <li>反而因为冷门而干净</li>
+        <li><b>它的眼睛好不好不重要，重要的是它不睡</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="figcap">
+    <b>这三格是本轮最有用的东西。</b>路 A 和路 B 都死在同一个逻辑上：它们是"功能描述"。
+    而第 9 类里，"描述功能"的词天然会被做同类功能的企业抢走——你的名字越像说明书的标题，越容易撞上别人正在卖的同一件事。
+    路 C 之所以能活，是因为"雁奴"不是个功能词，它是个<b>角色名</b>。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>动物里"替大家看着"的，实测三个</h2>
+  <p class="lead">
+    动物界真正对位的行为是"哨兵行为"——群体里留一个不睡、替全群警戒。全世界都认识的那个哨兵是狐獴，汉语古典里的那个哨兵是雁奴。我把这两个，加上一个报时的司晨，一起验了。
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:11%">名字</th><th style="width:17%">它的行为</th><th>第 9 类实测</th><th style="width:11%">判定</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>雁奴</b><br><span class="mono">yàn nú</span></td>
+        <td>雁群夜宿，留一只在外围不睡放哨，有动静就鸣叫报警。<br><b>它就是为"替全群看着"而存在的那只</b></td>
+        <td><b>第 9 类未见占用。</b>全类别里只查到一件：桐乡市威古拉服饰有限公司 第 <b>25 类</b> 服装鞋帽 <span class="mono">16899652</span>，商品项是童装、内衣、成品衣、鞋帽围巾婚纱——<b>一件软件项都没有，而且第 25 类本来就不挡第 9 类</b>。该件专用权 2016-07-07 至 2026-07-06，<b>已经到期</b>。另有一个同音不同字的「燕奴」（中山市燕奴服饰）也在服装类，与第 9 类无关。</td>
+        <td class="keep">绿灯</td>
+      </tr>
+      <tr>
+        <td><b>狐獴</b><br><span class="mono">hú měng</span></td>
+        <td>站岗放哨的狐獴，全世界最著名的哨兵形象</td>
+        <td>第 9 类有一件：深圳市添络科技 <span class="mono">16817937</span>，专用权 2016-06-21 至 2026-06-20（<b>已到期</b>）。商品项是 <b>0901-计算机外围设备、0908-电子监控装置、0909-照相机、0921-眼镜</b>——<b>注意：不含"计算机软件"，所以严格按判定法它不算硬障碍。</b>但"狐獴"作为现代动物名，另有上海狐獴企业管理有限公司在用（獴宝惠玩儿、CLUB 之类），字族周围有活人。</td>
+        <td class="rev">黄灯</td>
+      </tr>
+      <tr>
+        <td><b>司晨</b><br><span class="mono">sī chén</span></td>
+        <td>公鸡报晓，管的是"宣告"，不是"看"</td>
+        <td>第 9 类三件压顶：<span class="mono">84984291</span>（商品项仅 0921-眼镜，这一件不挡软件）、<span class="mono">86735423</span>（商品项含 <b>可下载的手机应用软件</b>——<b>硬障碍</b>）、<span class="mono">88064076</span>（<b>待审中</b>，商品项含 <b>可下载的计算机应用软件</b>）。语义上它也是三个里最偏的：报晓是"我告诉你天亮了"，而不是"我替你盯着"。</td>
+        <td class="kill">红灯</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="figcap">
+    <b>顺便说一个反直觉的发现：狐獴虽然是"哨兵"这个意象的全球代表，但它恰恰是最不该选的那类。</b>
+    原因不在商标，在名字本身——"狐獴"是个现代译名，它在中国人的语感里是动物园的、纪录片的、表情包的，
+    没有一层"替你看守"的汉字含义。而"雁奴"的每一个字都在说这件事。选意象，选的是字，不是图。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">03</span>汉语里"替看"那个动作的词，全被安防占了</h2>
+  <p class="lead">
+    动物名只是路 C。路 B 我本来最看好——因为"斥候""探马"这两个词说的就是"替主家去看"，字面上比"雁奴"还直接。结果是本轮最惨的一片。
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:11%">名字</th><th style="width:16%">它说的动作</th><th>第 9 类撞到谁</th><th style="width:11%">判定</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>斥候</b><br><span class="mono">chì hòu</span></td>
+        <td>古代侦察兵，替军队去前面看</td>
+        <td>三件围死：「先遣斥候」<span class="mono">18687001</span>，商品项含 <b>计算机软件（已录制）</b>——<b>硬障碍</b>；「斥候府」<span class="mono">51610497</span>，商品项含 <b>可下载的计算机应用软件</b>；「斥候 POINTMAN」<span class="mono">54037515</span> 已在驳回复审流程里。整族被占。</td>
+        <td class="kill">红灯</td>
+      </tr>
+      <tr>
+        <td><b>探马</b><br><span class="mono">tàn mǎ</span></td>
+        <td>骑马去前面打探消息的人</td>
+        <td>北京探马企服 <span class="mono">58229747</span>、<span class="mono">58202553</span> 两件均在等待实质审查，另有 <span class="mono">46451000</span> 落在第 9 类；探马（安徽）TEMASIC TEC <span class="mono">86598318</span>、探马智科 <span class="mono">86597491</span> 同样在第 9 类。<b>一个正在第 9 类密集布局的对手</b>，比已注册的更难碰——因为它还在往四周铺。</td>
+        <td class="kill">红灯</td>
+      </tr>
+      <tr>
+        <td><b>守望</b><br><span class="mono">shǒu wàng</span></td>
+        <td>守在原地，看着</td>
+        <td>守望云 <span class="mono">30773021</span>，商品项含 <b>计算机程序（可下载软件）、计算机软件（已录制）</b>——<b>硬障碍</b>；守望星 <span class="mono">12325525</span>，商品项含 <b>计算机软件（已录制）</b>。两件都是软件项。</td>
+        <td class="kill">红灯</td>
+      </tr>
+      <tr>
+        <td><b>耳目</b><br><span class="mono">ěr mù</span></td>
+        <td>眼睛和耳朵，引申为替人打探消息的人</td>
+        <td>安耳目 <span class="mono">7239927</span>，商品项含 <b>可下载的计算机程序、电子监控装置</b>——<b>硬障碍</b>；北京爱耳目科技 <span class="mono">17962514</span>，商品项含 <b>计算机软件（已录制）、电子监控装置</b>。<b>"耳目"＝安防，这个等号在第 9 类已经被画死了。</b></td>
+        <td class="kill">红灯</td>
+      </tr>
+      <tr>
+        <td><b>候骑</b><br><span class="mono">hòu jì</span></td>
+        <td>王维"萧关逢候骑"——巡逻侦察的骑兵</td>
+        <td>第 9 类未查到有效记录。但只是"没查到"，不是"查干净了"；且它跟"斥候""探马"同一家族，同族全占的情况下，单点空位的实际可注册性要打问号。</td>
+        <td class="rev">待查</td>
+      </tr>
+      <tr>
+        <td><b>柱下史</b><br><span class="mono">zhù xià shǐ</span></td>
+        <td>老子做过的官，管典籍档案</td>
+        <td>第 9 类未查到记录。但语义不贴——它是"记事的史官"，不是"替你看的哨兵"。既然不贴，干净也没意义。</td>
+        <td class="rev">不值得</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="figcap">
+    <b>为什么这四个词全死？</b>因为它们说的那句"我在替你看家"，恰好就是安防行业要卖的那个东西。
+    你想想监控摄像头的宣传语——"替您守着""眼观六路""24 小时看护"。
+    <b>谁的功能就是"替人看"，谁就会把"替人看"的词先用掉。</b>这条规律比第七批那条更狠：第七批是"看得清"的词被占，这一批连"替你看"的词也被占了。语义越准，抢的人越多。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span>本轮唯一的绿灯：雁奴</h2>
+  <p class="lead">
+    它活下来，是因为它绕开了上面那个陷阱：它不描述功能，它指认一个角色。而且这个角色在汉语古典里是有正式身份的——教育部《重编国语辞典修订本》里有它的条目。
+  </p>
+
+  <div class="card pick">
+    <div class="chead">
+      <div class="nm">雁奴</div>
+      <div class="py">yàn nú</div>
+      <span class="tag pick">本轮首选</span>
+      <span class="tag ok">第 9 类未见占用</span>
+      <span class="tag">典故真实</span>
+      <span class="tag warn">字面有争议</span>
+    </div>
+
+    <div class="quote">
+      雁群夜宿沙渚，围在大雁外围，以防备敌人或狐袭击的孤雁，称为「雁奴」。
+      <cite>教育部《重编国语辞典修订本》· 雁奴</cite>
+    </div>
+
+    <div class="quote">
+      鴈宿於江湖沙渚中，動計千百。尤者居中，令鴈奴圍而警採捕者。
+      <cite>曾慥《類說》卷五四 引《玉堂閒話》</cite>
+    </div>
+
+    <div class="quote">
+      雁奴辛苦候寒更，梦破黄芦雪打声。
+      <cite>金 · 元好问《惠崇芦雁》三首之二</cite>
+    </div>
+
+    <div class="quote">
+      寧為雁奴死，不作鶴媒生。
+      <cite>宋 · 陆游《古意》之二（钱仲联校注本）</cite>
+    </div>
+
+    <div class="quote">
+      為群榮雁奴，作倀恥鶴媒。
+      <cite>陈毅《感事》（另：清 · 金农《秋雨》「夜同鴈奴警」、宋 · 汪元量「塞煖雁奴歸」）</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>雁群夜宿沙渚，动计千百，尤者居中</td><td>屏幕就是那个"现场"，你在里面干活，你是那只"居中的"</td></tr>
+      <tr><td>令雁奴围而警採捕者</td><td>一目守在屏幕外围，一直盯着，看有没有东西来动它</td></tr>
+      <tr><td>不睡，专司警戒</td><td>常驻后台，不被注意到地一直看着——这正是一个工具该有的存在方式</td></tr>
+      <tr><td>是雁群里最小的一只</td><td>它不是主角，Agent 才是；它是那个小的、替大家干脏活的</td></tr>
+      <tr><td>遇敌即鸣，一叫全群惊起</td><td>一有结果，就"鸣"一声把 Agent 叫醒，把图递过去</td></tr>
+      <tr><td>宁为雁奴死，不作鹤媒生</td><td>鹤媒是把同类引向猎网的那只鹤。只做本地的守夜者，不做把屏幕送出去的那只"鹤媒"</td></tr>
+    </table>
+
+    <div class="cols">
+      <div class="box">
+        <h3>它为什么好</h3>
+        <ul>
+          <li><b>语义是八批里最准的一个。</b>它不是"看得清"，它字面上就是"替全群守夜"。你要的那个意象，汉语早就取好名字了</li>
+          <li><b>第 9 类公开渠道未见占用。</b>词冷，不在安防的取名习惯里，所以没被抢</li>
+          <li><b>典故是硬的。</b>教育部辞典有正式条目，元好问、陆游、金农、陈毅都写过，不是自造词</li>
+          <li><b>不生僻。</b>认识"雁"和"奴"就能念出来，两个字，好打</li>
+          <li><b>陆游那句正好把话说圆了</b>：雁奴替全群守夜而死，鹤媒靠出卖同类活着。产品"零上传、零遥测、只做本地感知"的立场，用这一句就够了</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>它的问题（必须说清）</h3>
+        <ul>
+          <li><b>"奴"字第一眼可能有卑微感。</b>现代人看到"奴"，先想到房奴、车奴、卡奴。这是这个方案唯一的、也是最真实的短板</li>
+          <li><b>第 25 类有一件同名服装商标</b>「雁奴 YANNU&amp;SSHAN」（桐乡市威古拉服饰，16899652，2016–2026，刚到期）。它不挡第 9 类，但说明服装上有人用过这个名字</li>
+          <li><b>词义偏冷，需要一句话解释。</b>不像"一目"那样看一眼就懂。对工具名来说这在可接受范围内，但不算零成本</li>
+          <li><b>"雁奴"在古诗里偶尔也泛指雁</b>（汪元量那句），不算歧义，但确实不是单一用法</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot">
+      <b>需要你拍板的地方：那个"奴"字。</b>三条路，我推荐第一条：
+      <br><b>A（推荐）直接用「雁奴」。</b>理由：古汉语里的"奴"是昵称用法，不是卑称——陆游自己写"狸奴"叫猫，苏轼写"橘奴"叫橘树，"衔蝉奴"也是猫。它是"小名"，不是"奴隶"。保住典故，就得接受这个字。
+      <br><b>B 换「雁候」或「雁警」</b>，躲开"奴"字。代价是典故断掉——这两个词古典里没有现成用法，等于退回第七批"代瞩"那种自造词的路子，语义还更绕。
+      <br><b>C 名字不上商标、只做故事。</b>"雁奴"只当作文案里的意象（官网第一句、logo 说明、发布文案），商标另选。"一目"现在卡在深圳一目科技的第 9 类障碍上，如果最终决定换名，雁奴是可以上商标的那个；如果不换名只做规避，"雁奴"当故事用也很划算。
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span>三条规律，能省你后面的力气</h2>
+  <p class="lead">这三条是八批测下来最值钱的东西，跟具体哪个名字无关。以后不管你自己取名还是找人取名，都能用。</p>
+
+  <div class="cards" style="display:grid;gap:14px">
+    <div class="box" style="padding:18px 20px">
+      <h3>规律一 · 描述功能的词，一定被做同一件事的企业用掉</h3>
+      <p style="margin:8px 0 0;color:var(--tx2);font-size:13px">
+        前六批测"看得清"，0%；第八批测"替你看"，还是 0%。因为你说的功能，等于别人的经营范围。<b>名字越像一句功能说明，越有人正在卖这件事。</b>
+      </p>
+    </div>
+    <div class="box" style="padding:18px 20px">
+      <h3>规律二 · 要的是角色，不是形容词</h3>
+      <p style="margin:8px 0 0;color:var(--tx2);font-size:13px">
+        "雁奴"能活，是因为它不是形容"看"的，是<b>指认一个身份</b>——替全群守夜的那只。类别名、职业名、器物名都往这个方向想，形容词别想。
+      </p>
+    </div>
+    <div class="box" style="padding:18px 20px">
+      <h3>规律三 · 冷门本身就是护城河（但要付解释成本）</h3>
+      <p style="margin:8px 0 0;color:var(--tx2);font-size:13px">
+        "雁奴"干净，唯一原因就是它冷——安防公司取名不会翻古诗。代价是用户第一眼不懂。<b>这笔交易值不值，取决于你更怕撞车，还是更怕听不懂。</b>
+      </p>
+    </div>
+  </div>
+
+  <div class="figcap" style="margin-top:18px">
+    <b>第七批和第八批合起来，其实只说明了一件事：</b>你这个产品最难取名的地方，不在它"做了什么"，
+    而在它"处在什么位置"——它不替人看，也不自己看，它是<b>替另一个东西看的那一层</b>。
+    汉语里为这个位置准备好的现成词很少，"雁奴"是目前找到的最贴的一个。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">06</span>八批合并收口</h2>
+  <p class="lead">前面各批的序列保留不动，本批只新增第八序列。总排序按"第 9 类洁净度 + 语义对位度 + 上口度"三项合看。</p>
+
+  <div class="route pick">
+    <div class="rh"><div class="rk">八</div><h3>动物哨兵序列（本批新增）</h3><span class="tag pick">新增</span></div>
+    <p>唯一活口：雁奴。其余是被同一批安防公司占掉的哨兵词。</p>
+    <div class="chips">
+      <span class="chip new">雁奴 ★★★</span>
+      <span class="chip off">狐獴（黄灯）</span>
+      <span class="chip off">司晨</span>
+      <span class="chip off">斥候</span>
+      <span class="chip off">探马</span>
+      <span class="chip off">守望</span>
+      <span class="chip off">耳目</span>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">七</div><h3>Agent 的眼睛序列</h3><p style="margin:0;color:var(--tx3);font-size:12.5px">第七批成果</p></div>
+    <div class="chips">
+      <span class="chip">代瞩</span><span class="chip">窥牖</span><span class="chip">寄目</span>
+      <span class="chip">袭明</span><span class="chip">分灯</span><span class="chip">司明</span>
+    </div>
+  </div>
+
+  <h3 style="margin:22px 0 10px">跨八批总排序（前十）</h3>
+  <div>
+    <div class="rank top"><div class="rnum">1</div><div class="rn">书巢</div><div class="rs">干净、好念、意象温润；语义靠"存放与整理"打，不是靠"看"</div></div>
+    <div class="rank top"><div class="rnum">2</div><div class="rn">蜀素</div><div class="rs">干净、雅；但与截图这个动作的关联最松，需要讲故事</div></div>
+    <div class="rank new"><div class="rnum">3</div><div class="rn">雁奴</div><div class="rs"><b>本轮新进。</b>语义对位八批第一，典故最硬，第 9 类未见占用；短板是"奴"字与词义偏冷</div></div>
+    <div class="rank"><div class="rnum">4</div><div class="rn">代瞩</div><div class="rs">第七批首选，语义准；但是自造词，无典故支撑</div></div>
+    <div class="rank"><div class="rnum">5</div><div class="rn">剪烛</div><div class="rs">李商隐典，画面感强；与截图动作隔一层</div></div>
+    <div class="rank"><div class="rnum">6</div><div class="rn">窥牖</div><div class="rs">"透过小窗看"，与取景框最像；生僻度偏高</div></div>
+    <div class="rank"><div class="rnum">7</div><div class="rn">洗砚</div><div class="rs">干净、有画面；与"看"无关，属气质路线</div></div>
+    <div class="rank"><div class="rnum">8</div><div class="rn">寄目</div><div class="rs">"把眼寄出去"，语义准确；读感略生硬</div></div>
+    <div class="rank"><div class="rnum">9</div><div class="rn">袭明</div><div class="rs">《道德经》"是谓袭明"；语义偏隐，指向不明显</div></div>
+    <div class="rank"><div class="rnum">10</div><div class="rn">芣苢</div><div class="rs">《诗经》植物名，独特度最高；多数人不认识怎么读</div></div>
+  </div>
+
+  <div class="figcap" style="margin-top:14px">
+    <b>怎么读这个排序：</b>书巢、蜀素赢在"念起来好听、写出来好看"，
+    雁奴赢在"最准确地说出这个东西是干什么的"。这三件事很难在同一名字里全占。
+    如果这个产品的对外沟通重点是"让 Agent 看见屏幕"，雁奴的准确度值这个位置；
+    如果重点是"一个品味很好的小工具"，书巢和蜀素更省事。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">07</span>交付前，你要自己做的两件事</h2>
+  <p class="lead">公开渠道只能做到这一步。下面是雁奴这个方案真正定下来之前，必须由你或代理机构完成的动作。</p>
+
+  <ol class="steps">
+    <li>
+      <b>去商标局官网查一遍「雁奴」在第 9 类的状态。</b>官方入口：中国商标网 <code>sbj.cnipa.gov.cn</code> → 商标网上查询 → 商标近似查询，输入"雁奴"，选国际分类第 9 类。
+      重点看三件事：① 有没有 2026 年 7 月之后新递交的申请（公开渠道盲查期约 3–6 个月，我这边看不到）；② 「雁奴」第 25 类那件 <span class="mono">16899652</span> 是否已续展（若不续展，服装类也会腾出来）；③ 有没有以"雁""奴"为要素的近似商标被判为近似。
+    </li>
+    <li>
+      <b>确认你要注册的商品项，并且只挑软件那三项。</b>按本项目一直用的判定标准，真正会挡你的只有三种表述：
+      <code>计算机程序（可下载软件）</code>、<code>可下载的计算机应用软件</code>、<code>计算机软件（已录制）</code>。
+      硬件类（雷达、导航、电缆、显示器、眼镜）不挡你。查到有人在这些硬件项上占着"雁奴"，不必惊慌；查到有人在上面三项任何一项上占着，就得重新考虑。
+    </li>
+    <li>
+      <b>如果决定用「雁奴」，顺手把 logo 的事接上。</b>现在的印章·甲骨目图形标记本来就与名字无关，可以直接配。
+      唯一要调整的是：如果这版名字定了"守夜的雁"，印章的叙事可以从"目"往"夜/守"上偏一点点——这个等你定了名再说，不着急。
+    </li>
+  </ol>
+
+  <div class="note" style="margin-top:20px">
+    <b>一句话总结这一批：</b>你问"替 Agent 看有没有更好的词"，答案是有的，但它不在"看"这条线上——
+    在"替谁守夜"这条线上。汉语为这个角色准备的现成词叫<b>雁奴</b>。它干净、有出处、语义最准，代价是"奴"字不够体面。
+    值不值得，取决于你更在意准确，还是更在意体面。
+  </div>
+</section>
+
+</div>
+</body>
+</html>

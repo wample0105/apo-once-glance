@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一目 · 动物方向复查与四轮收口</title>
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F7F7F8; --bg3:#EFEFF1;
+  --tx:#1D1D21; --tx2:#5C5C66; --tx3:#8E8E99;
+  --bd:#E4E4E8; --bd2:#D2D2D8;
+  --accent:#FF3B30;
+  --ok:#0F6E56; --okbg:#E1F5EE;
+  --warn:#854F0B; --warnbg:#FAEEDA;
+  --risk:#A32D2D; --riskbg:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg3); color:var(--tx);
+  font-family:-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+  font-size:14px; line-height:1.7;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:40px 24px 80px}
+header.top{
+  background:var(--bg); border-radius:16px; padding:36px 40px;
+  border:1px solid var(--bd); margin-bottom:28px;
+}
+h1{font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:.5px}
+.sub{color:var(--tx2); font-size:15px; margin:0 0 20px}
+.note{
+  background:var(--bg2); border-radius:var(--r); padding:16px 18px;
+  font-size:13px; color:var(--tx2); margin-top:18px;
+}
+.note b{color:var(--tx); font-weight:600}
+.note.ok{background:var(--okbg); color:var(--ok)}
+.note.ok b{color:var(--ok)}
+.note.risk{background:var(--riskbg); color:var(--risk)}
+.note.risk b{color:var(--risk)}
+section{
+  background:var(--bg); border-radius:16px; padding:32px 40px;
+  border:1px solid var(--bd); margin-bottom:24px;
+}
+h2{
+  font-size:19px; font-weight:600; margin:0 0 6px;
+  padding-bottom:14px; border-bottom:1px solid var(--bd);
+}
+h2 .num{color:var(--accent); font-weight:600; margin-right:8px}
+h3{font-size:15px; font-weight:600; margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{color:var(--tx2); font-size:13.5px; margin:14px 0 22px}
+
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{
+  text-align:left; font-weight:600; color:var(--tx2); font-size:12px;
+  letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--bd2);
+  background:var(--bg2);
+}
+td{padding:10px; border-bottom:1px solid var(--bd); vertical-align:top}
+td.kill{color:var(--risk); font-weight:600; white-space:nowrap}
+td.keep{color:var(--ok); font-weight:600; white-space:nowrap}
+td.rev{color:var(--warn); font-weight:600; white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--tx2)}
+
+.bar{
+  margin:14px 0 6px; padding:0;
+}
+.row{margin-bottom:16px}
+.rlabel{
+  display:flex; justify-content:space-between; align-items:baseline;
+  font-size:13px; margin-bottom:6px; gap:12px;
+}
+.rlabel b{font-weight:600}
+.rlabel span{color:var(--tx2); font-size:12px; white-space:nowrap}
+.track{
+  height:26px; background:var(--bg3); border-radius:6px; overflow:hidden;
+  display:flex;
+}
+.fill{height:100%; display:flex; align-items:center; justify-content:center; font-size:12px; color:#fff; font-weight:600}
+.fill.zero{background:var(--risk)}
+.fill.low{background:var(--warn)}
+.fill.mid{background:var(--ok)}
+.fill.rest{background:transparent}
+
+.quote{
+  border-left:3px solid var(--accent); padding:10px 0 10px 16px;
+  margin:16px 0; color:var(--tx); font-size:13.5px; line-height:1.8;
+}
+.quote cite{display:block; color:var(--tx3); font-size:12px; font-style:normal; margin-top:6px; letter-spacing:.3px}
+
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.box{background:var(--bg2); border-radius:var(--r); padding:14px 16px; font-size:13px}
+.box h3{font-size:12.5px; color:var(--tx2); letter-spacing:.4px; margin-bottom:8px}
+.box ul{margin:0; padding-left:17px; color:var(--tx)}
+.box li{margin-bottom:5px}
+.box li:last-child{margin-bottom:0}
+
+.route{
+  border:1px solid var(--bd); border-radius:14px; padding:22px 24px;
+  margin-bottom:14px; display:flex; gap:18px; align-items:flex-start;
+}
+.route.pick{border:2px solid var(--accent); background:#FFF9F9}
+.rk{
+  flex:0 0 40px; height:40px; border-radius:11px; background:var(--bg3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; font-weight:600; color:var(--tx2);
+}
+.route.pick .rk{background:var(--accent); color:#fff}
+.rb{flex:1}
+.rb h3{margin-bottom:6px; font-size:15.5px}
+.rb p{margin:0; font-size:13px; color:var(--tx2)}
+.rb p+p{margin-top:8px}
+.rb .lk{color:var(--tx); font-weight:600; font-size:14px; letter-spacing:1px}
+
+.foot{
+  margin-top:18px; padding-top:14px; border-top:1px solid var(--bd);
+  font-size:12.5px; color:var(--tx2);
+}
+.foot b{color:var(--tx); font-weight:600}
+ol.steps{padding-left:20px; margin:12px 0 0}
+ol.steps li{margin-bottom:9px; font-size:13.5px}
+code{
+  background:var(--bg2); border:1px solid var(--bd); border-radius:5px;
+  padding:1px 6px; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;
+}
+.figcap{font-size:12.5px; color:var(--tx2); margin-top:10px; line-height:1.75}
+.figcap b{color:var(--tx)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>动物这条路，我建议就此封掉</h1>
+  <p class="sub">这一轮查了 8 个，干净的 0 个 · 四轮累计 14 个动物名，只活下来 1 个</p>
+  <p style="margin:0;color:var(--tx2);font-size:13.5px">
+    上一轮我说"真要往动物方向走，得挑冷门的"。这一轮我按视力冠军的名单挨个查了——螳螂虾、壁虎、鸮、鲎、变色龙、眼镜猴，全是冷门、全是"视觉冠军"。结果是<b>一个都没剩下</b>。查完我明白为什么了，这个原因比结果本身更重要。
+  </p>
+  <div class="note risk">
+    <b>先给结论：动物名这条路走不通，不是运气问题，是结构问题。</b>下面这个理由，看完你就不会想再试了——<b>你这个行业最想讲的故事就是"看得清"，所以"视力冠军"的词，是全行业的公共素材，早被同行犁过一遍了。</b>
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span>这一轮查的 8 个，一个都没剩下</h2>
+  <p class="lead">前六个是各种"视力冠军"，后两个是我想试试能不能绕开动物名——也没绕开。</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:13%">名字</th>
+        <th style="width:11%">它的本事</th>
+        <th style="width:50%">撞到谁（公开渠道检索结果）</th>
+        <th style="width:26%">结论</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>螳螂虾</b><span class="mono"><br>táng láng xiā</span></td>
+        <td>色彩通道冠军</td>
+        <td>第9类 <span class="mono">51212238</span>（郑州谱光英才，2021-08-21 注册）<b>但没选 0901</b>，只到 0902 人脸识别／0909 热成像相机／0911 光学器械／0913 芯片等；同一家公司另有第41类 <span class="mono">51205268</span>（培训、教学、书籍出版）、第11类；且有「郑州螳螂虾数字技术有限公司」在营</td>
+        <td class="rev">部分障碍<br><span style="font-weight:400;color:var(--tx2)">9类软件项是空的，但对方把 41 类培训拿了，跟我们做教程正面撞；公司名本身就是这四个字，绕不开</span></td>
+      </tr>
+      <tr>
+        <td><b>壁虎</b><span class="mono"><br>bì hǔ</span></td>
+        <td>夜间灵敏度冠军</td>
+        <td>第9类至少三件：<span class="mono">22988058</span>（安庆银都贸易，含"计算机程序(可下载软件)""可下载的计算机应用软件"）；壁虎智洁 <span class="mono">90510663</span>（含 0901 计算机软件(已录制)，已初审）；壁虎防滑 <span class="mono">34442284</span>（含 0901 可下载的手机应用软件）</td>
+        <td class="kill">硬障碍<br><span style="font-weight:400;color:var(--tx2)">"壁虎"是最常被拿来做软件名的动物之一</span></td>
+      </tr>
+      <tr>
+        <td><b>鸮</b><span class="mono"><br>xiāo</span></td>
+        <td>夜视代表</td>
+        <td>整个"鸮"字族在9类被密集申请：九鸮 <span class="mono">91839204</span>（含 0901 已录制的计算机程序，待审）；雪鸮 <span class="mono">72706247</span>（北京智芯微电子，含 0901 计算机软件(已录制)等一整串，已初审）；云鸮 <span class="mono">90807421</span>（利尔达科技，含 0901 可下载的计算机应用软件，已初审）；鸣鸮 <span class="mono">92157567</span>（含 0901 已录制的计算机程序，已初审）</td>
+        <td class="kill">硬障碍<br><span style="font-weight:400;color:var(--tx2)">单字"鸮"本身也许还空，但"鸮"是这四个的显著识别部分，近似风险很高。而且四件都是 2026 年新递的，说明有人在抢这一族</span></td>
+      </tr>
+      <tr>
+        <td><b>鲎</b><span class="mono"><br>hòu</span></td>
+        <td>复眼研究经典</td>
+        <td>「鲎鱼」第9类已注册，<b>0901 全群组选了</b>（计算机、手机、照相机、生物芯片、眼镜、电池、动画片等），目前在商标交易平台挂卖；单字「鲎」另有 <span class="mono">65697517</span>／<span class="mono">65695998</span>（浙江美驯科技，0919 潜水护目镜 + 0921 眼镜，<b>不含 0901</b>）与 <span class="mono">56056555</span></td>
+        <td class="kill">硬障碍<br><span style="font-weight:400;color:var(--tx2)">"鲎鱼"把 0901 占满了，单字"鲎"就是它的显著部分</span></td>
+      </tr>
+      <tr>
+        <td><b>变色龙</b><span class="mono"><br>biàn sè lóng</span></td>
+        <td>视野冠军</td>
+        <td>第9类至少三件：<span class="mono">18695827</span>（赛默飞世尔上海，含 0901 可下载的计算机应用软件、计算机软件(已录制)）；<span class="mono">23312810</span>（深圳章鱼信息科技，含 0901 计算机程序(可下载软件)、监视程序）；<span class="mono">52241073</span>（广州诺德智能，0908 音像类）；另有「超级变色龙」<span class="mono">93020224</span> 2026 年新申请，0901 选了一大串</td>
+        <td class="kill">硬障碍<br><span style="font-weight:400;color:var(--tx2)">连"超级变色龙"都有人在递了</span></td>
+      </tr>
+      <tr>
+        <td><b>眼镜猴</b><span class="mono"><br>yǎn jìng hóu</span></td>
+        <td>眼球占比冠军</td>
+        <td>第9类 <span class="mono">74763820</span> 已注册，含 0901 可下载的手机应用软件、头戴式显示器、智能眼镜；另有另一件第9类「眼镜猴」在商标交易平台出售（0901 计算机外围设备、0909 照相机、0902 行车记录仪）</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>卧游</b><span class="mono"><br>wò yóu</span></td>
+        <td colspan="2">宗炳"澄怀观道，卧以游之"——老病不能出行，把山水挂在墙上躺着看，等于游过了。语义跟"让 Agent 替你看"几乎完美同构。<br>查到：「卧游网络」第9类 <span class="mono">90857169</span>（杭州卧游网络科技，2026-03-29 申请，0901 选了一大串）<b>已于 2026-07-01 驳回</b>；杭州卧游网络科技有限公司在营。单字「卧游」第9类未查到直接注册。</td>
+        <td class="rev">半干净，但<br><span style="font-weight:400;color:var(--tx2)">四字版被驳，说明 9 类里确实有拦路的东西（只是我没查到）。这反而是个警示信号，不是好消息</span></td>
+      </tr>
+      <tr>
+        <td><b>澄怀</b><span class="mono"><br>chéng huái</span></td>
+        <td colspan="2">出自宗炳《画山水序》"澄怀味象"，意思是把心清空，才能看清山水本来的样子。<br>查到：第9类未查到直接注册。但第43类（杭州澄怀实业）、第33类（酒）、第12类（澄怀(济南)文化科技，无人机）均有注册；澄怀(济南)文化科技<b>经营范围含"数字文化创意软件开发""软件销售"</b>。</td>
+        <td class="rev">半干净，但<br><span style="font-weight:400;color:var(--tx2)">同名公司做软件，虽然不是9类注册，但做起来容易被找上门</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="foot">
+    <b>这一轮的成绩：查明 8 个，硬障碍 6 个，部分障碍 1 个（螳螂虾），"半干净但已被驳过一次"1 个（卧游），"半干净但有关联公司"1 个（澄怀）。真正能叫"干净"的：0 个。</b>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>为什么"视力冠军"反而最该避开——这才是关键</h2>
+  <p class="lead">上一轮我以为撞车是运气不好，这一轮查完才看明白：不是运气，是必然。</p>
+
+  <p>把两轮查过的 14 个动物名摆在一起，规律非常刺眼：</p>
+
+  <table>
+    <thead>
+      <tr><th style="width:22%">视力上的地位</th><th style="width:30%">查过的名字</th><th style="width:48%">商标结果</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>各项冠军</b><br><span style="color:var(--tx2);font-size:12.5px">最该有资格用的</span></td>
+        <td>螳螂虾（色彩）、壁虎（夜视）、变色龙（视野）、眼镜猴（眼球占比）、鹘鹰（猛禽代表）</td>
+        <td class="kill">全撞，唯一例外在下面单独说</td>
+      </tr>
+      <tr>
+        <td><b>猛禽精锐</b><br><span style="color:var(--tx2);font-size:12.5px">锐度最高的那一类</span></td>
+        <td>隼目、重明鸟、重瞳、翠鸟</td>
+        <td class="kill">全撞。隼目那件连商品项都跟我们一字不差</td>
+      </tr>
+      <tr>
+        <td><b>好懂的常见动物</b></td>
+        <td>蜻蜓、鸮（字族）、鲎</td>
+        <td class="kill">全撞，且都是多件扎堆</td>
+      </tr>
+      <tr>
+        <td><b>唯一活口</b></td>
+        <td>鹘鹰 <span class="mono">9842730</span></td>
+        <td class="keep">不挡——但原因很说明问题：它归中国航空工业集团沈阳飞机设计研究所，选的是雷达／导航／信号／控制板／电缆，<b>没选 0901 软件项</b>，所以不构成障碍</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="quote">
+    14 个动物名，13 个撞，唯一没挡的那个，不是因为没人抢，恰恰是因为抢先的人<b>没要软件那一项</b>。换句话说：这不是名字干净，是刚好错开了。
+    <cite>换个说法——你想要的这个词，别人也想要；你以为的"冷门视角"，恰好是整个行业最想讲的故事。</cite>
+  </div>
+
+  <h3 style="margin-top:26px">这才是真正的原因</h3>
+  <p>你做的产品，核心卖点是"看得清、看得准"。那么"视觉最强的动物"就是<b>这个行业最自然、最公共的品牌素材</b>。18 万家 AI 公司里，只要有一批人跟你想到一块去了，这些词就被占了。而"视力冠军"这个名单是固定的、公开的、写在所有科普文章里的——**连找都不用找，谁都能查到**。</p>
+  <p>所以撞击率是 13/14。这不是巧合。这也解释了前几轮的发现：</p>
+
+  <div class="cols">
+    <div class="box">
+      <h3>越贴合产品故事 → 撞得越狠</h3>
+      <ul>
+        <li><b>"看"相关的词</b>（谛视、烛照、明视、洞观）→ 全撞，这是最挤的一条路</li>
+        <li><b>"镜子"类的词</b>（秦镜、冰鉴、鉴影）→ 基本封死</li>
+        <li><b>直接讲截图功能的词</b>（写照、察微、见微）→ 全部有主，且多是同赛道 AI 工具</li>
+        <li><b>动物名（视觉冠军）</b> → 13/14 撞</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>离产品故事越远 → 反而越空</h3>
+      <ul>
+        <li><b>古代手艺词</b>（拓、摹、影抄、粉本、写样）→ 有活口，且成批干净</li>
+        <li><b>文献与档案词</b>（留真、叙录、录副、定本、副墨）→ 有活口</li>
+        <li><b>载体与观看形制</b>（长卷、赫蹄、界画）→ 有活口</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-top:26px">四轮下来的洁净率，一眼看出差别</h3>
+  <div class="bar">
+    <div class="row">
+      <div class="rlabel"><b>"看"相关的词 · 镜子类的词</b><span>约 12 个候选，干净 0 个</span></div>
+      <div class="track"><div class="fill zero" style="width:100%">0% 干净</div></div>
+    </div>
+    <div class="row">
+      <div class="rlabel"><b>动物名 · 视觉冠军类</b><span>14 个候选，干净 0 个（鹘鹰是错开，不是干净）</span></div>
+      <div class="track"><div class="fill zero" style="width:100%">0% 干净</div></div>
+    </div>
+    <div class="row">
+      <div class="rlabel"><b>古代手艺词 · 文献档案词</b><span>约 22 个候选，干净 10 个以上</span></div>
+      <div class="track"><div class="fill mid" style="width:48%">约 48% 干净</div></div>
+    </div>
+  </div>
+  <p class="figcap"><b>这张图就是四轮调研的全部价值。</b>它说明的不是"哪个名字好"，而是<b>该往哪个方向找</b>——而且是拿真金白银的检索结果换来的，不是拍脑袋。</p>
+</section>
+
+<section>
+  <h2><span class="num">03</span>那两个字为什么也不行</h2>
+  <p class="lead">「卧游」和「澄怀」是我这轮唯二觉得有意思的字，说清楚它们各自的问题，你也好判断。</p>
+
+  <h3>卧游：意思最贴，但四字版刚被驳过</h3>
+  <p>宗炳老了走不动，把山水画挂墙上看，叫"卧游"。这跟"人懒得看屏幕、让 Agent 替他看"是同一个话——<b>语义上是我这四轮见过最贴的一个</b>，比"拓""粉本"都更直接。</p>
+  <p>但查到的事实是：「卧游网络」第9类 <span class="mono">90857169</span>（杭州卧游网络科技）<b>2026 年 7 月 1 日收到驳回通知书</b>。驳回通常就是因为审查员认为存在在先近似标。也就是说，第9类里大概率有个我没盘出来的拦路者。</p>
+  <div class="note risk">
+    <b>这一点必须讲清楚：四字被驳，不能直接推出"两字也会被驳"，但它是明确的警示。</b>如果你真喜欢"卧游"，正确做法不是直接去申请，而是先花几百块让代理把第9类彻底检索一遍，看那个把它驳掉的在先标到底是什么、还剩多少空间。
+  </div>
+
+  <h3 style="margin-top:24px">澄怀：第9类没查到，但同名公司在做软件</h3>
+  <p>出自宗炳《画山水序》"澄怀味象"——把心里清空，才看得见山水本来的样子。第9类确实没查到直接注册。</p>
+  <p>问题在别处：澄怀(济南)文化科技有限公司在营，<b>经营范围里明确写着"数字文化创意软件开发""软件销售"</b>。它没在第9类注册不代表它不用这个名字，做起来之后被找上门是很现实的麻烦。而且杭州澄怀实业在餐饮、酒类上也有注册，"澄怀"这两个字并不是没人认领的。</p>
+
+  <div class="foot">
+    <b>一句话总结：这两个都值得进你的备选池，但都不该排进第一梯队。</b>"卧游"要先花钱查清驳回原因，"澄怀"要接受跟一家软件公司同名。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span>四轮收口：能站住的，只有一支</h2>
+  <p class="lead">四轮查下来一百多个候选，被淘汰的将近九成。活下来的全部集中在同一支——古代手艺词。</p>
+
+  <p>这不是我偏爱古文，是被检索数据逼出来的唯一结论。下面按我推荐的顺序重排，前三档跟之前一致，新把"卧游／澄怀"放到第四档作为观察对象。</p>
+
+  <div class="route pick">
+    <div class="rk">1</div>
+    <div class="rb">
+      <h3>第一序列 · 六个，建议从这里选一个去注册</h3>
+      <p class="lk">朱拓 · 留真 · 粉本 · 响拓 · 长卷 · 描红</p>
+      <p>共同点：公开渠道查不到硬障碍；语义都能对上"把屏幕原样取下来交给 Agent"；都在不解释的情况下能先站住一会儿。</p>
+      <p>要我只挑三个去跑官方检索，我选 <b>响拓（赢在语义）、长卷（赢在传播）、描红（赢在跟一目红闭环）</b>。</p>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rk">2</div>
+    <div class="rb">
+      <h3>第二序列 · 格调够高，接受"要解释一遍"</h3>
+      <p class="lk">副墨 · 存照 · 写样 · 叙录 · 影抄 · 摹本 · 样张 · 朱记 · 定本</p>
+      <p>要么出处硬但偏冷，要么意思对但气质偏闷。走"讲得出故事的品牌"这条路，<b>副墨和叙录</b>最值得拿出来讲。</p>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rk">3</div>
+    <div class="rb">
+      <h3>第三序列 · 冷到极致，独占性最强</h3>
+      <p class="lk">赫蹄 · 录副 · 界画</p>
+      <p>撞车概率最低，官方查干净就基本是你的。代价是品牌教育成本高，第一眼没有信息量。<b>适合你想做一件长期的事、愿意花几年讲明白这个词。</b></p>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rk">4</div>
+    <div class="rb">
+      <h3>第四序列 · 新增观察对象，有戏但有前置条件</h3>
+      <p class="lk">卧游 · 澄怀</p>
+      <p><b>卧游</b>——语义最好的一个，但必须先让代理查清"卧游网络"被驳的原因，确认第9类还有没有空间。查干净了它就是第一梯队。</p>
+      <p><b>澄怀</b>——第9类空着，但要接受跟一家做软件的文化科技公司同名。适合你不介意"共存"、只想拿到自己那一块注册的情况。</p>
+    </div>
+  </div>
+
+  <div class="note ok">
+    <b>两条一直没变的边界，再确认一遍：</b><br>
+    1. <b>Logo 不用重做。</b>"印章 · 甲骨目"是图形标，跟中文名一点关系都没有。换名不碰这枚章，也不用动 <code>assets/logo/</code> 里那 14 个 SVG 和 29 个 PNG。注册时图形标和中文名分开申请、各报各的。<br>
+    2. <b>英文名继续用 Onceglance。</b>中文商标冲突管不到英文名，它还能保住域名、代码仓库名、npm 包名这些已经铺开的地方。两套名字分开，排查起来反而更清楚。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span>下一步</h2>
+  <p class="lead">检索的事我可以一直陪你跑，但最后那一步只能你亲自去。这不是推责任，是公开渠道确实做不到。</p>
+
+  <ol class="steps">
+    <li><b>先定三个名字。</b>从第一序列六个里选三个，或者加上"卧游"凑三个。定了我就陪你把官方检索一步步跑完。</li>
+    <li><b>上官网查。</b>中国商标网 <code>sbj.cnipa.gov.cn</code> → "商标查询" → "商标近似查询"。查 <b>第9类</b>（软件本体）、<b>第42类</b>（软件服务）、<b>第35类</b>（销售推广）、<b>第16类</b>（教程、印刷品）。</li>
+    <li><b>盯住 0901。</b>重点看对方商品项里有没有"计算机程序（可下载软件）""可下载的计算机应用软件""计算机软件（已录制）"这三样。有任意一样就是实打实的障碍；像鹘鹰那样只有硬件项，就不挡——<b>这一条是判断的核心，比看名字像不像更管用。</b></li>
+    <li><b>图形标单独查。</b>你那枚章要走"图形"查询，商标局 2026 年 5 月已上线以图搜图，直接传图即查。图样 png/jpg/jpeg，不超过 2M。</li>
+    <li><b>留意盲查期。</b>最近三个月刚递的申请可能还没进库，官网查不到不等于没有。</li>
+    <li><b>花几百块买一份书面意见。</b>让商标局备案的代理就你选定的名字和类别出正式检索报告。几百块换掉一次驳回——驳回官费不退，还要再等一年。</li>
+  </ol>
+
+  <div class="foot">
+    <b>交底：</b>这四轮我一共查了一百多个候选，能拍胸脯说"保证能注册"的是一个也没有。公开渠道能帮你把明显的坑排掉，剩下那点灰色地带，只有商标局和代理说了算。<b>但至少现在有一样东西是确定的——方向对了：往老手艺词里找，别再在动物和"看"字上耗了。</b>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

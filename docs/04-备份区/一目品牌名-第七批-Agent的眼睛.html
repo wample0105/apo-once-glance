@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一目 · 中文名第七批：Agent 的眼睛，中文该叫什么</title>
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F7F7F8; --bg3:#EFEFF1;
+  --tx:#1D1D21; --tx2:#5C5C66; --tx3:#8E8E99;
+  --bd:#E4E4E8; --bd2:#D2D2D8;
+  --accent:#FF3B30;
+  --ok:#0F6E56; --okbg:#E1F5EE;
+  --warn:#854F0B; --warnbg:#FAEEDA;
+  --risk:#A32D2D; --riskbg:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg3); color:var(--tx);
+  font-family:-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+  font-size:14px; line-height:1.7;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:40px 24px 80px}
+header.top{
+  background:var(--bg); border-radius:16px; padding:36px 40px;
+  border:1px solid var(--bd); margin-bottom:28px;
+}
+h1{font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:.5px}
+.sub{color:var(--tx2); font-size:15px; margin:0 0 20px}
+.note{
+  background:var(--bg2); border-radius:var(--r); padding:16px 18px;
+  font-size:13px; color:var(--tx2); margin-top:18px;
+}
+.note b{color:var(--tx); font-weight:600}
+section{
+  background:var(--bg); border-radius:16px; padding:32px 40px;
+  border:1px solid var(--bd); margin-bottom:24px;
+}
+h2{
+  font-size:19px; font-weight:600; margin:0 0 6px;
+  padding-bottom:14px; border-bottom:1px solid var(--bd);
+}
+h2 .num{color:var(--accent); font-weight:600; margin-right:8px}
+h3{font-size:15px; font-weight:600; margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{color:var(--tx2); font-size:13.5px; margin:14px 0 22px}
+
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{
+  text-align:left; font-weight:600; color:var(--tx2); font-size:12px;
+  letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--bd2);
+  background:var(--bg2);
+}
+td{padding:10px; border-bottom:1px solid var(--bd); vertical-align:top}
+td.kill{color:var(--risk); font-weight:600; white-space:nowrap}
+td.keep{color:var(--ok); font-weight:600; white-space:nowrap}
+td.rev{color:var(--warn); font-weight:600; white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--tx2)}
+
+.card{
+  border:1px solid var(--bd); border-radius:14px; padding:28px 30px;
+  margin-bottom:20px; background:var(--bg);
+}
+.card.pick{border:2px solid var(--accent)}
+.chead{display:flex; align-items:center; gap:16px; margin-bottom:6px; flex-wrap:wrap}
+.nm{font-size:30px; font-weight:600; letter-spacing:4px; line-height:1.2}
+.py{font-size:13px; color:var(--tx3); letter-spacing:.6px; margin-left:2px}
+.tag{
+  font-size:11.5px; padding:3px 9px; border-radius:20px;
+  background:var(--bg3); color:var(--tx2); letter-spacing:.3px;
+}
+.tag.pick{background:var(--accent); color:#fff; font-weight:600}
+.tag.ok{background:var(--okbg); color:var(--ok)}
+.tag.warn{background:var(--warnbg); color:var(--warn)}
+.tag.risk{background:var(--riskbg); color:var(--risk)}
+.quote{
+  border-left:3px solid var(--accent); padding:10px 0 10px 16px;
+  margin:16px 0; color:var(--tx); font-size:13.5px; line-height:1.8;
+}
+.quote cite{display:block; color:var(--tx3); font-size:12px; font-style:normal; margin-top:6px; letter-spacing:.3px}
+.map{width:100%; border-collapse:collapse; margin:16px 0; font-size:13px}
+.map td{border:1px solid var(--bd); padding:9px 12px}
+.map td:first-child{background:var(--bg2); color:var(--tx2); width:32%; font-size:12.5px}
+.map td:last-child{color:var(--tx)}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.box{background:var(--bg2); border-radius:var(--r); padding:14px 16px; font-size:13px}
+.box h3{font-size:12.5px; color:var(--tx2); letter-spacing:.4px; margin-bottom:8px}
+.box ul{margin:0; padding-left:17px; color:var(--tx)}
+.box li{margin-bottom:5px}
+.box li:last-child{margin-bottom:0}
+.foot{
+  margin-top:18px; padding-top:14px; border-top:1px solid var(--bd);
+  font-size:12.5px; color:var(--tx2);
+}
+.foot b{color:var(--tx); font-weight:600}
+
+/* 条形图 */
+.bars{margin:8px 0 4px}
+.bar{display:flex; align-items:center; gap:12px; margin-bottom:12px}
+.bl{flex:0 0 168px; font-size:12.5px; color:var(--tx2); text-align:right}
+.bt{flex:1; height:26px; background:var(--bg2); border-radius:6px; overflow:hidden; position:relative}
+.bf{height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:9px; color:#fff; font-size:12px; font-weight:600; letter-spacing:.3px}
+.bf.a{background:var(--accent)}
+.bf.b{background:#C9C9CF; color:var(--tx2)}
+.bf.c{background:var(--ok)}
+.bf.d{background:var(--warn)}
+.bv{flex:0 0 92px; font-size:12px; color:var(--tx2)}
+
+/* 主语换位图 */
+.swap{display:grid; grid-template-columns:1fr auto 1fr; gap:14px; align-items:center; margin:20px 0 6px}
+.sw{background:var(--bg2); border:1px solid var(--bd); border-radius:12px; padding:16px 18px}
+.sw.hi{background:#FFF9F9; border:2px solid var(--accent)}
+.sw h3{font-size:12.5px; letter-spacing:.4px; color:var(--tx2); margin-bottom:10px}
+.sw .ln{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13.5px; margin-bottom:8px}
+.sw .ln:last-child{margin-bottom:0}
+.node{background:var(--bg); border:1px solid var(--bd2); border-radius:20px; padding:3px 12px; font-size:13px}
+.node.a{border-color:var(--accent); color:var(--accent); font-weight:600}
+.arw{color:var(--tx3); font-size:13px}
+.mid{font-size:12px; color:var(--tx3); text-align:center; line-height:1.5; min-width:76px}
+
+/* 序列 */
+.route{
+  border:1px solid var(--bd); border-radius:14px; padding:20px 24px;
+  margin-bottom:14px;
+}
+.route.pick{border:2px solid var(--accent); background:#FFF9F9}
+.rh{display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap}
+.rk{
+  flex:0 0 34px; height:34px; border-radius:10px; background:var(--bg3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:600; color:var(--tx2);
+}
+.route.pick .rk{background:var(--accent); color:#fff}
+.rh h3{margin:0; font-size:15.5px}
+.chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
+.chip{
+  font-size:13.5px; padding:4px 12px; border-radius:20px;
+  background:var(--bg2); color:var(--tx); border:1px solid var(--bd);
+  letter-spacing:1px;
+}
+.chip.new{background:#FFF1F0; color:var(--accent); border-color:#FFD5D2; font-weight:600}
+.route p{margin:0; font-size:13px; color:var(--tx2)}
+
+.figcap{font-size:12.5px; color:var(--tx2); margin-top:6px; line-height:1.75}
+.figcap b{color:var(--tx)}
+ol.steps{padding-left:20px; margin:12px 0 0}
+ol.steps li{margin-bottom:9px; font-size:13.5px}
+ol.steps li b{font-weight:600}
+code{
+  background:var(--bg2); border:1px solid var(--bd); border-radius:5px;
+  padding:1px 6px; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>Agent 的眼睛，中文里该叫什么</h1>
+  <p class="sub">中文名第七批 · 实测 17 个，7 个撞死，10 个在公开渠道上还是空的</p>
+  <p style="margin:0;color:var(--tx2);font-size:13.5px">
+    你提的这个意象很关键：<b>不是"我看得清"，是"它替我看"。</b>
+    前六批测的全是"人自己看"那条线——一目、明鉴、观止、鹰隼、离朱，一百多个词，第 9 类洁净率 0%。
+    这批换了个问法：不在"怎么形容看得清"里找，改去"把看这件事交给谁"里找。结果一下就不一样了。
+  </p>
+  <div class="note">
+    <b>筛到什么程度，我先说清楚：</b>每个名字我都跑了公开渠道（阿里云商标、启信宝、爱企查、企查查、标库网）的第 9 类检索，查到障碍的写清撞到谁、注册号多少、商品项里到底有没有软件。没查到的写"未见占用"。<b>但这不等于能注册</b>——公开渠道有盲查期、有更新延迟，最终必须去商标局官网自己查一遍。这一步谁也替不了。
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span>先划掉 7 个：正着说"眼睛"的词，全是红海</h2>
+  <p class="lead">这 7 个都跟"看"直接相关，读起来也好听。它们死在同一个原因上：<b>第 9 类里，"视觉"这两个字本身就是安防和硬件的兵家必争之地。</b></p>
+
+  <table>
+    <thead>
+      <tr><th style="width:11%">名字</th><th style="width:15%">字面意思</th><th>撞到谁</th><th style="width:11%">判定</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>明眸</b><br><span class="mono">míng móu</span></td>
+        <td>明亮的眼睛。<br>本轮里"最美"的一个</td>
+        <td>撞的是最重的一家：<b>杭州海康威视</b>第9类 <span class="mono">26478807</span>，商品项里明明白白写着<b>计算机软件（已录制）、计算机程序（可下载软件）、已录制的计算机操作程序</b>，专用权 2018 至 2028，还经历过异议和驳回复审——说明这牌子海康是死守的。另有一件布勒（中国）投资第9类 <span class="mono">79279513</span>（2025-04-21 注册至 2035），商品项含<b>可下载的计算机应用软件</b>。双重占位，一点缝都没有。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>烛照</b><br><span class="mono">zhú zhào</span></td>
+        <td>拿蜡烛照亮。<br>引申为"洞察"</td>
+        <td>三件齐上：中科烛照（北京）科技第9类 <span class="mono">49978772</span> 已注册至 2031-05-06；武汉烛照科技第9类 <span class="mono">40111536</span>，商品项含<b>已录制的计算机程序、数据处理设备</b>；昆仑烛照第9类 <span class="mono">60073152</span>，商品项含<b>可下载的手机应用软件、可下载的计算机应用软件</b>。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>瞻明</b><br><span class="mono">zhān míng</span></td>
+        <td>抬头看，看得清</td>
+        <td>更麻烦的是它撞在"活口"上。一件嘉兴市经开城南巨来日用品商行第9类 <span class="mono">60212619</span> 已注册至 2032-04-27，商品项含 <b>0901-计算机</b>；另一件<b>瞻明（山东）信息技术有限公司</b>第9类 <span class="mono">93364869</span> 于 2026-08-06 刚递交、目前待审，商品项是数据管理软件、图像图表文字处理软件、可下载的计算机软件平台一整套——<b>同名公司正在第9类申请软件商标，这是最不该碰的一类对手。</b></td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>天目</b><br><span class="mono">tiān mù</span></td>
+        <td>天眼；也是浙江的名山</td>
+        <td>北京汉邦高科第9类 <span class="mono">1501690</span> 已注册，商品项含<b>计算机软件（已录制）、已录制的计算机程序</b>，专用权到 2031-01-06，2023 年还被人提过撤三——人在用。另有「天目慧视仪」<span class="mono">84843311</span>、「天目比对」<span class="mono">74028867</span> 在场，整个"天目"字族已经被围住。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>目窍</b><br><span class="mono">mù qiào</span></td>
+        <td>眼孔、视觉通道</td>
+        <td>广州视科医疗第9类 <span class="mono">87438030</span> 已于 2025-09-04 初审公告，商品项是<b>0901-智能眼镜、0921-眼镜及附件</b>一整套。虽然它没有软件项，但"目窍"配"视科医疗"这个组合，加上眼镜类目，撞车风险实打实。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>继明</b><br><span class="mono">jì míng</span></td>
+        <td>把光延续下去</td>
+        <td>宁波继明电器第9类 <span class="mono">5166723 / 6964574</span> 只占 0901 计算机外围设备，<b>不含软件项，本来不挡。</b>真正的杀手是「继明健康」第9类 <span class="mono">53369172</span>，商品项含<b>可下载的手机应用软件、可下载的计算机应用软件、已录制的或可下载的计算机软件平台</b>——全套软件项。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>司视</b><br><span class="mono">sī shì</span></td>
+        <td>掌管观看</td>
+        <td>裸词没查到，但被衍生名连坐：「司视明」第9类已注册至 2033-02-27，商品项含<b>可下载的计算机程序</b>，这件还在转让平台上挂着 13850 元卖。带"视"的短词，名字就在别人手里。</td>
+        <td class="rev">连坐，不做候选</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="foot">
+    <b>这几个为什么一定撞：</b>摄像头、监控、行车记录仪、智能眼镜、AI 视觉、安防——这些公司全挤在第 9 类。<b>"明眸""天目""烛照"这种词对它们来说是刚需词，对我们只是修辞。</b>刚需打修辞，修辞没有胜算。<br>
+    另外提醒一句：<b>瞩目、监临、假目、借明</b>这四个我没查清（公开渠道返回的都是分类表页面，没有有效记录）。<b>"没查到"和"没有"是两回事，别当干净词用。</b>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>关键发现：把"看"这件事递出去，第 9 类就空了</h2>
+  <p class="lead">这批我把词分成两类各测一遍，结果分得比上一批还干脆。</p>
+
+  <div class="bars">
+    <div class="bar"><div class="bl">正着说"视觉"的词<br><span style="color:var(--tx3);font-size:11px">6 个</span></div><div class="bt"><div class="bf b" style="width:6%">0%</div></div><div class="bv">0 / 6 空着</div></div>
+    <div class="bar"><div class="bl">把"看"递出去的词<br><span style="color:var(--tx3);font-size:11px">10 个</span></div><div class="bt"><div class="bf c" style="width:100%">100%</div></div><div class="bv">10 / 10 空着</div></div>
+  </div>
+  <p class="figcap">
+    横轴长度＝<b>公开渠道第 9 类"未见占用"的比例</b>，不是"能注册"的比例。第一档是明眸、烛照、瞻明、天目、目窍、继明，全军覆没；第二档是窥牖、代瞩、寄目、属目、分灯、袭明、司明、代明、代视、续焰，一个都没撞上。
+  </p>
+
+  <h3 style="margin-top:26px">最要紧的一点：换主语，比换形容词管用</h3>
+  <p class="figcap" style="margin-bottom:2px">
+    前六批我们一直在干左边这件事——换各种词去形容"看得清楚"。这批改干右边：<b>不换形容词，换那个"在看的人"。</b>
+  </p>
+
+  <div class="swap">
+    <div class="sw">
+      <h3>前六批的思路 · 洁净 0 / 100+</h3>
+      <div class="ln"><span class="node">人</span><span class="arw">→</span><span class="node">看得清</span><span class="arw">→</span><span class="node">屏幕</span></div>
+      <div class="ln" style="color:var(--tx2);font-size:12.5px">一目 / 明鉴 / 观止 / 鹰 / 隼 / 离朱 / 烛阴……</div>
+      <div class="ln" style="color:var(--risk);font-size:12.5px">改的全是中间那格形容词，主语始终是"人"。</div>
+    </div>
+    <div class="mid">换<br>主<br>语</div>
+    <div class="sw hi">
+      <h3>这批的思路 · 洁净 10 / 10</h3>
+      <div class="ln"><span class="node a">Agent</span><span class="arw">→</span><span class="node">代看</span><span class="arw">→</span><span class="node">屏幕</span></div>
+      <div class="ln" style="color:var(--tx2);font-size:12.5px">代瞩 / 寄目 / 属目 / 分灯 / 袭明 / 司明……</div>
+      <div class="ln" style="color:var(--ok);font-size:12.5px">改的是最左边那格主语：看的人变成 Agent，工具只是那只手。</div>
+    </div>
+  </div>
+  <p class="figcap">
+    这件事跟产品的真实结构是对上的：<b>按快门的是工具，决定要看什么的是 Agent，成果最后交回给人。</b>工具名不该说"我看得清"——工具本来就不需要看，它只需要"替谁看"。
+  </p>
+
+  <h3 style="margin-top:26px">三条实测出来的规律</h3>
+
+  <table>
+    <thead><tr><th style="width:22%">规律</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><b>一、某条路 0% 的时候，别在形容词里继续找</b></td><td>六批一百多个词，只要词根是"看/眼/明/镜/鹰"，洁净率就是 0。这不是"换个更好的词就能过"，是<b>整个词族都在别人的护城河里</b>。这种情况下唯一的出路是换词性——从形容词挪到动词，从"什么样子"挪到"谁在干"。</td></tr>
+      <tr><td><b>二、"视觉"是第 9 类最挤的位置</b></td><td>海康威视、汉邦高科这些做摄像头监控的公司，必须把"看得清"的词全占了。<b>我们挑"明眸""天目"，等于跟安防产业抢同一个词。</b>他们守的是产品线，我们只是想要个好听的名字。</td></tr>
+      <tr><td><b>三、"递"这个动作天然空着</b></td><td>代、寄、属、分、司、袭——这几个字的共同点是"<b>把某样东西从 A 挪到 B</b>"。这类结构在商业命名里几乎没人用，因为它没有画面感、不够响亮。但它跟"Agent 调用工具截图"这件事是同构的。空，是因为没人需要，不是因为我们运气好。</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">03</span>六个站住的，按推荐度从高到低</h2>
+  <p class="lead">下面这六个第 9 类在公开渠道上都没查到占用。每个我都标了出处、对应到产品哪一步、以及它的真实缺点——缺点我不帮你藏。</p>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">窥牖</span><span class="py">kuī yǒu</span>
+      <span class="tag pick">语义最准</span>
+      <span class="tag ok">第9类未见占用</span>
+    </div>
+    <div class="quote">
+      不出户，知天下；不窥牖，见天道。其出弥远，其知弥少。
+      <cite>《老子》第四十七章</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>"窥"是从小孔往里看，"牖"是窗。合起来：<b>透过一个小口子，看见外面整片天。</b></td></tr>
+      <tr><td>对应产品哪一步</td><td>这一句几乎是在写我们的产品：<b>人不出门、不盯屏，透过截图这一个"小窗"，Agent 就看见了整屏发生的事。</b>"其出弥远，其知弥少"还暗合另一层——我们不做全天候监控，只在需要的那一下看一眼，看得少反而看得准。</td></tr>
+      <tr><td>第9类状况</td><td>前案 <span class="mono">32790646</span>（2018 年申请，商品项含全套软件项）<b>已被驳回</b>，障碍已失效，这个词目前是空的。驳回不等于永久安全，但至少没有活的权利人在守。</td></tr>
+      <tr><td>英文名</td><td>Onceglance 不动，中文名独立，不需要互译。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li>语义贴合度是这批里最高的一个：<b>"透过一个小孔看见大世界"＝"透过截图看懂整屏"</b>，不用绕。</li>
+        <li>出处是《道德经》，讲得出口，而且是"看得少才看得准"这个反直觉的意思，跟产品"不监控、只按需看"的性格完全一致。</li>
+        <li>两个字都是现成的古汉语常用字，不是生造。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li><b>最硬的伤："窥"有偷看的味道。</b>截图工具本来就最怕被说侵犯隐私，名字里再放一个"窥"字，等于自己往那个方向递话。这是真实风险，不是小毛病。</li>
+        <li>"牖"字生僻（yǒu），大多数人不认识，口头传播要长期配拼音。</li>
+        <li>前案虽已驳回，但驳回理由不明，注册时仍可能被引证近似。</li>
+      </ul></div>
+    </div>
+    <div class="foot"><b>我的判断：</b>单看"意思对不对"，它第一。加上"窥"字和隐私的冲突，它得往后挪。如果拿它当候选，<b>建议只做内部代号或社区里的小名，不做正式品牌名。</b></div>
+  </div>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">代瞩</span><span class="py">dài zhǔ</span>
+      <span class="tag pick">本轮首选</span>
+      <span class="tag ok">第9类未见占用</span>
+    </div>
+    <div class="quote">
+      "代"是替，"瞩"是注视。合起来就是三个字：<b>替你看着。</b>
+      <cite>两个都是现成的古汉语字，组合后是个新词</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>替你把眼睛放在那儿，一直盯着。</td></tr>
+      <tr><td>对应产品哪一步</td><td>就是 Agent 调工具的整个动作：<b>人不用自己在场，Agent 发指令，工具替它看这一屏，看完交回去。</b>名字直接把"替"这个关系写出来了。</td></tr>
+      <tr><td>为什么它安全</td><td>不含"眼/目/眸/镜"任何一个字，不跟安防和眼镜产业抢词；也不含任何竞争、宏大的味道，就是一个动作。</td></tr>
+      <tr><td>英文名</td><td>Onceglance 不动。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li><b>零误读。</b>"代"和"瞩"都是常用字，看一眼意思就到了，不需要解释。</li>
+        <li>它把这个产品最独特的那一点（<b>看的人不是人</b>）直接写进了名字。前六批所有候选都没做到这一点，它们描述的都是人的体验。</li>
+        <li>两个字笔画都轻，好写好打；组合成新词，独占性天然比现成词高。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li><b>它不是一句古诗、不是一个现成的典故</b>，这是我们自己拼的。好处是独占，坏处是讲不出"出处故事"。</li>
+        <li>"瞩"字偏书面，日常口语里少用，品牌第一眼可能略显文气。</li>
+        <li>读音 dài zhǔ 跟"代主""待煮"同音，口播时单独听要上下文。</li>
+      </ul></div>
+    </div>
+    <div class="foot"><b>我的判断：</b>这批里最"可用"的一个。<b>它不美，但它准，而且不撞。</b>如果发布节奏紧、不想在名字上再耗一个月，它是能直接定下来的那一个。</div>
+  </div>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">寄目</span><span class="py">jì mù</span>
+      <span class="tag pick">强推</span>
+      <span class="tag ok">第9类未见占用</span>
+    </div>
+    <div class="quote">
+      把眼睛寄出去——人不在场，目光还在。
+      <cite>古汉语里"寄目"有"托付目光、借他人之眼"的用法</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>"寄"是托付、寄放。把自己的眼睛寄放在别处。</td></tr>
+      <tr><td>对应产品哪一步</td><td>最贴"委托"这个动作的一层：<b>Agent 把我的"看"寄放在工具身上，工具替我在屏幕上待着。</b>比"代瞩"多了一层"信任交付"的味道。</td></tr>
+      <tr><td>为什么它安全</td><td>第9类未见占用。"寄"这个动作在软件命名里几乎没人用过。</td></tr>
+      <tr><td>英文名</td><td>Onceglance 不动。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li>两个字都常用好写，"寄"自带文气但不生僻，念出来有节奏。</li>
+        <li>"把眼睛交出去"这个画面很具体，配合图标（印章 · 甲骨目）能讲成一个完整的动作。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li><b>硬伤：jì mù 跟"祭墓"完全同音。</b>这是个不吉利的谐音，中文品牌名里这类坑不能装看不见。谁先听出来谁别扭。</li>
+        <li>因为有这个谐音，它在口播和门店场景里都会打折。</li>
+        <li>写起来像人名，第一眼不易判断是产品。</li>
+      </ul></div>
+    </div>
+    <div class="foot"><b>我的判断：</b>意思和气质都好过"代瞩"，<b>但那个谐音是实打实的减分项。</b>如果很在意口播，它排在"代瞩"后面。</div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">袭明</span><span class="py">xí míng</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag">出处最硬</span>
+    </div>
+    <div class="quote">
+      善行无辙迹，善言无瑕谪，善数不用筹策……是谓袭明。
+      <cite>《老子》第二十七章（"袭明"＝顺着事物的本性去做，明察而不露痕迹）</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>"袭"是承袭、顺着来，"明"是看得明白。整句意思是：<b>做得好的，不留痕迹。</b></td></tr>
+      <tr><td>对应产品哪一步</td><td>"善行无辙迹"——<b>工具最好的状态是你不觉得它在</b>：不弹窗、不打扰、不要求你先去配一堆参数，你按下快捷键它就在了。这正好是一目"极短路径"的产品性格。</td></tr>
+      <tr><td>为什么它安全</td><td>第9类未见占用，"袭明"这个组合在现代商业命名里基本没人动过。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li>出处跟"窥牖"同一个级别（《道德经》），而且这半句"善行无辙迹"本身就是一个很好的产品理念。</li>
+        <li>"明"字跟"一目"的语义延续，能接得上。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li><b>"袭"字现代汉语里的第一义是"袭击""抄袭"</b>（突袭、沿袭、因袭）。放在品牌名前，第一眼的联想是负面的，需要靠文案去掰。</li>
+        <li>整体意思偏抽象，不解释一遍听不出跟截图有什么关系。</li>
+        <li>两个字都偏文，不够轻快。</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">分灯</span><span class="py">fēn dēng</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag">意象最好</span>
+    </div>
+    <div class="quote">
+      禅宗讲传法，叫"传灯"，也叫"分灯"——从这一盏上分出一支火，递给下一个人。
+      <cite>《景德传灯录》以降的禅门用语</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>从一团火里分出一支，给它自己的光。</td></tr>
+      <tr><td>对应产品哪一步</td><td><b>把"看"分一份出去，让 Agent 也有一双眼睛</b>——这就是你描述的那个功能本身。而且"这一盏还在，那一盏也亮了"，正好是"多一个使用者，不多一份成本"的软件本性。</td></tr>
+      <tr><td>为什么它安全</td><td>第9类未见占用。第42类 <span class="mono">59075116</span> 有人在（含软件设计、SaaS、文档数字化扫描），但那是服务类，<b>挡不住第9类</b>，别搞混。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li>意象是这批里最暖的一个，讲出来有故事性，适合做品牌叙事。</li>
+        <li>两个字都好写，念起来干脆。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li><b>它偏"灯"不偏"眼"。</b>你要的意象是"Agent 的眼睛"，分灯说的是"把光传下去"，中间隔了一层。</li>
+        <li>"灯"字会把品牌往灯具、照明类目上带（第11类），需要额外解释。</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">司明</span><span class="py">sī míng</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag warn">像人名</span>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>"司"是掌管，"明"是看得见。掌管"看得见"这件事。</td></tr>
+      <tr><td>对应产品哪一步</td><td>把工具定位成"视觉这件事的管家"——<b>不管内容、不做判断，只负责让该看见的看见。</b></td></tr>
+      <tr><td>为什么它安全</td><td>第9类未见占用。带"司"字的词在软件命名里也少见。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li>跟"代"字族的思路同源：都是把"看"当成一件可以托付的事。</li>
+        <li>两个字都常用，无生僻字，好念好写。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li><b>"司"是姓，加上"明"，两个字凑一起极易被当成人名</b>（司明、思明、斯明都是常见人名）。产品名里这个歧义不小。</li>
+        <li>"掌管"这个词味道偏重，像是要管控什么，跟"轻量小工具"的性格有点冲突。</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span>还有 4 个备选：能过，但各有各的别扭</h2>
+  <p class="lead">这四个第 9 类也都空着。每个都有一处让我犹豫的地方，我把犹豫写出来了。</p>
+
+  <table>
+    <thead>
+      <tr><th style="width:10%">名字</th><th style="width:10%">读音</th><th style="width:26%">字义</th><th style="width:20%">第9类状况</th><th>让我犹豫的地方</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>属目</b></td><td class="mono">zhǔ mù</td>
+        <td>"属"通"嘱"，属目＝专注地看。其实就是"瞩目"的古写</td>
+        <td class="keep">未见占用</td>
+        <td>意思是对的，但<b>它和"瞩目"完全同音同义，而"瞩目"是极常用的词</b>——审查时容易被认为缺乏显著特征；另外"属"字本身两读（shǔ 属于 / zhǔ 属目），<b>绝大多数人会念错</b>。念错一个字的名字，口头传播就是残的。</td>
+      </tr>
+      <tr>
+        <td><b>代明</b></td><td class="mono">dài míng</td>
+        <td>"代"是替，"明"是看清；替你看清</td>
+        <td class="keep">基本干净<br><span class="mono">仅「樊代明」89672902 待审中（人名，医学VR软件），裸词未见占用</span></td>
+        <td>跟"代瞩"同族，但弱一档："明"字太泛（明天、聪明、光明），指向不唯一，而且"代明"也像人名。<b>"代"字族如果要选，选"代瞩"不选"代明"。</b>另外那件人名商标虽不是同一回事，仍需上官网确认。</td>
+      </tr>
+      <tr>
+        <td><b>代视</b></td><td class="mono">dài shì</td>
+        <td>替你看</td>
+        <td class="keep">9类未见中文占用<br><span class="mono">（只查到英文 DESVIEW 90486689 已初审，与中文"代视"不是同一个标）</span></td>
+        <td>三个"代"字族里最直白的一个，直白到<b>会被人往"代偿视力""代替视力"这个医学方向想</b>，听起来像视力矫正产品或眼科设备。名字太顺口反而没了品牌感，也不够独占。</td>
+      </tr>
+      <tr>
+        <td><b>续焰</b></td><td class="mono">xù yàn</td>
+        <td>佛家"续佛慧命"，传灯叫续焰——把这支火接下去</td>
+        <td class="keep">未见占用</td>
+        <td>跟"分灯"同一族，但方向不同：分灯是"分出去"，续焰是"接下去"。翻译成产品就是"一代接一代"，<b>离"Agent 的眼睛"这个意象最远</b>，它讲的是传承，不是替看。"焰"字也偏重、偏烈。</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">05</span>七批合并收口：现在的序列长这样</h2>
+  <p class="lead">第七批加进来之后，七个方向的全貌。判断标准一直是同一条：公开渠道第 9 类有没有撞上"可下载软件"这类商品项。</p>
+
+  <div class="route">
+    <div class="rh"><div class="rk">1</div><h3>看 / 视觉类词 · 12 个</h3><span class="tag risk">洁净 0 / 12</span></div>
+    <p>跟"看"和镜子有关的词，被注册得像筛子。这条线不用再试了。</p>
+    <div class="chips"><span class="chip">一目</span><span class="chip">瞥</span><span class="chip">观止</span><span class="chip">明鉴</span><span class="chip">镜</span><span class="chip">瞭</span></div>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">2</div><h3>动物与视觉冠军 · 14 个</h3><span class="tag risk">洁净 0 / 14</span></div>
+    <p>鹰、隼、猫头鹰、变色龙这类"眼力最好"的动物名，全部已被占用。</p>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">3</div><h3>神话神兽与神人 · 8 个</h3><span class="tag risk">洁净 0 / 8</span></div>
+    <p>离朱、陆吾、迷谷、若木、归墟、烛阴……《山海经》里叫得出名的，第9类基本被扫干净。</p>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">4</div><h3>古手艺与档案词 · 22 个</h3><span class="tag warn">洁净约 48%</span></div>
+    <p>装裱、抄书、归档这些老行当的词，一半能过。这条线证明"行业生词"是安全区。</p>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">5</div><h3>文人案头与文献词 · 6 个</h3><span class="tag ok">洁净 6 / 6</span></div>
+    <p>第五批的成果，全都干净。</p>
+    <div class="chips">
+      <span class="chip">芣苢 fú yǐ</span><span class="chip">卷耳 juàn ěr</span><span class="chip">蜀素 shǔ sù</span><span class="chip">琅嬛 láng huán</span><span class="chip">二酉 èr yǒu</span><span class="chip">烛阴 zhú yīn</span>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">6</div><h3>唐诗宋词元曲的动作与藏书词 · 21 个</h3><span class="tag ok">洁净 17 / 17</span></div>
+    <p>同一个安全区，但这一批的词"念得出来、讲得出故事"。</p>
+    <div class="chips">
+      <span class="chip">书巢</span><span class="chip">剪烛</span><span class="chip">洗砚</span><span class="chip">韦编</span><span class="chip">乌丝栏</span>
+      <span class="chip">缥帙</span><span class="chip">缥缃</span><span class="chip">花笺</span><span class="chip">青箱</span><span class="chip">芸阁</span>
+      <span class="chip">香篆</span><span class="chip">邺架</span><span class="chip">插架</span><span class="chip">架阁</span><span class="chip">汗青</span>
+      <span class="chip">云蓝</span><span class="chip">竹素</span><span class="chip">誊录</span>
+    </div>
+  </div>
+
+  <div class="route pick">
+    <div class="rh"><div class="rk">7</div><h3>把"看"交给别人的词 · 本轮新增</h3><span class="tag ok">洁净 10 / 10</span></div>
+    <p>这条线不是从"好看"来的，是从<b>产品真实结构</b>倒推出来的——看的人不是人，是 Agent。它准，但不美。</p>
+    <div class="chips">
+      <span class="chip new">代瞩</span><span class="chip new">窥牖</span><span class="chip new">寄目</span><span class="chip new">袭明</span>
+      <span class="chip new">分灯</span><span class="chip new">司明</span>
+      <span class="chip">属目</span><span class="chip">代明</span><span class="chip">代视</span><span class="chip">续焰</span>
+    </div>
+  </div>
+
+  <h3 style="margin-top:26px">如果今天就要定一个，我的排序</h3>
+  <table>
+    <thead><tr><th style="width:8%">顺位</th><th style="width:14%">名字</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td class="keep">1</td><td><b>书巢</b></td><td>仍是总榜第一。唯一同时满足"两个字都认识、出处是真人真事、意思正好落在主功能上"的候选。第六批的结论没被这批推翻。</td></tr>
+      <tr><td class="keep">2</td><td><b>蜀素</b></td><td>载体意象准、独占性高。代价是"蜀"字要解释一次。</td></tr>
+      <tr><td class="keep">3</td><td><b>代瞩</b></td><td><b>本轮新进前三。</b>它是七个方向里唯一把"Agent 替你看"这件事直接写进名字的候选，零误读、零生僻字、零谐音坑。它不美，但它最"对"。</td></tr>
+      <tr><td class="keep">4</td><td><b>剪烛</b></td><td>唐诗名句里的空档，动作词，零生僻字。缺点是不太像产品名。</td></tr>
+      <tr><td class="rev">5</td><td><b>窥牖</b></td><td><b>本轮新进前五。</b>语义贴合度是全部候选里最高的（"透过小孔看见大世界"），但"窥"字跟截图工具的隐私敏感撞车，只能做内部代号，不宜做正式品牌名。</td></tr>
+      <tr><td class="rev">6</td><td><b>洗砚</b></td><td>跟剪烛同级，多一层"文房"质感，且它是唯一从元代拿到的成果。</td></tr>
+    </tbody>
+  </table>
+  <div class="foot">
+    <b>一句话归纳七批的结果：</b>越像"一个工具在默默干活"的词越安全，越像"一个品牌在战斗"的词越危险。<b>而这批加了一条更狠的——名字要站在"谁在看"这一格上，不要站在"看得怎么样"那一格上。</b>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">06</span>最后这道工序，得你自己跑一遍</h2>
+  <p class="lead">我做的是公开渠道预筛，有盲查期、有延迟。<b>在提交注册之前，下面这几步必须做。</b></p>
+  <ol class="steps">
+    <li><b>上官网查</b>：打开 <code>sbj.cnipa.gov.cn</code> → 商标查询 → 商标近似查询。国际分类填 <code>09</code>，按顺序查：<code>书巢</code> → <code>代瞩</code> → <code>蜀素</code> → <code>窥牖</code> → <code>剪烛</code> → <code>寄目</code>。</li>
+    <li><b>只看一件事</b>：每一项结果的服务项里，有没有出现 <code>计算机程序（可下载软件）</code>、<code>可下载的计算机应用软件</code>、<code>计算机软件（已录制）</code> 这三条中的任意一条。<b>有，就是挡路；没有，就不挡。</b>像"雷达""导航仪""电缆""大屏幕液晶显示器"这类硬件项，不构成软件障碍——本轮"继明"的两件硬件商标就是这样，不挡，真正挡住的是另一件带全套软件项的。</li>
+    <li><b>顺手把"代"字族一起查</b>：<code>代瞩</code>、<code>代明</code>、<code>代视</code> 三件一起递进检索框。同一个字族里只要有一件被引证，整族都会被拖累——「司视明」就是这么把"司视"拖下水的。</li>
+    <li><b>图形标另查一遍</b>：印章标「甲骨目」用图形检索，2026-05-22 起官网已支持以图搜图（png/jpeg/jpg，≤2M）。</li>
+    <li><b>类别布局</b>：主打第9类（软件本体）；辅以第16类（纸品文具）、第35类（广告销售）、第42类（软件服务）。<b>注意第42类是服务类，挡不住别人在第9类注册</b>——"分灯"第42类 <span class="mono">59075116</span> 有人在，但那不影响我们的第9类。</li>
+  </ol>
+</section>
+
+</div>
+</body>
+</html>

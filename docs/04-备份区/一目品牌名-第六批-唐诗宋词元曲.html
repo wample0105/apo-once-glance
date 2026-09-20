@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一目 · 中文名第六批：从唐诗宋词元曲里找</title>
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F7F7F8; --bg3:#EFEFF1;
+  --tx:#1D1D21; --tx2:#5C5C66; --tx3:#8E8E99;
+  --bd:#E4E4E8; --bd2:#D2D2D8;
+  --accent:#FF3B30;
+  --ok:#0F6E56; --okbg:#E1F5EE;
+  --warn:#854F0B; --warnbg:#FAEEDA;
+  --risk:#A32D2D; --riskbg:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg3); color:var(--tx);
+  font-family:-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+  font-size:14px; line-height:1.7;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:40px 24px 80px}
+header.top{
+  background:var(--bg); border-radius:16px; padding:36px 40px;
+  border:1px solid var(--bd); margin-bottom:28px;
+}
+h1{font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:.5px}
+.sub{color:var(--tx2); font-size:15px; margin:0 0 20px}
+.note{
+  background:var(--bg2); border-radius:var(--r); padding:16px 18px;
+  font-size:13px; color:var(--tx2); margin-top:18px;
+}
+.note b{color:var(--tx); font-weight:600}
+section{
+  background:var(--bg); border-radius:16px; padding:32px 40px;
+  border:1px solid var(--bd); margin-bottom:24px;
+}
+h2{
+  font-size:19px; font-weight:600; margin:0 0 6px;
+  padding-bottom:14px; border-bottom:1px solid var(--bd);
+}
+h2 .num{color:var(--accent); font-weight:600; margin-right:8px}
+h3{font-size:15px; font-weight:600; margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{color:var(--tx2); font-size:13.5px; margin:14px 0 22px}
+
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{
+  text-align:left; font-weight:600; color:var(--tx2); font-size:12px;
+  letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--bd2);
+  background:var(--bg2);
+}
+td{padding:10px; border-bottom:1px solid var(--bd); vertical-align:top}
+td.kill{color:var(--risk); font-weight:600; white-space:nowrap}
+td.keep{color:var(--ok); font-weight:600; white-space:nowrap}
+td.rev{color:var(--warn); font-weight:600; white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--tx2)}
+
+.card{
+  border:1px solid var(--bd); border-radius:14px; padding:28px 30px;
+  margin-bottom:20px; background:var(--bg);
+}
+.card.pick{border:2px solid var(--accent)}
+.chead{display:flex; align-items:center; gap:16px; margin-bottom:6px; flex-wrap:wrap}
+.nm{font-size:30px; font-weight:600; letter-spacing:4px; line-height:1.2}
+.py{font-size:13px; color:var(--tx3); letter-spacing:.6px; margin-left:2px}
+.tag{
+  font-size:11.5px; padding:3px 9px; border-radius:20px;
+  background:var(--bg3); color:var(--tx2); letter-spacing:.3px;
+}
+.tag.pick{background:var(--accent); color:#fff; font-weight:600}
+.tag.ok{background:var(--okbg); color:var(--ok)}
+.tag.warn{background:var(--warnbg); color:var(--warn)}
+.tag.risk{background:var(--riskbg); color:var(--risk)}
+.quote{
+  border-left:3px solid var(--accent); padding:10px 0 10px 16px;
+  margin:16px 0; color:var(--tx); font-size:13.5px; line-height:1.8;
+}
+.quote cite{display:block; color:var(--tx3); font-size:12px; font-style:normal; margin-top:6px; letter-spacing:.3px}
+.map{width:100%; border-collapse:collapse; margin:16px 0; font-size:13px}
+.map td{border:1px solid var(--bd); padding:9px 12px}
+.map td:first-child{background:var(--bg2); color:var(--tx2); width:32%; font-size:12.5px}
+.map td:last-child{color:var(--tx)}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.box{background:var(--bg2); border-radius:var(--r); padding:14px 16px; font-size:13px}
+.box h3{font-size:12.5px; color:var(--tx2); letter-spacing:.4px; margin-bottom:8px}
+.box ul{margin:0; padding-left:17px; color:var(--tx)}
+.box li{margin-bottom:5px}
+.box li:last-child{margin-bottom:0}
+.foot{
+  margin-top:18px; padding-top:14px; border-top:1px solid var(--bd);
+  font-size:12.5px; color:var(--tx2);
+}
+.foot b{color:var(--tx); font-weight:600}
+
+/* 条形图 */
+.bars{margin:8px 0 4px}
+.bar{display:flex; align-items:center; gap:12px; margin-bottom:12px}
+.bl{flex:0 0 150px; font-size:12.5px; color:var(--tx2); text-align:right}
+.bt{flex:1; height:26px; background:var(--bg2); border-radius:6px; overflow:hidden; position:relative}
+.bf{height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:9px; color:#fff; font-size:12px; font-weight:600; letter-spacing:.3px}
+.bf.a{background:var(--accent)}
+.bf.b{background:#C9C9CF; color:var(--tx2)}
+.bf.c{background:var(--ok)}
+.bf.d{background:var(--warn)}
+.bv{flex:0 0 92px; font-size:12px; color:var(--tx2)}
+
+/* 序列 */
+.route{
+  border:1px solid var(--bd); border-radius:14px; padding:20px 24px;
+  margin-bottom:14px;
+}
+.route.pick{border:2px solid var(--accent); background:#FFF9F9}
+.rh{display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap}
+.rk{
+  flex:0 0 34px; height:34px; border-radius:10px; background:var(--bg3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:600; color:var(--tx2);
+}
+.route.pick .rk{background:var(--accent); color:#fff}
+.rh h3{margin:0; font-size:15.5px}
+.chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
+.chip{
+  font-size:13.5px; padding:4px 12px; border-radius:20px;
+  background:var(--bg2); color:var(--tx); border:1px solid var(--bd);
+  letter-spacing:1px;
+}
+.chip.new{background:#FFF1F0; color:var(--accent); border-color:#FFD5D2; font-weight:600}
+.route p{margin:0; font-size:13px; color:var(--tx2)}
+
+.figcap{font-size:12.5px; color:var(--tx2); margin-top:6px; line-height:1.75}
+.figcap b{color:var(--tx)}
+ol.steps{padding-left:20px; margin:12px 0 0}
+ol.steps li{margin-bottom:9px; font-size:13.5px}
+ol.steps li b{font-weight:600}
+code{
+  background:var(--bg2); border:1px solid var(--bd); border-radius:5px;
+  padding:1px 6px; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;
+}
+.big{font-size:15px; font-weight:600; color:var(--tx); margin:20px 0 6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>从唐诗、宋词、元曲里找名字</h1>
+  <p class="sub">中文名第六批 · 实测 23 个，5 个撞死，18 个在公开渠道上还是空的</p>
+  <p style="margin:0;color:var(--tx2);font-size:13.5px">
+    这批翻了唐诗、宋词、元曲三大块。结论跟你想的可能相反：<b>诗词里最值钱的不是名句本身，是名句里那个动作。</b>
+    "欲寄彩笺兼尺素"——"尺素"早被人抢了；"何当共剪西窗烛"——"剪烛"还空着。
+    同样，"吾家洗砚池头树"值钱的不是"墨梅"，是"洗砚"；"韦编屡绝铁砚穿"值钱的不是"读书"，是"韦编"。
+    <b>越像一句好词、越大伙儿都会用，越挤；越像某个行当里干活的专用词，越空。</b>
+  </p>
+  <div class="note">
+    <b>筛到什么程度，我先说清楚：</b>每个名字我都跑了公开渠道（阿里云商标、启信宝、爱企查、企查查、标库网）的第 9 类检索，查到障碍的写清楚撞到谁、注册号多少、商品项里到底有没有软件。没查到的写"未见占用"。<b>但这不等于能注册</b>——公开渠道有盲查期、有更新延迟，最终必须去商标局官网自己查一遍。这一步谁也替不了。
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span>先划掉 5 个：读音好听、意思也对的，往往就是被占得最狠的</h2>
+  <p class="lead">这 5 个都是第一眼特别合适、而且名气大的词。它们的问题不是不好，是"太出名，早有人要了"。</p>
+
+  <table>
+    <thead>
+      <tr><th style="width:12%">名字</th><th style="width:17%">出处</th><th>撞到谁</th><th style="width:12%">判定</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>尺素</b><br><span class="mono">chǐ sù</span></td>
+        <td>晏殊《蝶恋花》<br><span class="mono">欲寄彩笺兼尺素</span></td>
+        <td>上海尺素信息技术有限公司第9类 <span class="mono">19608770</span> 已注册，商品项含<b>可下载的计算机应用软件、电子出版物（可下载）</b>，专用权到 2037-05-27，2026 年 7 月刚办完续展；另一件北京尺素科技有限公司第9类 <span class="mono">89598637</span> 已于 2026-08-20 初审公告。这家公司还开了个公众号叫"尺素传书"。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>芸编</b><br><span class="mono">yún biān</span></td>
+        <td>书卷的代称。"芸"是能驱书虫的香草，"编"是串竹简的绳</td>
+        <td>广东共享信息技术有限公司手上两件第9类：<span class="mono">43637353</span>「芸编」已注册、<span class="mono">43632198</span>「芸编智能实验室 COOKBOOK AI·LABORATORY」已注册，另有第41类 <span class="mono">43641570</span>。这是一家做信息技术的公司，第9类大概率含软件项。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>朱墨</b><br><span class="mono">zhū mò</span></td>
+        <td>朱砂和墨两色，古人校书用朱墨两色分别批注</td>
+        <td>合肥栈顶信息科技有限公司第9类 <span class="mono">53224280</span>，商品项含<b>可下载的计算机程序、可下载的手机应用软件、可下载的计算机游戏软件</b>——全套软件项，一点余地都没有。另有深圳朱墨服饰第25类 <span class="mono">17737411</span>。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>墨池</b><br><span class="mono">mò chí</span></td>
+        <td>曾巩《墨池记》；王羲之临池学书，池水尽墨</td>
+        <td>铭智华通科技（北京）有限公司第9类 <span class="mono">19908031</span> 已注册，专用权 2017-09-14 至 2027-09-13，商品项没能查到公开明细，但申请人是科技公司，撞上软件项的概率很高。同一持有人还握着第16类 <span class="mono">20298090</span>、第38类 <span class="mono">19908274</span>。</td>
+        <td class="rev">高风险，建议弃</td>
+      </tr>
+      <tr>
+        <td><b>心画</b><br><span class="mono">xīn huà</span></td>
+        <td>扬雄《法言》<br><span class="mono">书，心画也</span></td>
+        <td>核心词被衍生名连累：「心画师」第9类 <span class="mono">87344240</span>（龙象广州文化）含<b>可下载的手机应用软件、可下载的计算机应用软件、计算机软件（已录制）</b>全套；「心画心声」第9类 <span class="mono">65559200</span> 也在场。</td>
+        <td class="kill">连坐，不做候选</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="foot">
+    <b>顺手说个反面教材：</b>「云蓝匠星」、「心画师」、「青箱子」这类名字提醒我们一件很重要的事——一个干净的核心词，会被它的一串衍生名连累。所以最后定名前，除了查裸词本身，还得把<b>你可能想到的几个组合</b>一起查一遍。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>关键发现：决定干不干净的，是"生僻度"，不是"出处美不美"</h2>
+  <p class="lead">这一批我特意把词分成三类各测一遍，结果分得特别干脆。</p>
+
+  <div class="bars">
+    <div class="bar"><div class="bl">文学常用雅词<br><span style="color:var(--tx3);font-size:11px">6 个</span></div><div class="bt"><div class="bf b" style="width:8%">0%</div></div><div class="bv">0 / 6 空着</div></div>
+    <div class="bar"><div class="bl">案头动作词<br><span style="color:var(--tx3);font-size:11px">5 个</span></div><div class="bt"><div class="bf c" style="width:100%">100%</div></div><div class="bv">5 / 5 空着</div></div>
+    <div class="bar"><div class="bl">文献专名词<br><span style="color:var(--tx3);font-size:11px">12 个</span></div><div class="bt"><div class="bf c" style="width:100%">100%</div></div><div class="bv">12 / 12 空着</div></div>
+  </div>
+  <p class="figcap">
+    横轴长度＝<b>公开渠道第 9 类"未见占用"的比例</b>，不是"能注册"的比例。"文学常用雅词"这一档是尺素、心画、朱墨、墨池、芸编、青灯，全军覆没；另外两档一个都没撞上。
+  </p>
+
+  <h3 style="margin-top:26px">三条实测出来的规律</h3>
+
+  <table>
+    <thead><tr><th style="width:22%">规律</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><b>一、值钱的是动词</b></td><td>"何当共剪西窗烛"——"西窗"是景，抢手；"剪烛"是动作，没人要。"吾家洗砚池头树"——"墨梅"抢手，"洗砚"没人要。诗词里那个<b>手上真在做的动作</b>，是整句里最空的位置。</td></tr>
+      <tr><td><b>二、藏书词整片空着</b></td><td>书巢、青箱、芸阁、缥帙、缥缃、邺架、架阁——这些词共同点是"<b>书放在哪儿</b>"。这类词几十年没人拿来做软件名，因为不够响亮。但对"给截图找个住处"这件事，它们答得比谁都准。</td></tr>
+      <tr><td><b>三、元曲这条线天然出不了好名</b></td><td>我把元曲过了一遍，实话说：元曲用口语俗语写，几乎不产"案头雅词"。这批里唯一从元代捡到的是元末王冕那首《墨梅》。所以你要的"元"这一条，不是我偷懒没翻，是它本来就没货。</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">03</span>六个站住的，按推荐度从高到低</h2>
+  <p class="lead">下面这六个，第 9 类在公开渠道上都没查到占用。每个我都标了出处、对应到产品哪一步、以及它的真实缺点——缺点我不帮你藏。</p>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">书巢</span><span class="py">shū cháo</span>
+      <span class="tag pick">本轮首选</span>
+      <span class="tag ok">第9类未见占用</span>
+    </div>
+    <div class="quote">
+      其室之内，或栖于椟，或陈于前，或枕藉于床，俯仰四顾，无非书者……间有意欲起而乱书围之，如积槁枝，或至不得行，则自笑曰：此非吾所谓"巢"者耶？
+      <cite>陆游《书巢记》· 南宋</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>书自己搭的窝。</td></tr>
+      <tr><td>对应产品哪一步</td><td>截图不用整理、不用分类，一张一张往巢里叼。要找的时候从巢里翻出来——这正是一目"零配置、先存下"的产品性格。</td></tr>
+      <tr><td>为什么它安全</td><td>"巢"是<b>东西待着的地方</b>，是一个静态名词，不是"我在战斗"。跟前面五批测出来的安全区完全吻合。</td></tr>
+      <tr><td>英文名</td><td>保持 Onceglance，中文名独立，不需要互译。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li>两个字都是小学水平的字，念得出来、打得出来、记得住——这是第五批所有候选都没做到的。</li>
+        <li>出处是南宋陆游自己给自己书房起的号，不是拼凑的，可以直接讲一个完整故事。</li>
+        <li>"书"直接标明产品服务的对象（文字、文档、资料）。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li>陆游这个斋号太有名，书房、书店、茶馆、民宿类同名很多，第 16 / 35 / 41 类大概率被占。<b>第9类本轮未见占用，但这是重点核查对象。</b></li>
+        <li>"巢"字有人会读成贬义（"巢穴"），但对工具名不算问题。</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">剪烛</span><span class="py">jiǎn zhú</span>
+      <span class="tag pick">强推</span>
+      <span class="tag ok">第9类未见占用</span>
+    </div>
+    <div class="quote">
+      何当共剪西窗烛，却话巴山夜雨时。
+      <cite>李商隐《夜雨寄北》· 唐</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>烛芯烧长了光就暗，剪掉一截，光回来。</td></tr>
+      <tr><td>对应产品哪一步</td><td>维持那点亮。工具不喊口号，只是"保证你看得见"——这正是"Agent 的视觉层"该干的事。</td></tr>
+      <tr><td>为什么它安全</td><td>是纯动作词，画面是一个人在夜里守着桌子，不带竞争感、不带宏大叙事。</td></tr>
+      <tr><td>英文名</td><td>Onceglance 不动。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li>唐诗里知名度极高的句子，但被拿走的是"西窗"、"夜雨"，"剪烛"反而是空档。</li>
+        <li>两个字都常用，输入法一打就出，无生僻字。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li>读音与"剪竹"完全相同，口播做域名时要留意。</li>
+        <li>会有人第一反应以为跟蜡烛、灯具产品有关（第11类、第4类）。</li>
+        <li><b>顺带排掉一个近似词：</b>"挑灯"（陆游《冬夜读书》"挑灯夜读书"）也是好词，但辛弃疾"醉里挑灯看剑"太有名，杀气重，且"挑"字两读（tiāo / tiǎo），容易念错，不取。</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">洗砚</span><span class="py">xǐ yàn</span>
+      <span class="tag pick">强推 · 补齐"元"这条线</span>
+      <span class="tag ok">第9类未见占用</span>
+    </div>
+    <div class="quote">
+      吾家洗砚池头树，个个花开淡墨痕。
+      <cite>王冕《墨梅》· 元</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>写完字，把砚台洗干净。一天的活到这儿收工。</td></tr>
+      <tr><td>对应产品哪一步</td><td>截完、存下、落盘、写 manifest——就是那个"收尾"的动作。</td></tr>
+      <tr><td>为什么它安全</td><td>跟剪烛同一族：都是天黑以后对着一张桌子的动作，没有任何"我要赢"的味道。</td></tr>
+      <tr><td>英文名</td><td>Onceglance 不动。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li>你说的"元"这条线，它就是唯一从元代捡到的成果——元末王冕的名句。</li>
+        <li>背后还叠着"王羲之临池学书、池水尽墨"的典故，故事可以讲两层。</li>
+        <li>"砚"字自带文房质感，比"剪烛"更贴"资料/文档"这个对象。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li>是个动词短语，冷不丁听上去不太像产品名，需要配一句解释。</li>
+        <li>"砚"字在手机上手写输入要多写几笔。</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">韦编</span><span class="py">wéi biān</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag">备选第一</span>
+    </div>
+    <div class="quote">
+      韦编屡绝铁砚穿，口诵手钞那计年。
+      <cite>陆游《寒夜读书》· 南宋（典出《史记·孔子世家》"韦编三绝"）</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>把竹简串起来的那根皮绳。"屡绝"＝用得太狠，绳子都断了。</td></tr>
+      <tr><td>对应产品哪一步</td><td>工具被用到磨损——这才是"工具在干活"的味道，比任何"我看见"都更贴。</td></tr>
+      <tr><td>为什么它安全</td><td>极冷门的一个名词，几十年没人拿它做软件名。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li>笔画轻，两个字都好写；"编"字天然带"编排、组织、成册"的意思。</li>
+        <li>有《史记》+"韦编三绝"两层出处，专业性够。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li>"韦"单独看容易被当成姓（韦小宝那个韦），第一眼像个人名。</li>
+        <li>"编"在软件圈会被当成"编码"或"编辑"，指向不够唯一。</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">乌丝栏</span><span class="py">wū sī lán</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag">独占性最高</span>
+    </div>
+    <div class="quote">
+      唐宋人抄书写经，先在纸上画好一道道黑色界格线，再照着线写；线是黑的叫"乌丝栏"，是红的叫"朱丝栏"。
+      <cite>敦煌写经、宋版书上的常见格式</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>一条条竖线，把一大片空白切成有秩序的格子。</td></tr>
+      <tr><td>对应产品哪一步</td><td><b>这就跟我们的 OCR 分块 bbox 是同一件事</b>——把一整屏杂乱的像素，切成一块块有坐标、有秩序的区域。相隔一千多年，干的是同一个活。</td></tr>
+      <tr><td>为什么它安全</td><td>是行业专用术语，不是文学修辞，独占性极高。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li>三个字有具体形像，一眼能看到画面，这在所有候选里是唯一的。</li>
+        <li>"一眼看到格子线"跟产品名"一目"在气质上是同一挂的。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li>三字名的注册难度比两字大，审查时可能被拆开比对。</li>
+        <li>"乌"字偏暗沉，跟一目红那种明快调性需要重新调和一下视觉。</li>
+        <li>三个字里有"栏"字，可能被联想成对话框／专栏，指向不够干净。</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">缥帙</span><span class="py">piǎo zhì</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag warn">生僻字硬伤</span>
+    </div>
+    <table class="map">
+      <tr><td>字面</td><td>"缥"是淡青色，"帙"是书衣、书套。"缥帙青箱"是固定搭配，指一整套藏书。</td></tr>
+      <tr><td>对应产品哪一步</td><td>书外面那层套子。产品做的正是给屏幕上抓到的东西套一层壳——原图加一个 json manifest，正好两层。</td></tr>
+      <tr><td>为什么它安全</td><td>两个都是生僻字，独占性最高，基本不会撞。</td></tr>
+    </table>
+    <div class="cols">
+      <div class="box"><h3>优点</h3><ul>
+        <li>跟"衍生图／分身"这个概念对得最准的一个词。</li>
+        <li>青色是书衣的颜色，正好能接一目的视觉体系。</li>
+      </ul></div>
+      <div class="box"><h3>缺点 / 要盯的地方</h3><ul>
+        <li><b>硬伤：两个生僻字，口头传播基本靠不住</b>，必须长期配拼音 piǎo zhì，做搜索也吃亏。</li>
+        <li>所以它排在这六个的最后，除非你决定"独占性优先、传播性让位"。</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span>还有 13 个备选：能过，但各有各的别扭</h2>
+  <p class="lead">这一批备选的量比前五批都大，说明诗词这条路是真的有货。只是每个都有一处让我犹豫的地方，我把犹豫写出来了。</p>
+
+  <table>
+    <thead>
+      <tr><th style="width:10%">名字</th><th style="width:10%">读音</th><th style="width:26%">出处 / 词义</th><th style="width:26%">第9类状况</th><th>让我犹豫的地方</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>缥缃</b></td><td class="mono">piǎo xiāng</td>
+        <td>淡青与浅黄两种书衣颜色，代指书卷</td>
+        <td class="keep">未见占用<br><span class="mono">（16类89326936 纸品文具、30类69161801 在场）</span></td>
+        <td>和缥帙同一族，但比缥帙更软、更顺口，两个字都是颜色，画面更美。<b>缺点一样是生僻。</b>如果要在"生僻但美"里挑一个，我会挑它而不是缥帙。</td>
+      </tr>
+      <tr>
+        <td><b>花笺</b></td><td class="mono">huā jiān</td>
+        <td>宋词里"彩笺""红笺"常见：晏殊《蝶恋花》"欲寄彩笺兼尺素"；晏几道《清平乐》"红笺小字，说尽平生意"</td>
+        <td class="keep">未见占用<br><span class="mono">（10类28162964、11类28153135、5类31351022A 在场）</span></td>
+        <td>"笺"字现在被便签、笔记类产品用滥了，在软件圈里撞车的风险比其他词高，指向也不够独占。</td>
+      </tr>
+      <tr>
+        <td><b>青箱</b></td><td class="mono">qīng xiāng</td>
+        <td>"缥帙青箱"是固定搭配；《宋书》里有"青箱学"，指家里世代相传的学问</td>
+        <td class="keep">未见占用<br><span class="mono">（41类70656243 在场；「青箱子」9类77393544 是另一件商品，「青葙」9类89194314 是另一个字）</span></td>
+        <td>很稳，但"箱"字听起来像个硬件收纳产品，少一点软件的轻。</td>
+      </tr>
+      <tr>
+        <td><b>芸阁</b></td><td class="mono">yún gé</td>
+        <td>芸香能驱书虫，所以唐宋人把藏书的地方叫芸阁，也指秘书省</td>
+        <td class="keep">未见占用<br><span class="mono">（4类66981931、35类57220813、41类49383190、30类48613884 在场）</span></td>
+        <td>温润好念，符合我们测出来的安全区；但"阁"字偏建筑，容易被当成书店或民宿。</td>
+      </tr>
+      <tr>
+        <td><b>香篆</b></td><td class="mono">xiāng zhuàn</td>
+        <td>把香盘成篆书字样的形状，烧完香灰还留着那个纹路；唐宋诗词里常见</td>
+        <td class="keep">未见占用</td>
+        <td>意象极妙——"火灭了，痕迹还在"，和"截图留证"是同一个意思；而且"篆"跟我们的印章标天然呼应。<b>但"香"字会把它拖进香氛、祭祀类目</b>，这是它最别扭的一处。</td>
+      </tr>
+      <tr>
+        <td><b>邺架</b></td><td class="mono">yè jià</td>
+        <td>韩愈写"邺侯家多书，插架三万轴"；后人用"邺架"代指藏书的地方</td>
+        <td class="keep">未见占用</td>
+        <td>典故漂亮，独占性高。缺点是"邺"是地名，认读有门槛，口头传播不如书巢。</td>
+      </tr>
+      <tr>
+        <td><b>插架</b></td><td class="mono">chā jià</td>
+        <td>同出韩愈《送诸葛觉往随州读书》："邺侯家多书，插架三万轴，一一悬牙签，新若手未触。"</td>
+        <td class="keep">未见占用</td>
+        <td>纯动作词，跟"归档"最贴。但它太像一个动作，不太像一个名字，站在货架上不像品牌。</td>
+      </tr>
+      <tr>
+        <td><b>架阁</b></td><td class="mono">jià gé</td>
+        <td>宋代官府档案库叫"架阁库"，里面的文书叫"架阁文字"</td>
+        <td class="keep">未见占用</td>
+        <td>跟"归档"字面同源，语义最直给。<b>但读音像"价格"</b>，口播时容易被听错，这是个真实麻烦。</td>
+      </tr>
+      <tr>
+        <td><b>汗青</b></td><td class="mono">hàn qīng</td>
+        <td>文天祥《过零丁洋》"留取丹心照汗青"；本义是把青竹简烤出水便于书写、防虫</td>
+        <td class="rev">9类已有占位但不挡路<br><span class="mono">13179427 商品为0901-计算机、0907、0908、0909、0912、0919、0920、0921、0922，<b>没有</b>软件下载项</span></td>
+        <td>语义最对"记录"这件事，但气场太壮烈——把工具名搞成家国情怀，跟轻量小工具的性格不搭。</td>
+      </tr>
+      <tr>
+        <td><b>云蓝</b></td><td class="mono">yún lán</td>
+        <td>云蓝纸，唐代的名纸，见唐人笔记（元稹用过它寄诗）</td>
+        <td class="rev">9类只有硬件占位<br><span class="mono">「云蓝匠星」56835849 商品为0901大屏幕液晶显示器、0908、0911、0913、0920、0922，无软件项</span></td>
+        <td>字漂亮、好念、好写。问题是太像美妆或服装品牌，而且"云蓝"两个字放在一起，做软件名有点飘。</td>
+      </tr>
+      <tr>
+        <td><b>竹素</b></td><td class="mono">zhú sù</td>
+        <td>竹简与素帛，古书的两种载体，合起来泛指书籍</td>
+        <td class="rev">第9类未见占用，但有同名同业<br><span class="mono">深圳竹素科技有限公司（2023 年成立，经营范围含软件开发）在营</span></td>
+        <td>简洁、好念，是这两批里最"现代"的一个。唯一隐患是同名公司做的正是软件，虽然没查到它的第9类商标，仍属中风险。</td>
+      </tr>
+      <tr>
+        <td><b>誊录</b></td><td class="mono">téng lù</td>
+        <td>照原文再抄一遍；清代设过"誊录"官专门抄档</td>
+        <td class="keep">未见占用</td>
+        <td>动作词，"把东西原样放一份"的意思最直白，比所有候选都更贴产品。<b>但它不是诗词出典，是文书制度词</b>——如果你想严守"从诗词里来"这个条件，它就不合格。</td>
+      </tr>
+      <tr>
+        <td><b>青灯</b></td><td class="mono">qīng dēng</td>
+        <td>陆游诗里常见"青灯"（青灯黄卷，指夜里读书）</td>
+        <td class="rev">没查清<br><span class="mono">已知41类27237706已销亡、19类31932251、41类85274122待审中，第9类没有查到确切记录</span></td>
+        <td><b>请别把它当干净词。</b>"没查到"和"没有"是两回事，这个必须上官网自己查。</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">05</span>六批合并收口：现在的序列长这样</h2>
+  <p class="lead">第六批加进来之后，六个方向的全貌。判断标准一直是同一条：公开渠道第 9 类有没有撞上"可下载软件"这类商品项。</p>
+
+  <div class="route">
+    <div class="rh"><div class="rk">1</div><h3>看 / 视觉类词 · 12 个</h3><span class="tag risk">洁净 0 / 12</span></div>
+    <p>跟"看"和镜子有关的词，被注册得像筛子。这条线不用再试了。</p>
+    <div class="chips"><span class="chip">一目</span><span class="chip">瞥</span><span class="chip">观止</span><span class="chip">明鉴</span><span class="chip">镜</span><span class="chip">瞭</span></div>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">2</div><h3>动物与视觉冠军 · 14 个</h3><span class="tag risk">洁净 0 / 14</span></div>
+    <p>鹰、隼、猫头鹰、变色龙这类"眼力最好"的动物名，全部已被占用。</p>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">3</div><h3>神话神兽与神人 · 8 个</h3><span class="tag risk">洁净 0 / 8</span></div>
+    <p>离朱、陆吾、迷谷、若木、归墟、烛阴……《山海经》里叫得出名的，第9类基本被扫干净。</p>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">4</div><h3>古手艺与档案词 · 22 个</h3><span class="tag warn">洁净约 48%</span></div>
+    <p>装裱、抄书、归档这些老行当的词，一半能过。这条线证明"行业生词"是安全区。</p>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">5</div><h3>文人案头与文献词 · 6 个</h3><span class="tag ok">洁净 6 / 6</span></div>
+    <p>第五批的成果，全都干净。</p>
+    <div class="chips">
+      <span class="chip">芣苢 fú yǐ</span><span class="chip">卷耳 juàn ěr</span><span class="chip">蜀素 shǔ sù</span><span class="chip">琅嬛 láng huán</span><span class="chip">二酉 èr yǒu</span><span class="chip">烛阴 zhú yīn</span>
+    </div>
+  </div>
+
+  <div class="route pick">
+    <div class="rh"><div class="rk">6</div><h3>唐诗宋词元曲的动作与藏书词 · 本轮新增</h3><span class="tag ok">洁净 17 / 17</span></div>
+    <p>同一个安全区，但这一批的词"念得出来、讲得出故事"——这是它比第五批强的地方。</p>
+    <div class="chips">
+      <span class="chip new">书巢</span><span class="chip new">剪烛</span><span class="chip new">洗砚</span><span class="chip new">韦编</span><span class="chip new">乌丝栏</span>
+      <span class="chip new">缥帙</span><span class="chip">缥缃</span><span class="chip">花笺</span><span class="chip">青箱</span><span class="chip">芸阁</span>
+      <span class="chip">香篆</span><span class="chip">邺架</span><span class="chip">插架</span><span class="chip">架阁</span><span class="chip">汗青</span>
+      <span class="chip">云蓝</span><span class="chip">竹素</span><span class="chip">誊录</span>
+    </div>
+  </div>
+
+  <h3 style="margin-top:26px">如果今天就要定一个，我的排序</h3>
+  <table>
+    <thead><tr><th style="width:8%">顺位</th><th style="width:14%">名字</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td class="keep">1</td><td><b>书巢</b></td><td>唯一同时满足"两个字都认识、出处是真人真事、意思正好落在产品主功能上"的候选。第五批所有候选都卡在"字认不出来"这一步，它没这个毛病。</td></tr>
+      <tr><td class="keep">2</td><td><b>蜀素</b></td><td>第五批的头名。米芾《蜀素帖》，载体意象准、独占性高；代价是"蜀"字要解释一次。</td></tr>
+      <tr><td class="keep">3</td><td><b>剪烛</b></td><td>唐诗名句里的空档，动作词，零生僻字。缺点是不太像产品名，需要配一句口号。</td></tr>
+      <tr><td class="keep">4</td><td><b>洗砚</b></td><td>跟剪烛同级，但多一层"文房"质感，且它是唯一从元代拿到的成果。</td></tr>
+      <tr><td class="rev">5</td><td><b>芣苢</b></td><td>独占性最强（《诗经》"采采芣苢"，"采"这个动作跟截图是天生的），但生僻到需要长期标拼音。</td></tr>
+    </tbody>
+  </table>
+  <div class="foot">
+    <b>一句话归纳六批的结果：</b>越像"一个工具在默默干活"的词越安全，越像"一个品牌在战斗"的词越危险。这条规律在六个方向、一百多个词上都没被打破过。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">06</span>最后这道工序，得你自己跑一遍</h2>
+  <p class="lead">我做的是公开渠道预筛，有盲查期、有延迟。<b>在提交注册之前，下面这几步必须做。</b></p>
+  <ol class="steps">
+    <li><b>上官网查</b>：打开 <code>sbj.cnipa.gov.cn</code> → 商标查询 → 商标近似查询。国际分类填 <code>09</code>，输入候选词（书巢 / 剪烛 / 洗砚 / 韦编 / 乌丝栏 / 缥帙依次查）。</li>
+    <li><b>只看一件事</b>：每一项结果的服务项里，有没有出现 <code>计算机程序（可下载软件）</code>、<code>可下载的计算机应用软件</code>、<code>计算机软件（已录制）</code> 这三条中的任意一条。<b>有，就是挡路；没有，就不挡。</b>像"雷达""导航仪""电缆""大屏幕液晶显示器"这类硬件项，不构成软件障碍。</li>
+    <li><b>图形标另查一遍</b>：印章标「甲骨目」用图形检索，2026-05-22 起官网已支持以图搜图（png/jpeg/jpg，≤2M）。</li>
+    <li><b>顺带查组合名</b>：把"书巢云""书巢笔记"这类你可能顺手用上的衍生名一起查。前面「云蓝匠星」「心画师」就是被衍生名连累的反面例子。</li>
+    <li><b>类别布局</b>：主打第9类（软件本体）；辅以第16类（纸品文具）、第35类（广告销售）、第42类（软件服务）。注意第42类是服务类，挡不住别人在第9类注册，别搞混。</li>
+  </ol>
+</section>
+
+</div>
+</body>
+</html>

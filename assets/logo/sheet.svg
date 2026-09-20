@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 640" width="460" height="640" font-family="PingFang SC, Microsoft YaHei, sans-serif">
+  <rect width="460" height="640" rx="18" fill="#FFFFFF"/>
+  <text x="230" y="56" text-anchor="middle" font-size="20" font-weight="600" fill="#1D1D21">影章 · 彡 — 定影 Onceglance 品牌标</text>
+  <text x="230" y="80" text-anchor="middle" font-size="12" fill="#8E8E99">红底方章 + 白色「彡」三斜纹 · 斜切 35° · 与甲骨目同章身</text>
+
+  <!-- 主标 160 -->
+  <rect x="60" y="110" width="160" height="160" rx="34" fill="#FF3B30"/>
+  <g transform="rotate(35 140 190)" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" fill="none">
+    <path d="M88.4 133h103.2"/><path d="M94.3 190h91.4"/><path d="M100.2 247h79.6"/>
+  </g>
+  <text x="140" y="300" text-anchor="middle" font-size="13" fill="#5C5C66">主标 160px · 描边 14（=4.2@48 等比）</text>
+
+  <!-- 比例网格 48 原始坐标系 -->
+  <g transform="translate(330 110)">
+    <rect x="0" y="0" width="160" height="160" rx="34" fill="#F7F7F8" stroke="#E4E4E8"/>
+    <g transform="translate(13.33 13.33) scale(2.78)">
+      <rect x="4" y="4" width="40" height="40" rx="10" fill="none" stroke="#D2D2D8" stroke-dasharray="3 2.4"/>
+      <g transform="rotate(35 24 24)" stroke="#FF3B30" stroke-width="4.2" stroke-linecap="round" fill="none">
+        <path d="M13 17.4h22"/><path d="M14.25 24h19.5"/><path d="M15.5 30.6h17"/>
+      </g>
+    </g>
+    <line x1="80" y1="0" x2="80" y2="160" stroke="#EFEFF1"/>
+    <line x1="0" y1="80" x2="160" y2="80" stroke="#EFEFF1"/>
+  </g>
+  <text x="410" y="300" text-anchor="middle" font-size="13" fill="#5C5C66">48 坐标网格 · 三线居中递减</text>
+
+  <!-- 尺寸分级 -->
+  <g transform="translate(60 340)">
+    <rect x="0" y="0" width="96" height="96" rx="21" fill="#FF3B30"/>
+    <g transform="rotate(35 48 48) translate(28.7 13.3) scale(2.004)" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round" fill="none"><path d="M13 17.4h22"/><path d="M14.25 24h19.5"/><path d="M15.5 30.6h17"/></g>
+    <text x="48" y="118" text-anchor="middle" font-size="12" fill="#5C5C66">96 · 标准</text>
+  </g>
+  <g transform="translate(180 352)">
+    <rect x="0" y="0" width="64" height="64" rx="14" fill="#FF3B30"/>
+    <g transform="rotate(35 32 32) translate(15.7 12.7) scale(1.33)" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round" fill="none"><path d="M13 17.4h22"/><path d="M14.25 24h19.5"/><path d="M15.5 30.6h17"/></g>
+    <text x="32" y="106" text-anchor="middle" font-size="12" fill="#5C5C66">64 · 标准</text>
+  </g>
+  <g transform="translate(268 364)">
+    <rect x="0" y="0" width="48" height="48" rx="10" fill="#FF3B30"/>
+    <g transform="rotate(35 24 24)" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round" fill="none"><path d="M13 17.4h22"/><path d="M14.25 24h19.5"/><path d="M15.5 30.6h17"/></g>
+    <text x="24" y="94" text-anchor="middle" font-size="12" fill="#5C5C66">48 · 标准 4.2</text>
+  </g>
+  <g transform="translate(336 376)">
+    <rect x="0" y="0" width="32" height="32" rx="6.7" fill="#FF3B30"/>
+    <g transform="rotate(35 16 16) translate(9.33 11.33) scale(0.667)" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" fill="none"><path d="M14 17h20"/><path d="M15.25 24h17.5"/><path d="M16.5 31h15"/></g>
+    <text x="16" y="82" text-anchor="middle" font-size="12" fill="#5C5C66">32 · 加粗 5</text>
+  </g>
+  <g transform="translate(384 388)">
+    <rect x="0" y="0" width="16" height="16" rx="3.3" fill="#FF3B30"/>
+    <g transform="rotate(35 8 8) translate(4.67 5.67) scale(0.333)" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" fill="none"><path d="M14 17h20"/><path d="M15.25 24h17.5"/><path d="M16.5 31h15"/></g>
+    <text x="8" y="70" text-anchor="middle" font-size="12" fill="#5C5C66">16</text>
+  </g>
+
+  <!-- 变体行 -->
+  <g transform="translate(60 470)">
+    <text x="0" y="14" font-size="13" font-weight="600" fill="#1D1D21">单色镂空（mask，非白线）</text>
+    <g transform="translate(0 26)">
+      <rect x="0" y="0" width="48" height="48" rx="10" fill="#1D1D21"/>
+      <g transform="rotate(35 24 24) translate(4 4)" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round" fill="none" opacity="0.92"><path d="M13 17.4h22"/><path d="M14.25 24h19.5"/><path d="M15.5 30.6h17"/></g>
+      <rect x="4" y="4" width="40" height="40" rx="10" fill="none"/>
+    </g>
+    <g transform="translate(64 26)">
+      <rect x="0" y="0" width="48" height="48" fill="#1D1D21"/>
+      <g transform="rotate(35 24 24) translate(4 4)" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round" fill="none" opacity="0.95"><path d="M13 17.4h22"/><path d="M14.25 24h19.5"/><path d="M15.5 30.6h17"/></g>
+    </g>
+    <text x="128" y="56" font-size="12" fill="#5C5C66">深底白纹章 / 深底无底纹（mono-light 用途示意）</text>
+  </g>
+
+  <!-- 线描版 -->
+  <g transform="translate(300 470)">
+    <text x="0" y="14" font-size="13" font-weight="600" fill="#1D1D21">线描版（浅色界面）</text>
+    <rect x="0" y="26" width="48" height="48" rx="10" fill="#FFFFFF" stroke="#FF3B30" stroke-width="3.4"/>
+    <g transform="rotate(35 24 24) translate(4 4)" stroke="#FF3B30" stroke-width="3.4" stroke-linecap="round" fill="none"><path d="M13 17.4h22"/><path d="M14.25 24h19.5"/><path d="M15.5 30.6h17"/></g>
+  </g>
+
+  <!-- 锁排 -->
+  <g transform="translate(60 570)">
+    <rect x="0" y="0" width="48" height="48" rx="10" fill="#FF3B30"/>
+    <g transform="rotate(35 24 24)" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round" fill="none"><path d="M13 17.4h22"/><path d="M14.25 24h19.5"/><path d="M15.5 30.6h17"/></g>
+    <text x="62" y="24" font-size="22" font-weight="500" letter-spacing="1.4" fill="#1D1D21">定影</text>
+    <text x="63" y="41" font-size="10.5" letter-spacing="2.4" fill="#1D1D21" opacity="0.62">Onceglance</text>
+    <text x="190" y="24" font-size="12" fill="#8E8E99">横向锁排 · 字标随中文名改为「定影」</text>
+  </g>
+</svg>

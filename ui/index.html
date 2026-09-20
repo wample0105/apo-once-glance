@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>定影 Onceglance</title>
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg-primary);
+    display: flex;
+    flex-direction: column;
+    font-size: 12.5px;
+  }
+
+  /* ===== 自定义标题栏（48px 以下，§5.1）===== */
+  #titlebar {
+    height: 42px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+  }
+  #titlebar .dragzone {
+    flex: 1;
+    height: 100%;
+    -webkit-app-region: drag;
+  }
+  .brandchip {
+    width: 24px; height: 24px;
+    flex: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brandchip img { width: 24px; height: 24px; border-radius: 6px; display: block; }
+  .brandname { font-size: 12.5px; font-weight: 500; }
+  .adot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--success); flex: none;
+    cursor: pointer;
+  }
+  .adot.off { background: var(--accent); }
+  .winctrl { display: flex; gap: 2px; align-items: center; -webkit-app-region: no-drag; }
+  .winctrl button {
+    border: none; background: transparent;
+    width: 40px; height: 30px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .winctrl button:hover { background: var(--bg-tertiary); }
+  .winctrl button.close:hover { background: var(--accent); color: #fff; }
+
+  /* ===== 主体 ===== */
+  #winbody { flex: 1; display: flex; min-height: 0; }
+  #nav {
+    width: 148px; flex: none;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    padding: 10px 8px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    border: none; background: transparent;
+    font-size: 12.5px; color: var(--text-secondary);
+    cursor: pointer; text-align: left; width: 100%;
+  }
+  .nav-item svg { width: 16px; height: 16px; flex: none; color: var(--text-tertiary); }
+  .nav-item:hover { background: #EAEAEF; color: var(--text-primary); }
+  .nav-item.active { background: var(--accent-bg); color: var(--accent-text); font-weight: 500; }
+  .nav-item.active svg { color: var(--accent); }
+  #nav .ver {
+    margin-top: auto;
+    padding: 7px 10px;
+    font-size: 10.5px; color: var(--text-tertiary);
+    display: flex; align-items: center; gap: 6px;
+  }
+  #nav .statusdot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--success); flex: none; cursor: pointer;
+  }
+  #nav .statusdot.warn { background: #E5A100; }
+  #nav .statusdot.err { background: var(--accent); }
+
+  #content { flex: 1; min-width: 0; overflow: auto; }
+  .page { display: none; padding: 14px 16px; }
+  .page.on { display: block; }
+  .ptitle { font-size: 15px; font-weight: 500; margin-bottom: 2px; }
+  .psub { font-size: 12px; color: var(--text-tertiary); margin-bottom: 14px; line-height: 1.6; }
+
+  /* 历史操作条 */
+  .actionbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+  .searchrow { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+  .searchrow input {
+    flex: 1; min-width: 0;
+    font-family: inherit; font-size: 12.5px;
+    padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: var(--r-btn);
+    background: #fff; color: var(--text-primary);
+  }
+  .searchrow input:focus { outline: none; border-color: var(--accent); }
+  .metaline { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
+  .syntaxhint { font-size: 11px; color: var(--text-tertiary); margin-bottom: 12px; }
+  .syntaxhint code {
+    font-family: var(--mono); background: var(--bg-tertiary);
+    padding: 1px 5px; border-radius: 4px; cursor: pointer; color: var(--text-secondary);
+  }
+  .datehead {
+    font-size: 11px; color: var(--text-tertiary); font-weight: 500;
+    position: sticky; top: -14px; background: var(--bg-primary);
+    padding: 6px 0 5px; z-index: 2; margin-bottom: 6px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+    gap: 10px; margin-bottom: 12px;
+  }
+  .card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.12s, box-shadow 0.12s;
+  }
+  .card:hover { border-color: var(--border-strong); }
+  .card:hover .cardacts { opacity: 1; pointer-events: auto; }
+  .thumb { height: 84px; position: relative; overflow: hidden; background: #E9E9EE; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .kindbadge {
+    position: absolute; top: 4px; left: 4px;
+    background: rgba(29, 29, 33, 0.75); color: #F5F5F7;
+    font-size: 10px; border-radius: 4px; padding: 1px 6px;
+  }
+  .cardinfo { padding: 7px 9px 9px; }
+  .cardname { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cardmeta { font-size: 10.5px; color: var(--text-tertiary); margin-top: 2px; }
+  .cardocr {
+    font-size: 11px; color: var(--text-secondary); margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cardacts {
+    position: absolute; top: 6px; right: 6px;
+    display: flex; gap: 4px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.12s;
+  }
+  .cardacts button {
+    border: none; border-radius: 5px;
+    background: rgba(29, 29, 33, 0.82); color: #F5F5F7;
+    font-size: 11px; padding: 3px 8px; cursor: pointer;
+  }
+  .cardacts button:hover { background: rgba(29, 29, 33, 0.95); }
+  .empty {
+    text-align: center; color: var(--text-tertiary);
+    padding: 60px 0 40px; font-size: 12.5px;
+  }
+  .empty .big { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+
+  /* 设置页通用 */
+  .group {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    padding: 4px 14px;
+    margin-bottom: 12px;
+  }
+  .row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .row:last-child { border-bottom: none; }
+  .row .label { flex: 1; min-width: 0; }
+  .row .label .t { font-size: 12.5px; }
+  .row .label .d { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; line-height: 1.5; }
+  .row .ctl { flex: none; display: flex; align-items: center; gap: 8px; }
+  .row.disabled { opacity: 0.55; }
+  .ro-value { font-size: 12px; color: var(--text-secondary); }
+  .statline { font-size: 11.5px; margin-top: 6px; }
+  .statline.ok { color: var(--success); }
+  .statline.cut { color: var(--error); }
+
+  .auditlist {
+    background: var(--ov-surface); color: var(--ov-fg);
+    font-family: var(--mono); font-size: 11px;
+    border-radius: 8px; padding: 10px 12px;
+    max-height: 220px; overflow: auto;
+    line-height: 1.8;
+  }
+  .auditlist .l-ok { color: #7BD8AE; }
+  .auditlist .l-err { color: #FF9187; }
+
+  select, input[type="text"].formin {
+    font-family: inherit; font-size: 12.5px;
+    padding: 6px 10px;
+    border: 1px solid var(--border); border-radius: var(--r-btn);
+    background: #fff; color: var(--text-primary);
+  }
+  .doctor-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .doctor-item:last-child { border-bottom: none; }
+  .doctor-item .d-ok { color: var(--success); font-weight: 500; }
+  .doctor-item .d-bad { color: var(--error); font-weight: 500; }
+
+  .hotkeyrow { display: flex; align-items: center; gap: 10px; }
+  .hotkeychip {
+    font-family: var(--mono); font-size: 11.5px;
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: 6px; padding: 3px 10px;
+  }
+  table.ref { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.ref td, table.ref th {
+    text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border);
+  }
+  table.ref th { color: var(--text-tertiary); font-weight: 500; font-size: 11px; }
+  table.ref code { font-family: var(--mono); font-size: 11px; background: var(--bg-tertiary); padding: 1px 5px; border-radius: 4px; }
+  .installcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px; }
+  .installcard { border: 1px solid var(--border); border-radius: var(--r-card); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .installcard h4 { font-size: 12px; font-weight: 500; }
+  .installcard .sub { font-size: 11px; color: var(--text-tertiary); line-height: 1.5; }
+</style>
+</head>
+<body data-os="windows">
+  <div id="titlebar">
+    <span class="brandchip"><img id="brand-img" alt="定影影章" src=""></span>
+    <span class="brandname">定影 Onceglance</span>
+    <span class="adot" id="agent-dot" title="Agent 调用状态"></span>
+    <div class="dragzone"></div>
+    <div class="winctrl">
+      <button id="btn-min" title="最小化">─</button>
+      <button id="btn-max" title="最大化">□</button>
+      <button id="btn-close" class="close" title="关闭（最小化到托盘）">✕</button>
+    </div>
+  </div>
+
+  <div id="winbody">
+    <nav id="nav">
+      <button class="nav-item active" data-page="history">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.5V8l2.5 1.8"/></svg>
+        历史
+      </button>
+      <button class="nav-item" data-page="theme">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10.8 2.6l2.6 2.6L6 12.6l-3.4.8.8-3.4z"/></svg>
+        标注主题
+      </button>
+      <button class="nav-item" data-page="privacy">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 1.8l5 1.8v4c0 3.2-2.1 5.5-5 6.6-2.9-1.1-5-3.4-5-6.6v-4z"/></svg>
+        Agent 与隐私
+      </button>
+      <button class="nav-item" data-page="agent">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 14V9.5M10 14V9.5M4.5 9.5h7M5 9.5V6a3 3 0 016 0v3.5M8 3V1.5"/></svg>
+        Agent 接入
+      </button>
+      <button class="nav-item" data-page="general">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M12.4 3.6L11 5M5 11l-1.4 1.4"/></svg>
+        通用
+      </button>
+      <button class="nav-item" data-page="doctor">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9h2l1.5-4 3 6.5L11 9h2"/></svg>
+        诊断
+      </button>
+      <div class="ver"><span class="statusdot" id="status-dot" title="诊断状态"></span><span id="ver-text">v0.1.0</span></div>
+    </nav>
+
+    <main id="content">
+      <!-- ===== 历史 ===== -->
+      <section class="page on" id="page-history">
+        <div class="actionbar">
+          <button class="btn primary" id="act-region">区域截图 <span class="kbd">Alt+Shift+A</span></button>
+          <button class="btn" id="act-window">窗口 <span class="kbd">Alt+Shift+W</span></button>
+          <button class="btn" id="act-fullscreen">全屏 <span class="kbd">Alt+Shift+F</span></button>
+          <button class="btn" id="act-ocr">取字 <span class="kbd">Alt+Shift+T</span></button>
+          <button class="btn" id="act-scroll">长截图 <span class="kbd">Alt+Shift+L</span></button>
+        </div>
+        <div class="searchrow">
+          <input id="search" type="text" placeholder='试试 kind:window 或 after:昨天（OCR 全文检索）'>
+          <span class="metaline" id="pathmeta"></span>
+        </div>
+        <div class="syntaxhint">搜索语法：<code>kind:window</code> <code>after:昨天</code> <code>has:annotated</code> <code>ocr:failed</code>，或直接输入文字</div>
+        <div id="history-list"></div>
+      </section>
+
+      <!-- ===== 标注主题（只读管理视图，§4.8）===== -->
+      <section class="page" id="page-theme">
+        <div class="ptitle">标注主题</div>
+        <div class="psub">调参入口在标注编辑器——这里展示的是编辑器自动记忆的"上次使用值"。本页不做第二套参数，也不需要保存。</div>
+        <div class="group">
+          <div class="row">
+            <div class="label"><div class="t">记住标注设置</div><div class="d">关闭后，编辑器里的改动仅本次生效，默认值不再更新</div></div>
+            <div class="ctl"><button class="switch on" id="sw-remember" role="switch" aria-checked="true"></button></div>
+          </div>
+          <div class="row">
+            <div class="label"><div class="t">恢复默认值</div><div class="d">全部重置为出厂预设，编辑器下次打开生效</div></div>
+            <div class="ctl"><button class="btn" id="btn-theme-reset">恢复默认值</button></div>
+          </div>
+        </div>
+        <div class="group" id="theme-values"></div>
+        <div class="psub">本页没有"保存"按钮——默认值由编辑器自动记忆，这里看到的永远是最新的一份。</div>
+      </section>
+
+      <!-- ===== Agent 与隐私（§4.9）===== -->
+      <section class="page" id="page-privacy">
+        <div class="ptitle">Agent 与隐私</div>
+        <div class="psub">隐私是卖点，外露不藏：总开关、黑名单、审计日志一页看全。</div>
+        <div class="group">
+          <div class="row">
+            <div class="label"><div class="t">允许本机 Agent 调用定影</div><div class="d">CLI、Agent Skill 与 MCP 通过仅限当前用户的本机桥接调用，不开放网络端口</div></div>
+            <div class="ctl"><button class="switch on" id="sw-agent" role="switch" aria-checked="true"></button></div>
+          </div>
+          <div class="statline ok" id="agent-stat"></div>
+          <div class="row" id="row-autocap">
+            <div class="label"><div class="t">允许无感自动截图</div><div class="d">静默截图不弹出取景层、不抢占前台 App、不模拟键鼠；黑名单与审计日志依旧生效</div></div>
+            <div class="ctl"><button class="switch on" id="sw-autocap" role="switch" aria-checked="true"></button></div>
+          </div>
+        </div>
+        <div class="ptitle" style="font-size:13px">隐私 App 黑名单</div>
+        <div class="psub">命中即拒绝截图，不留成图，Agent 收到退出码 6 的明确错误。不提供"本次放行"。</div>
+        <div class="group">
+          <div id="blacklist-rows"></div>
+          <div class="row">
+            <input type="text" class="formin" id="bl-input" placeholder="进程名（1password.exe）或关键字（*银行*），回车添加" style="flex:1">
+            <button class="btn" id="bl-add">添加</button>
+          </div>
+        </div>
+        <div class="ptitle" style="font-size:13px">审计日志</div>
+        <div class="psub">仅元数据（时间、命令、耗时、状态、目标进程名），永不记录图片内容与 OCR 正文。30 天自动清理。</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <select id="audit-filter"><option value="all">全部</option><option value="fail">仅失败</option></select>
+          <span style="flex:1"></span>
+          <button class="btn ghost" id="audit-clear">清空</button>
+        </div>
+        <div class="auditlist" id="audit-list"></div>
+      </section>
+
+      <!-- ===== Agent 接入（§4.10）===== -->
+      <section class="page" id="page-agent">
+        <div class="ptitle">Agent 接入</div>
+        <div class="psub">让 Agent 看见你的屏幕，替你把操作变成教程。</div>
+        <div class="codebox" id="bridge-status" style="margin-bottom:14px">桥接状态检测中…</div>
+        <div class="ptitle" style="font-size:13px">第 1 步 · 安装 CLI 与 Skill（一次装齐）</div>
+        <div class="psub">一条命令同时安装或更新 CLI 与 Skill：自动校验下载文件，并适配 Codex 和通用 Agent Skills 目录。</div>
+        <div class="installcards">
+          <div class="installcard">
+            <h4>方式一 · 终端</h4>
+            <div class="codebox" style="height:84px;display:flex;align-items:center"><span class="copy" data-copy="curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wample/OnceGlance/releases/latest/download/install.sh | bash">复制</span>curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wample/OnceGlance/releases/latest/download/install.sh | bash</div>
+          </div>
+          <div class="installcard">
+            <h4>方式二 · 交给 Agent</h4>
+            <div class="codebox" style="height:84px"><span class="copy" id="copy-prompt">复制</span><span id="install-prompt">请帮我在这台电脑安装 OnceGlance 的 CLI 和 Agent Skill。请执行下面这条命令：
+curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wample/OnceGlance/releases/latest/download/install.sh | bash
+安装完成后，运行 once status --json 验证是否安装成功。</span></div>
+          </div>
+        </div>
+        <div class="psub" style="margin-top:8px">安装后重启 Agent，再运行 <code>once status --json</code> 验证连接。Windows 在 Git Bash / WSL 中执行，macOS 在终端执行。</div>
+        <div class="ptitle" style="font-size:13px;margin-top:14px">第 2 步 · 配置 MCP</div>
+        <div class="psub">把下面的 JSON 加入你的 Agent 的 MCP 配置（命令为 once.exe 的绝对路径）。</div>
+        <div class="codebox" id="mcp-config"><span class="copy">复制</span></div>
+        <div class="ptitle" style="font-size:13px;margin-top:14px">接口速查</div>
+        <div class="group" style="padding:0 14px">
+          <table class="ref">
+            <tr><th>命令</th><th>说明</th></tr>
+            <tr><td><code>once status</code></td><td>版本、实例、桥接、热键状态</td></tr>
+            <tr><td><code>once capture window|fullscreen|region</code></td><td>捕获；--out 指定输出</td></tr>
+            <tr><td><code>once ocr &lt;path|last&gt;</code></td><td>本地 OCR，blocks + bbox</td></tr>
+            <tr><td><code>once annotate &lt;path|last&gt; --script F --out P</code></td><td>指令驱动标注（衍生图）</td></tr>
+            <tr><td><code>once history --query Q</code></td><td>FTS 检索</td></tr>
+            <tr><td><code>once mcp</code></td><td>stdio 启动 MCP Server</td></tr>
+            <tr><th colspan="2">退出码（冻结）</th></tr>
+            <tr><td><code>0</code></td><td>成功</td></tr>
+            <tr><td><code>1 / 2 / 3</code></td><td>参数错误 / 捕获失败 / OCR 失败</td></tr>
+            <tr><td><code>4 / 5 / 6</code></td><td>读写失败 / 权限被拒 / 黑名单拦截</td></tr>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== 资产详情（§4.6：文字块与图片联动）===== -->
+      <section class="page" id="page-detail">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <button class="btn ghost" id="detail-back">← 返回历史</button>
+          <span style="font-size:12.5px;font-weight:500" id="detail-name"></span>
+          <span class="tagok" id="detail-kind" style="display:none"></span>
+        </div>
+        <div style="display:flex;gap:12px;min-height:0">
+          <div style="flex:1;min-width:0;position:relative;background:var(--bg-tertiary);border-radius:var(--r-card);
+                      overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:12px;max-height:520px">
+            <div id="detail-imgwrap" style="position:relative;display:inline-block">
+              <img id="detail-img" style="max-width:100%;display:block" draggable="false">
+            </div>
+          </div>
+          <aside style="width:260px;flex:none;display:flex;flex-direction:column;gap:10px;overflow:auto;max-height:520px">
+            <div class="group" style="margin:0;padding:10px 12px">
+              <div class="row" style="padding:5px 0"><span class="ro-value" id="detail-meta1"></span></div>
+              <div class="row" style="padding:5px 0"><span class="ro-value" id="detail-meta2"></span></div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:500;margin-bottom:4px">文字块（<span id="detail-bcount">0</span>）</div>
+              <div id="detail-blocks" style="max-height:200px;overflow:auto"></div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:500;margin-bottom:4px">版本</div>
+              <div id="detail-versions"></div>
+              <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">原图不会被任何操作覆盖</div>
+            </div>
+          </aside>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+          <button class="btn primary" id="detail-edit">编辑</button>
+          <button class="btn" id="detail-copyimg">复制图片</button>
+          <button class="btn" id="detail-open">在文件夹中显示</button>
+          <button class="btn ghost" id="detail-delete">删除（进回收站）</button>
+          <span style="flex:1"></span>
+          <span class="metaline">滚轮缩放 · Esc 返回</span>
+        </div>
+      </section>
+
+      <!-- ===== 通用（§4.11）===== -->
+      <section class="page" id="page-general">
+        <div class="ptitle">通用</div>
+        <div class="psub">快捷键、捕获默认动作、保存位置与启动行为。</div>
+        <div class="ptitle" style="font-size:13px">快捷键</div>
+        <div class="statline cut" id="hotkey-conflicts" style="margin-bottom:6px"></div>
+        <div class="group" id="hotkey-rows"></div>
+        <div class="ptitle" style="font-size:13px">捕获</div>
+        <div class="group">
+          <div class="row">
+            <div class="label"><div class="t">截图后默认动作</div><div class="d">动作条主按钮与热键直采的默认行为</div></div>
+            <div class="ctl">
+              <select id="sel-action">
+                <option value="copy_image">复制图片</option>
+                <option value="ocr_copy">取字并复制</option>
+                <option value="save_only">仅保存</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="ptitle" style="font-size:13px">保存</div>
+        <div class="group">
+          <div class="row">
+            <div class="label"><div class="t">落盘目录</div><div class="d">命名：HHmmss-类型-shortid.png，按日期分子目录；衍生图永不覆盖原图</div></div>
+            <div class="ctl">
+              <button class="btn" id="btn-dir-open">打开</button>
+              <button class="btn" id="btn-dir-change">更改</button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="pathchip" id="save-dir-chip" style="flex:1"></span>
+          </div>
+        </div>
+        <div class="ptitle" style="font-size:13px">启动</div>
+        <div class="group">
+          <div class="row">
+            <div class="label"><div class="t">开机自启</div><div class="d">通过任务计划程序在登录时启动（SYS-4）</div></div>
+            <div class="ctl"><button class="switch" id="sw-autostart" role="switch" aria-checked="false"></button></div>
+          </div>
+          <div class="row">
+            <div class="label"><div class="t">关闭主窗口时最小化到托盘</div><div class="d">关闭（关闭即退出）——改动下次关窗生效</div></div>
+            <div class="ctl"><button class="switch on" id="sw-closetray" role="switch" aria-checked="true"></button></div>
+          </div>
+        </div>
+        <div class="ptitle" style="font-size:13px">关于</div>
+        <div class="group">
+          <div class="row"><div class="label"><div class="t">版本</div></div><div class="ctl ro-value">v0.1.0 · MIT</div></div>
+          <div class="row"><div class="label"><div class="t">零云端承诺</div></div><div class="ctl ro-value">零 API Key · 零上传 · 零遥测</div></div>
+        </div>
+      </section>
+
+      <!-- ===== 诊断（§4.12）===== -->
+      <section class="page" id="page-doctor">
+        <div class="ptitle">诊断</div>
+        <div class="psub">一键自检：捕获、落盘目录、OCR 引擎、桥接。诊断报告不含任何截图内容与 OCR 文字。</div>
+        <button class="btn primary" id="btn-doctor">重新自检</button>
+        <div class="group" id="doctor-list" style="margin-top:12px"></div>
+      </section>
+    </main>
+  </div>
+  <script src="js/main.js"></script>
+</body>
+</html>

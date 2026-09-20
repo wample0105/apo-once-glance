@@ -1,0 +1,177 @@
+/* 定影 Onceglance · 设计令牌（ui-design.md §3，v1.2）
+   颜色、圆角、间距全部走 CSS 令牌；平台差异用 body[data-os] 切换（§7）。 */
+
+:root {
+  --accent: #FF3B30;
+  --accent-hover: #E8372C;
+  --accent-bg: #FFE9E6;
+  --accent-text: #B3271C;
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F5F5F7;
+  --bg-tertiary: #EFEFF2;
+  --border: #E5E5EA;
+  --border-strong: #C7C7CE;
+  --text-primary: #1C1C1E;
+  --text-secondary: #55555A;
+  --text-tertiary: #8E8E93;
+  --success: #1D9E75;
+  --error: #B3271C;
+  --warn: #B26A00;
+
+  --r-card: 9px;
+  --r-btn: 8px;
+  --r-tool: 10px;
+  --r-toast: 9px;
+  --r-win: 12px;
+
+  /* 覆盖层（暗色取景）专用 */
+  --ov-surface: #1D1D21;
+  --ov-surface-2: #26262B;
+  --ov-border: rgba(255, 255, 255, 0.13);
+  --ov-fg: #F5F5F7;
+  --ov-fg-dim: #9A9AA2;
+  --ov-mask-idle: rgba(0, 0, 0, 0.30);
+  --ov-mask-drag: rgba(0, 0, 0, 0.55);
+  --ov-handle-bg: #FFFFFF;
+  --ov-snap: rgba(255, 59, 48, 0.5);
+  --ov-guide: rgba(255, 255, 255, 0.35);
+  --stitch-low: #FFB020;
+
+  --mono: "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+  --ui: "Segoe UI", "Microsoft YaHei UI", -apple-system, sans-serif;
+}
+
+body[data-os="macos"] {
+  --r-card: 11px;
+  --r-btn: 10px;
+  --r-tool: 12px;
+  --r-toast: 11px;
+  --r-win: 14px;
+  --ui: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { font-family: var(--ui); color: var(--text-primary); }
+
+button { font-family: inherit; }
+
+.kbd {
+  font-family: var(--mono);
+  font-size: 11px;
+  opacity: 0.72;
+}
+
+/* 焦点环（无障碍：2px accent） */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* 通用按钮 */
+.btn {
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 7px 12px;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: background 0.1s;
+  min-height: 30px;
+}
+.btn:hover { background: var(--bg-tertiary); }
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 500;
+  min-height: 32px;
+}
+.btn.primary:hover { background: var(--accent-hover); }
+.btn.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+/* 开关（40×22） */
+.switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--border-strong);
+  cursor: pointer;
+  flex: none;
+  transition: background 0.15s;
+  border: none;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.switch.on { background: var(--success); }
+.switch.on::after { left: 20px; }
+.switch:disabled { opacity: 0.55; cursor: default; }
+
+/* 检测徽标（tagok / tagwarn） */
+.tagok, .tagwarn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  border-radius: 5px;
+  padding: 3px 8px;
+}
+.tagok { background: #E6F6EF; color: #0E6E4E; }
+.tagwarn { background: #FFF3D6; color: #8A5A00; }
+
+/* 只读 pathchip */
+.pathchip {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  word-break: break-all;
+}
+
+/* codebox */
+.codebox {
+  background: var(--ov-surface);
+  color: var(--ov-fg);
+  font-family: var(--mono);
+  font-size: 11px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  position: relative;
+  overflow-x: auto;
+  white-space: pre;
+  line-height: 1.6;
+}
+.codebox .copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: var(--ov-surface-2);
+  color: var(--ov-fg);
+  border: 1px solid var(--ov-border);
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.codebox .copy:hover { background: #323238; }
