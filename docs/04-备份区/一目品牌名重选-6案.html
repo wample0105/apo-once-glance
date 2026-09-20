@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一目 · 品牌名重选 6 案（传统文化方向）</title>
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F7F7F8; --bg3:#EFEFF1;
+  --tx:#1D1D21; --tx2:#5C5C66; --tx3:#8E8E99;
+  --bd:#E4E4E8; --bd2:#D2D2D8;
+  --accent:#FF3B30;
+  --ok:#0F6E56; --okbg:#E1F5EE;
+  --warn:#854F0B; --warnbg:#FAEEDA;
+  --risk:#A32D2D; --riskbg:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg3); color:var(--tx);
+  font-family:-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+  font-size:14px; line-height:1.7;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:40px 24px 80px}
+header.top{
+  background:var(--bg); border-radius:16px; padding:36px 40px;
+  border:1px solid var(--bd); margin-bottom:28px;
+}
+h1{font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:.5px}
+.sub{color:var(--tx2); font-size:15px; margin:0 0 20px}
+.note{
+  background:var(--bg2); border-radius:var(--r); padding:16px 18px;
+  font-size:13px; color:var(--tx2); margin-top:18px;
+}
+.note b{color:var(--tx); font-weight:600}
+section{
+  background:var(--bg); border-radius:16px; padding:32px 40px;
+  border:1px solid var(--bd); margin-bottom:24px;
+}
+h2{
+  font-size:19px; font-weight:600; margin:0 0 6px;
+  padding-bottom:14px; border-bottom:1px solid var(--bd);
+}
+h2 .num{color:var(--accent); font-weight:600; margin-right:8px}
+h3{font-size:15px; font-weight:600; margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{color:var(--tx2); font-size:13.5px; margin:14px 0 22px}
+
+/* 筛选记录表 */
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{
+  text-align:left; font-weight:600; color:var(--tx2); font-size:12px;
+  letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--bd2);
+  background:var(--bg2);
+}
+td{padding:10px; border-bottom:1px solid var(--bd); vertical-align:top}
+td.kill{color:var(--risk); font-weight:600; white-space:nowrap}
+td.keep{color:var(--ok); font-weight:600; white-space:nowrap}
+td.rev{color:var(--warn); font-weight:600; white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--tx2)}
+
+/* 候选卡 */
+.card{
+  border:1px solid var(--bd); border-radius:14px; padding:28px 30px;
+  margin-bottom:20px; background:var(--bg);
+}
+.card.pick{border:2px solid var(--accent)}
+.chead{display:flex; align-items:center; gap:16px; margin-bottom:6px; flex-wrap:wrap}
+.chip{
+  width:52px; height:52px; border-radius:13px; background:var(--accent);
+  display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+}
+.chip svg{width:32px; height:32px}
+.nm{font-size:30px; font-weight:600; letter-spacing:4px; line-height:1.2}
+.py{font-size:13px; color:var(--tx3); letter-spacing:.6px; margin-left:2px}
+.tag{
+  font-size:11.5px; padding:3px 9px; border-radius:20px;
+  background:var(--bg3); color:var(--tx2); letter-spacing:.3px;
+}
+.tag.pick{background:var(--accent); color:#fff; font-weight:600}
+.tag.ok{background:var(--okbg); color:var(--ok)}
+.tag.warn{background:var(--warnbg); color:var(--warn)}
+.tag.risk{background:var(--riskbg); color:var(--risk)}
+.lockup{
+  display:flex; align-items:center; gap:12px; padding:14px 18px;
+  background:var(--bg2); border-radius:var(--r); margin:16px 0 20px;
+}
+.lockup .lkw{display:flex; flex-direction:column; line-height:1.25}
+.lockup .cn{font-size:21px; font-weight:600; letter-spacing:3px}
+.lockup .en{font-size:10.5px; letter-spacing:2.4px; color:var(--tx2); margin-top:2px}
+.quote{
+  border-left:3px solid var(--accent); padding:10px 0 10px 16px;
+  margin:16px 0; color:var(--tx); font-size:13.5px; line-height:1.8;
+}
+.quote cite{display:block; color:var(--tx3); font-size:12px; font-style:normal; margin-top:6px; letter-spacing:.3px}
+.map{width:100%; border-collapse:collapse; margin:16px 0; font-size:13px}
+.map td{border:1px solid var(--bd); padding:9px 12px}
+.map td:first-child{background:var(--bg2); color:var(--tx2); width:34%; font-size:12.5px}
+.map td:last-child{color:var(--tx)}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.box{background:var(--bg2); border-radius:var(--r); padding:14px 16px; font-size:13px}
+.box h3{font-size:12.5px; color:var(--tx2); letter-spacing:.4px; margin-bottom:8px}
+.box ul{margin:0; padding-left:17px; color:var(--tx)}
+.box li{margin-bottom:5px}
+.box li:last-child{margin-bottom:0}
+.foot{
+  margin-top:18px; padding-top:14px; border-top:1px solid var(--bd);
+  font-size:12.5px; color:var(--tx2);
+}
+.foot b{color:var(--tx); font-weight:600}
+@media(max-width:720px){
+  .wrap{padding:20px 12px 60px}
+  header.top,section{padding:22px 18px}
+  .cols{grid-template-columns:1fr}
+  .nm{font-size:25px}
+  table{font-size:12px}
+  td,th{padding:7px 6px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>一目 · 品牌名重选 6 案</h1>
+  <p class="sub">方向：中国传统文化 · 造字取义，先从古籍里找出处，再看能不能注册</p>
+  <p>因为「一目」在第 9 类（计算机软件）上有实质在先障碍（见《一目-商标冲突初筛报告》），这次连名字带商标一起重做。</p>
+  <div class="note">
+    <b>这次和上次做法不同：先把候选名查一遍再交给你。</b>上次是定了名才去查商标，结果撞车，白做一轮。这次我按"有没有公司在用这个名字""第 9 类有没有在先商标"两个口径，把 14 个候选先过了一遍筛子，只留能打的 6 个。
+    <br><br>
+    但要说清楚边界：我做的是<b>公开渠道初筛</b>，不是商标局的正式检索。下面每个名字的风险标记，是"公开渠道查到什么"，不是"法律上能不能注册"。最终得你去中国商标网跑一次，或者让代理出书面意见。
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span>先看筛掉了什么，你就知道这次挑名的规律</h2>
+  <p class="lead">14 个候选，划掉 8 个。划掉的原因有一个共同规律，值得你先知道。</p>
+
+  <table>
+    <tr><th>候选名</th><th>出处 / 语义</th><th>为什么划掉</th></tr>
+    <tr>
+      <td class="kill">传拓</td>
+      <td>拓印技艺，非遗</td>
+      <td>撞上大公司：德国 <b>TRATON 集团</b>的中文名就叫「传拓」（大众旗下商用车集团，全球第二大商用车制造商），在中国有北京/上海/如皋三个研发中心。另有上海传拓电子信息科技（已注销）、洛阳传拓文化。同名污染严重。</td>
+    </tr>
+    <tr>
+      <td class="kill">察微</td>
+      <td>「见微知著」</td>
+      <td><b>第 9 类已被注册</b>：山西察微数字科技有限公司，注册号 48852418，第 9 类科学仪器。申请人本身就是做应用软件开发的，同业风险高。另有上海察微电子、宁波察微生物两家同字号公司。</td>
+    </tr>
+    <tr>
+      <td class="kill">写照</td>
+      <td>顾恺之「传神写照，正在阿堵中」</td>
+      <td>已有同类产品：AI 工具「写照」（Depict，微博在运营），上传图片→识别→生成文案。<b>跟我们的"识别+成文"路径几乎重合。</b></td>
+    </tr>
+    <tr>
+      <td class="kill">见微</td>
+      <td>「见微知著」</td>
+      <td>第 9 类已有在先商标：「见微」88436959（安徽省国盛量子科技，2026-05 已初审公告）；另有「见微科仪」「微岩见微」同在 9 类，其中「微岩见微」90279960 直接含 0901 计算机软件商品项。三家公司字号带"见微"。</td>
+    </tr>
+    <tr>
+      <td class="kill">烛微</td>
+      <td>「洞烛其微」</td>
+      <td>三家「烛微科技」：杭州烛微智能科技（2021，主营 AI 应用软件开发、算法软件开发）、苏州烛微科技（2025，AI 应用软件开发）、上海烛微科技（2016，软件业）。全是软件方向同业。</td>
+    </tr>
+    <tr>
+      <td class="kill">澄观</td>
+      <td>宗炳《画山水序》「澄怀观道」</td>
+      <td>五家以上公司用作字号（四川澄观、滁州澄观、合肥澄观、澄观光学、南京澄观）。合肥澄观申请「CGKNIGHT 澄观科技」第 42 类<b>已被驳回</b>，说明软件类已有在先障碍。</td>
+    </tr>
+    <tr>
+      <td class="kill">响拓</td>
+      <td>古籍复制：透光描摹法书</td>
+      <td>已有「响拓（北京）控股有限公司」在用；更要命的是 <b>Wacom 的数位板品牌中文名叫「影拓」</b>，与「响拓」同音近形，会长期混淆。</td>
+    </tr>
+    <tr>
+      <td class="kill">离娄</td>
+      <td>《孟子》「离娄之明，公输子之巧」（离娄是目力最好的人）</td>
+      <td><b>第 9 类已被注册</b>：离娄科技（北京）有限公司，商标「LILOU TECH 离娄科技」62231562，第 9 类。<b>而且它做的就是计算机视觉 + AI</b>，技术方向重叠。另有「离娄」22748535 第 41 类已注册。这个词本来最贴"一目"的神髓，可惜。</td>
+    </tr>
+  </table>
+
+  <div class="note" style="margin-top:22px">
+    <b>划掉 8 个之后，规律很清楚了：越是典雅好听、越是常用成语里的词，越早被占。</b>「写照」「见微」「察微」「澄观」「传拓」「离娄」——这些词好听、好懂，所以从 2015 年起就陆续有公司拿去注册。
+    <br><br>
+    <b>所以能剩下的是另一类词：有真出处、够古，但因为是某门学问的专业术语，普通人不会拿去起名，商业化使用就少。</b>下面 6 个都走的这条路——来自<b>金石学</b>（碑帖拓本这一支）和<b>文献学</b>（古籍整理这一支）。这两门学问正好一个管"把东西从器物表面取下来"，一个管"把内容梳理成有条理的记录"——跟你的产品是同一件事。
+    <br><br>
+    还有一点顺便说：<b>换名字不用换 Logo。</b>「印章 · 甲骨目」是图形标识，跟叫什么名无关，照用。这轮只动名字。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>六个候选</h2>
+  <p class="lead">每个都给了：出处原文、跟产品动作怎么对应、商标初筛结果、优点和代价。按我判断的推荐度排。</p>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="chip"><svg viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="nm">朱拓</span>
+      <span class="py">zhū tà（"拓"读 tà，不是 tuò）</span>
+      <span class="tag pick">我的首选</span>
+      <span class="tag ok">初筛干净</span>
+    </div>
+    <div class="lockup">
+      <span class="chip" style="width:44px;height:44px"><svg viewBox="0 0 48 48" fill="none" style="width:28px;height:28px"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="lkw"><span class="cn">朱拓</span><span class="en">ZHU TA</span></span>
+    </div>
+
+    <p><b>拓本分三种，按用墨分：淡墨叫「蝉翼拓」、浓墨叫「乌金拓」、朱砂叫「朱拓」。</b>「朱拓」就是用朱砂把碑刻、器铭上的图文拓下来，红底黑字的拓片。历代碑帖著录里常见"朱拓本"，是拓本里最讲究的一种——因为朱砂贵、工序繁，通常只用来拓重要的碑。</p>
+
+    <div class="quote">
+      同类产品这个字的本义，是<b>把器物表面的凹凸图文，用纸墨取下、移到纸上</b>。传拓技艺是国家级非物质文化遗产。
+      <cite>「朱拓」「乌金拓」「蝉翼拓」为拓本三大类，见历代碑帖著录与拓本鉴定通例</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>产品在做什么</td><td>「朱拓」这个词在说什么</td></tr>
+      <tr><td>框选屏幕的一块区域</td><td><b>拓</b>——覆纸上石、把表面取下来</td></tr>
+      <tr><td>把内容变成一张干净的图</td><td><b>拓片</b>——原物的图文，落到纸上</td></tr>
+      <tr><td>品牌色 <span class="mono">#FF3B30</span> 朱红</td><td><b>朱</b>——朱砂色，也是印章的颜色</td></tr>
+    </table>
+
+    <p><b>为什么我觉得这个最合适：</b>它把你已经定下来的三样东西串成了一个闭环——<b>品牌色是朱红、Logo 是朱红方章、名字叫"朱拓"</b>。而且它跟"目"的眼睛图形不打架：朱拓本来拓的就是碑刻文字，眼睛是取景的隐喻，两者各管一边。你之前在小篆、金文、甲骨里选了甲骨文，本来就是金石学的偏好，「朱拓」跟这个偏好是同一路的。</p>
+
+    <div class="cols">
+      <div class="box">
+        <h3>优点</h3>
+        <ul>
+          <li>三字闭环：色、形、名同一套语言</li>
+          <li>语义跟截图动作精确对应（"拓"就是把表面图文取下来）</li>
+          <li>公开渠道未见任何公司用「朱拓」作字号或品牌</li>
+          <li>有金石学的分量，但读起来不绕</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>代价</h3>
+        <ul>
+          <li>"拓"要读 tà，第一次见的人容易读成 tuò，得教一次</li>
+          <li>不认识金石学的人第一眼不知道"朱拓"是什么，需要一句解释</li>
+          <li>拼音 zhutuo 撞了一些液压/汽保公司，但字形完全不同，商标上不构成近似</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b>保留 <b>Onceglance</b>（自造词，独占性最强，且不用重做已导出的品牌资产）。若一定要配套，「朱拓」可取 <b>Rubric</b>——这个词本义就是"用红字写的"，现代义是"规程、操作要点"，恰好对应"把操作写成规程"。</div>
+  </div>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="chip"><svg viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="nm">叙录</span>
+      <span class="py">xù lù</span>
+      <span class="tag pick">并列首选</span>
+      <span class="tag ok">初筛最干净</span>
+    </div>
+    <div class="lockup">
+      <span class="chip" style="width:44px;height:44px"><svg viewBox="0 0 48 48" fill="none" style="width:28px;height:28px"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="lkw"><span class="cn">叙录</span><span class="en">XU LU</span></span>
+    </div>
+
+    <p>这是 14 个候选里<b>唯一一个我搜关键词只搜到词典和百科、一条企业信息都没搜到的词</b>。搜索「叙录」返回的只有汉典、快读百科、360 百科的词条页——说明没有公司拿它做生意。</p>
+
+    <div class="quote">
+      「每一书成，向皆条列篇目，撮其指要，录而奏之，谓之叙录。」<br>
+      ——汉 · 刘向《管子叙录》《战国策叙录》
+      <cite>又见《三国志·吴志·薛莹传》：「臣闻五帝三王皆立史官，叙录功美，垂之无穷。」</cite>
+    </div>
+
+    <p><b>这段话值得逐句看，因为它跟你的产品链路是一对一的。</b>刘向当年做的事，跟你这个工具帮人做的事，是同一件事——把零散的东西读一遍、抓出要点、整理成一份能交出去的东西。</p>
+
+    <table class="map">
+      <tr><td>刘向校书（公元前 1 世纪）</td><td>一目做的工作</td></tr>
+      <tr><td><b>条列篇目</b>——把一本书逐篇列清楚</td><td>把一段操作逐张截下来</td></tr>
+      <tr><td><b>撮其指要</b>——抓出核心要点</td><td>OCR 取字，把画面变成可用文字</td></tr>
+      <tr><td><b>录而奏之</b>——写成文件交上去</td><td>Agent 写成教程，交付出去</td></tr>
+    </table>
+
+    <p>而且"叙"这个字对应 Agent 那一半（叙述、行文），"录"这个字对应工具那一半（记录、落盘）——<b>名字本身就把你"三方分工"的产品哲学说出来了：工具负责记录，Agent 负责成文。</b></p>
+
+    <div class="cols">
+      <div class="box">
+        <h3>优点</h3>
+        <ul>
+          <li>全部候选中公开渠道占用最少的一个</li>
+          <li>语义映射最完整：三个动作逐项对上</li>
+          <li>两个字都是常用字，不用教读音</li>
+          <li>出处硬（刘向 + 三国志双证），不是编的</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>代价</h3>
+        <ul>
+          <li>现代汉语里冷门，第一眼不知道是什么意思，得配一句释义</li>
+          <li>"叙"容易被读成"序"</li>
+          <li>气质偏文献、偏静，少了点"工具"的手感</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b>保留 <b>Onceglance</b>；或取 <b>Recount</b>（重新叙述、逐项陈述），与"叙录"的意思对得上。</div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="chip"><svg viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="nm">双钩</span>
+      <span class="py">shuāng gōu</span>
+      <span class="tag ok">初筛较干净</span>
+    </div>
+    <div class="lockup">
+      <span class="chip" style="width:44px;height:44px"><svg viewBox="0 0 48 48" fill="none" style="width:28px;height:28px"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="lkw"><span class="cn">双钩</span><span class="en">SHUANG GOU</span></span>
+    </div>
+
+    <p>古代要复制一幅字帖，最讲究的办法叫<b>「双钩廓填」</b>：把薄纸覆在原迹上，用极细的线先把每个字的轮廓勾出来（双钩），再往轮廓里填墨（廓填）。用这个办法复制出来的本子，能跟原作一模一样，是书法复制里精度最高的一路。</p>
+
+    <div class="quote">
+      双钩廓填：以薄纸覆于墨迹之上，先双钩其字之轮廓，再填墨于其中，故能不失原迹之形。
+      <cite>书法复制传统，见历代法书摹本与鉴定术语</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>产品在做什么</td><td>「双钩」这个词在说什么</td></tr>
+      <tr><td>用选区框住要的那一块</td><td><b>双钩</b>——先勾出轮廓</td></tr>
+      <tr><td>把框住的内容完整取出来</td><td><b>廓填</b>——把内容填进去</td></tr>
+      <tr><td>要求"取下来的跟原来一模一样"</td><td>双钩的立身之本就是<b>不失原迹之形</b></td></tr>
+    </table>
+
+    <p><b>这个词的好处是硬朗、有技术感。</b>两个字都是常见字，读起来利落，不像"叙录"那样偏文。"钩"字还自带一个动作画面——勾出来。</p>
+
+    <div class="cols">
+      <div class="box">
+        <h3>优点</h3>
+        <ul>
+          <li>两个字都常用，好读好写好记</li>
+          <li>动作感强，跟"框选"这个核心操作直接对应</li>
+          <li>国内软件类未见占用（台湾有「雙鉤牌 DOUBLE HOOK」，属五金类，不冲突）</li>
+          <li>名字有"精度"的暗示，适合强调"取下来的东西不失真"</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>代价</h3>
+        <ul>
+          <li>钓鱼（双钩鱼钩）、武术（双钩兵器）也用这个词，搜索时会有杂音</li>
+          <li>字面偏"工艺"，少一点文化意境</li>
+          <li>跟"目"的眼睛图形没有语义上的呼应</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b>保留 <b>Onceglance</b>；或取 <b>Contour</b>（轮廓），直译"双钩"的动作。</div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="chip"><svg viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="nm">图录</span>
+      <span class="py">tú lù</span>
+      <span class="tag ok">初筛较干净</span>
+    </div>
+    <div class="lockup">
+      <span class="chip" style="width:44px;height:44px"><svg viewBox="0 0 48 48" fill="none" style="width:28px;height:28px"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="lkw"><span class="cn">图录</span><span class="en">TU LU</span></span>
+    </div>
+
+    <p><b>「图录」是金石学和文献学的正经术语</b>——把器物、碑刻、字画按类编成图册，配上说明。宋代《宣和博古图》、清代各家《金石图录》都是这一类。它不是"图片"也不是"目录"，而是<b>图像 + 记录合在一起的那份东西</b>。</p>
+
+    <div class="quote">
+      图录：汇辑器物、碑帖、书画之图像，各系说明，以类相从，便于稽考。
+      <cite>金石学、目录学传统；如《宣和博古图》及历代金石图录之作</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>产品在做什么</td><td>「图录」这个词在说什么</td></tr>
+      <tr><td>把屏幕上的画面截下来</td><td><b>图</b>——图像</td></tr>
+      <tr><td>配上文字说明、整理成册</td><td><b>录</b>——记录、编次</td></tr>
+      <tr><td>最后交付的那份教程</td><td>一份<b>图录</b>（图文对照的东西）</td></tr>
+    </table>
+
+    <p><b>这个词的强项是好懂。</b>不像"叙录""蝉翼"需要解释，"图录"两个字一看就大致知道是什么——图加记录，正好是产品输出物的样子。而且它指的就是<b>成品</b>（一份图录），不是动作，这跟"把操作变成教程"的最终交付物对得上。</p>
+
+    <div class="cols">
+      <div class="box">
+        <h3>优点</h3>
+        <ul>
+          <li>两个字都是常用字，望文可生义，零解释成本</li>
+          <li>有金石学的真出处，不是生造</li>
+          <li>指的是"成品"，适合做产品名（"用图录把这事记下来"）</li>
+          <li>已知同类公司「重庆图录网络科技」已于早年注销</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>代价</h3>
+        <ul>
+          <li>"图录"是通用出版词，第 16 类（图书印刷品）大概率有在先商标，<b>第 9 类需你复核</b></li>
+          <li>"录"字跟「叙录」重复，如果两个都留着选会有干扰</li>
+          <li>气质偏"册子"，少一点"工具"的锐度</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b><b>Atlas</b>——这个词本义就是"图册、图录"（地图集），跟中文名几乎是一对一直译，且比 Onceglance 更好念。缺点是要查一下它的商标占用情况。</div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="chip"><svg viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="nm">取象</span>
+      <span class="py">qǔ xiàng</span>
+      <span class="tag warn">需复核</span>
+    </div>
+    <div class="lockup">
+      <span class="chip" style="width:44px;height:44px"><svg viewBox="0 0 48 48" fill="none" style="width:28px;height:28px"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="lkw"><span class="cn">取象</span><span class="en">QU XIANG</span></span>
+    </div>
+
+    <p>出自《周易·系辞》。<b>「取象」是《易》的方法论核心</b>——不直接讲抽象道理，而是把事物的形象取过来，用形象去说明事情。这跟"用截图说明操作"是同一个思路。</p>
+
+    <div class="quote">
+      「仰则观象于天，俯则观法于地」「近取诸身，远取诸物，于是始作八卦」
+      <cite>《周易·系辞下》；「取象比类」为中国传统思维的基本方法</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>产品在做什么</td><td>「取象」这个词在说什么</td></tr>
+      <tr><td>把屏幕上的画面取下来</td><td><b>取象</b>——把形象取过来</td></tr>
+      <tr><td>取完之后能说明一件事</td><td>取象的目的是<b>以象明理</b></td></tr>
+      <tr><td>界面里那个功能叫"取字"</td><td>「取象」与「取字」是同一族词，天然配套</td></tr>
+    </table>
+
+    <p><b>我最看重它的一点是：它和产品里已有的功能名"取字"是同族的。</b>界面上"取字"取文字，"取象"取画面，一大一小，逻辑自洽——用户学一次就懂。"象"字还对应"图像 + 象征"两层意思，比"图"字更有余地。</p>
+
+    <div class="cols">
+      <div class="box">
+        <h3>优点</h3>
+        <ul>
+          <li>与界面已有的"取字"构成同族词，产品语言自洽</li>
+          <li>出处是《易》，分量足够</li>
+          <li>两个字都好读好写</li>
+          <li>有"东方方法论"的味道，适合讲中国故事</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>代价</h3>
+        <ul>
+          <li><b>第 16 类已有在先商标</b>：「取象艺术」23325317（深圳市取象艺术品有限公司，书画刻印/图画类），需确认第 9 类是否也有</li>
+          <li>偏学术，普通用户第一眼可能不知道在说什么</li>
+          <li>「象」字在 AI 圈已很密集（现象、具象、万象…），辨识度会被稀释</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b>保留 <b>Onceglance</b>；或取 <b>Eikon</b>（希腊语"形象"，也是 icon 的词源），与"取象"呼应，但生僻。</div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="chip"><svg viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="nm">蝉翼</span>
+      <span class="py">chán yì</span>
+      <span class="tag warn">需复核</span>
+    </div>
+    <div class="lockup">
+      <span class="chip" style="width:44px;height:44px"><svg viewBox="0 0 48 48" fill="none" style="width:28px;height:28px"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/></svg></span>
+      <span class="lkw"><span class="cn">蝉翼</span><span class="en">CHAN YI</span></span>
+    </div>
+
+    <p>还是拓本术语。<b>拓本三大类里，「蝉翼拓」是淡墨轻拓，拓出来的字迹薄透如蝉翼，历代被推为最精美的一路。</b>「朱拓」和「蝉翼」同出一门，一个主红、一个主淡。</p>
+
+    <div class="quote">
+      蝉翼拓：以极淡之墨轻拓，字口清晰而墨色薄透如蝉翼，为拓本中最精者。
+      <cite>拓本鉴定术语，与「乌金拓」「朱拓」并列</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>产品在做什么</td><td>「蝉翼」这个词在说什么</td></tr>
+      <tr><td>工具要轻，本地跑、秒出图</td><td><b>蝉翼</b>——薄、轻、透</td></tr>
+      <tr><td>不做重、不做大、不常驻后台</td><td>蝉翼拓之所以珍贵，正因它<b>不厚重</b></td></tr>
+      <tr><td>取下来的图要干净精确</td><td>薄透方能<b>见字口</b></td></tr>
+    </table>
+
+    <p><b>这个词是 6 个里气质最好看的一个</b>，适合把产品往"审美向工具"的方向做——像那些只有设计师和写作者在用的精致小工具。缺点是它跟"截图"这件事的关联是最弱的，得靠解释。</p>
+
+    <div class="cols">
+      <div class="box">
+        <h3>优点</h3>
+        <ul>
+          <li>气质最雅、最有画面感（薄透如翼）</li>
+          <li>两个字常用、好读、好记</li>
+          <li>有真金石学出处，不是硬凑的意象</li>
+          <li>适合走"精致轻工具"的产品调性</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>代价</h3>
+        <ul>
+          <li><b>「蝉翼」26732312 已在第 12 类注册</b>（深圳市蝉翼无人机），且对方有软件著作权；第 9 类需你复核</li>
+          <li>"蝉翼"在服饰、美妆行业是常见描述词，搜索污染较重</li>
+          <li>与"截图"的语义关联最弱，需要一句话解释才立得住</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b><b>Cicada</b>（蝉）——干净、好念、有画面，但需要查占用；或保留 Onceglance。</div>
+  </div>
+
+</section>
+
+<section>
+  <h2><span class="num">03</span>六个放在一起看</h2>
+  <table>
+    <tr>
+      <th>名字</th><th>读音</th><th>出处</th><th>商标初筛</th><th>语义贴合度</th><th>一句话</th>
+    </tr>
+    <tr>
+      <td><b>朱拓</b></td><td class="mono">zhū tà</td><td>拓本用朱砂的一路</td>
+      <td class="keep">较干净</td><td>很高</td>
+      <td>色、形、名三者闭环，跟已定稿的朱红印章天然一套</td>
+    </tr>
+    <tr>
+      <td><b>叙录</b></td><td class="mono">xù lù</td><td>刘向校书，条列篇目、撮其指要、录而奏之</td>
+      <td class="keep">最干净</td><td>很高</td>
+      <td>三个动作逐项对上，还顺带说清了"工具记录、Agent 成文"</td>
+    </tr>
+    <tr>
+      <td><b>双钩</b></td><td class="mono">shuāng gōu</td><td>书法复制：双钩廓填</td>
+      <td class="keep">较干净</td><td>高</td>
+      <td>最硬朗、动作感最强，直接对应"框选—取下"</td>
+    </tr>
+    <tr>
+      <td><b>图录</b></td><td class="mono">tú lù</td><td>金石学：器物图像汇编</td>
+      <td class="rev">需复核</td><td>高</td>
+      <td>最好懂，望文生义，指的是产品交付的那份成品</td>
+    </tr>
+    <tr>
+      <td><b>取象</b></td><td class="mono">qǔ xiàng</td><td>《周易·系辞》取象比类</td>
+      <td class="rev">需复核</td><td>高</td>
+      <td>与界面已有的"取字"同族，产品语言自洽</td>
+    </tr>
+    <tr>
+      <td><b>蝉翼</b></td><td class="mono">chán yì</td><td>拓本：蝉翼拓（淡墨轻拓）</td>
+      <td class="rev">需复核</td><td>中</td>
+      <td>气质最雅，适合走精致轻工具路线，但语义关联最弱</td>
+    </tr>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">04</span>你必须自己跑一次的检索（我做不了这一步）</h2>
+  <p class="lead">我做的是公开搜索。真正的检索要在中国商标网做，那里是唯一权威数据源。步骤不难，半小时能做完。</p>
+
+  <h3 style="margin-top:20px">第一步：文字检索</h3>
+  <p>打开 <span class="mono">wcjs.sbj.cnipa.gov.cn</span>（商标网上检索系统），进「商标近似查询」或「商标综合查询」，逐个查这 6 个词：</p>
+  <table style="margin:14px 0">
+    <tr><th>要查的词</th><th>重点看的类别</th><th>看什么</th></tr>
+    <tr><td><b>朱拓 / 叙录 / 双钩 / 图录 / 取象 / 蝉翼</b></td><td>第 9 类</td><td>有没有在先注册或申请中的相同/近似商标</td></tr>
+    <tr><td>同上</td><td>第 42 类</td><td>软件开发、技术服务类（产品要做的话大概率涉及）</td></tr>
+    <tr><td>同上</td><td>第 35 类</td><td>广告销售类（做官网、推广会涉及）</td></tr>
+    <tr><td>同上</td><td>第 16 类</td><td>印刷出版物（教程、文档类，最容易被忽略但很常被占）</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--tx2)">查到结果后看三样：<b>状态</b>（有效 / 驳回 / 无效 / 撤销）、<b>类似群</b>（0901 是计算机软件，最关键）、<b>商品项</b>（有没有"可下载的计算机应用软件""计算机程序(可下载软件)"）。状态是无效或没有 0901 商品项的，基本不构成障碍。</p>
+
+  <h3 style="margin-top:24px">第二步：图形检索（你上次也还没做）</h3>
+  <p>不管最后叫哪个名，<b>「印章 · 甲骨目」这枚图形也要单独查一次</b>。用国家知识产权局 2026-05-22 上线的「以图搜图」：</p>
+  <p class="mono" style="background:var(--bg2);padding:12px 16px;border-radius:var(--r);font-size:12.5px;line-height:1.9">
+    中国商标网 → 商标网上查询系统 → 商标近似查询 → 自动查询-查询方式 → 选「以图搜图」→ 上传图片<br>
+    图片要求：png / jpeg / jpg，不超过 2M
+  </p>
+  <p style="font-size:13px;color:var(--tx2)">上传文件用仓库里这两个（先转成 png）：<br>
+    <span class="mono">assets/logo/onceglance-mark.svg</span>（描边目）<br>
+    <span class="mono">assets/logo/onceglance-mark-solid.svg</span>（实心眼，适合缩到小尺寸上传）
+  </p>
+
+  <div class="note" style="margin-top:24px">
+    <b>三步别省的钱：</b>如果 6 个里挑中了哪个，花几百块让商标代理出一份书面检索意见，再决定要不要正式申请。这笔钱比事后被投诉、被迫改名便宜得多——你现在已经因为没先查而多花了一轮工，这就是例子。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span>我的建议</h2>
+
+  <p><b>如果只让我说一个：朱拓。</b></p>
+  <p>理由是它不是靠典故硬撑的名字，而是<b>跟你已经定下来的东西咬合</b>——品牌色是朱红（<span class="mono">#FF3B30</span>）、Logo 是朱红方章、名字叫「朱拓」（用朱砂拓印）。这三样是一套语言，不是三件拼在一起的东西。而且它的意思（把器物表面的图文取下来、移到纸上）跟截图这个动作是同一件事，不需要绕。你之前在小篆、金文、甲骨里选了甲骨文，这个选择本身就说明你对金石学这一路是有感觉的，「朱拓」就长在那一路上。</p>
+
+  <p><b>如果你更看重"零解释成本 + 商标最干净"：叙录。</b></p>
+  <p>它是唯一一个我搜遍了都找不到任何企业占用的词，而且"条列篇目、撮其指要、录而奏之"这三句跟你产品的三步动作是一对一。它的短板是冷门——但冷门在商标这件事上是优点，在传播上才是缺点。可以靠一句释义解决："叙录，刘向当年整理古籍的办法：把零碎的东西读一遍、抓出要点、写成一份能交出去的东西。"</p>
+
+  <p><b>如果你要的是"好懂 + 一眼明白在干嘛"：双钩 或 图录。</b></p>
+  <p>这两个都不需要解释。「双钩」更硬朗、动作感强，但钓鱼和武术也用它，搜索会杂；「图录」望文生义，指的是产品交付的那份成品，但它是通用出版词，第 16 类大概率有人占了，第 9 类得你确认。</p>
+
+  <p><b>如果你想让产品走审美路线：蝉翼。</b>但它的语义关联最弱，而且第 12 类已经有「蝉翼」商标，风险是 6 个里偏高的。</p>
+
+  <div class="note" style="margin-top:24px">
+    <b>还有一件事不管选哪个都建议做：英文名继续用 Onceglance。</b>
+    <br><br>
+    理由很实在：Onceglance 是自造词，独占性比任何古典词都强；上一轮查它的时候没发现中文障碍；而且字标、图标资产、域名都做好了，换中文名不用连带重做一遍，省一大块工。
+    <br><br>
+    中英不互译不是问题——「一目 Onceglance」本来也不是直译关系。只要在官网上写一句中文名的出处，两者就都立住了。
+  </div>
+
+  <div class="note" style="margin-top:18px;background:var(--riskbg)">
+    <b>最后说清这份东西的性质：</b>本页所有"商标初筛"结论都来自公开渠道搜索（企业信息平台、搜索引擎、商标信息聚合站），<b>不是商标局的正式检索，也不构成法律意见</b>。商标局数据有 1–2 个月公示滞后；第三方平台数据不全，只能用来"发现冲突"，不能用来"证明没有冲突"。最终判断必须走第 04 节的官方检索，或者交由代理。
+  </div>
+</section>
+
+</div>
+</body>
+</html>

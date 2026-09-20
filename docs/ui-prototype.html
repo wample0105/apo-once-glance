@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>定影 UI 原型 · 双平台预览</title>
+<style>
+  :root {
+    --accent: #FF3B30;
+    --accent-bg: #FFE9E6;
+    --accent-text: #B3271C;
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F5F5F7;
+    --bg-tertiary: #EFEFF2;
+    --border: #E5E5EA;
+    --text-primary: #1C1C1E;
+    --text-secondary: #55555A;
+    --text-tertiary: #8E8E93;
+    --success: #1D9E75;
+    --r-card: 9px; --r-btn: 8px; --r-tool: 10px; --r-toast: 9px; --r-win: 12px;
+  }
+  .win[data-os="macos"] {
+    --r-card: 11px; --r-btn: 10px; --r-tool: 12px; --r-toast: 11px; --r-win: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: #E9E9EE;
+    font-family: -apple-system, "PingFang SC", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    color: var(--text-primary);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 18px 16px 40px; gap: 14px;
+    min-height: 100%;
+  }
+
+  /* ---------- 原型工具条（非产品 UI） ---------- */
+  .proto-bar {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center;
+  }
+  .proto-bar .title { font-size: 13px; font-weight: 500; }
+  .seg {
+    display: inline-flex; background: #FFFFFF; border: 1px solid var(--border);
+    border-radius: 9px; padding: 3px; gap: 2px;
+  }
+  .seg button {
+    border: none; background: transparent; padding: 6px 16px; font-size: 12.5px;
+    border-radius: 6px; cursor: pointer; color: var(--text-secondary); font-family: inherit;
+    transition: background .12s, color .12s;
+  }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 500; }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .proto-note { font-size: 11.5px; color: var(--text-tertiary); }
+
+  /* ---------- 模拟窗口 ---------- */
+  .win {
+    width: min(800px, 100%); height: 560px;
+    background: var(--bg-primary);
+    border: 1px solid #D8D8DE; border-radius: var(--r-win);
+    box-shadow: 0 12px 40px rgba(28, 28, 30, 0.14);
+    display: flex; flex-direction: column; overflow: hidden;
+    font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    position: relative;
+  }
+  .win[data-os="macos"] { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; }
+
+  /* 标题栏 */
+  .titlebar {
+    height: 42px; flex: none; display: flex; align-items: center; gap: 10px;
+    padding: 0 12px; border-bottom: 1px solid var(--border);
+    user-select: none;
+  }
+  .traffic { display: none; gap: 7px; align-items: center; order: 0; }
+  .traffic i { width: 11px; height: 11px; border-radius: 50%; }
+  .win[data-os="macos"] .traffic { display: inline-flex; }
+  .winctrl { display: flex; gap: 16px; align-items: center; order: 9; margin-left: auto;
+             color: var(--text-tertiary); font-size: 12px; }
+  .win[data-os="macos"] .winctrl { display: none; }
+  .brandline { display: flex; align-items: center; gap: 8px; }
+  .win[data-os="macos"] .brandline { margin: 0 auto; position: relative; left: -22px; }
+  .brandchip {
+    width: 24px; height: 24px; border-radius: 6px; background: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+  }
+  .brandchip svg { width: 13px; height: 13px; }
+  .brandname { font-size: 12.5px; font-weight: 500; }
+  .agent-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); flex: none;
+               transition: background .15s; }
+  .agent-dot.off { background: var(--accent); }
+
+  /* 主体 */
+  .body { flex: 1; display: flex; min-height: 0; }
+  .nav {
+    width: 148px; flex: none; background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    padding: 10px 8px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 7px; border: none; background: transparent;
+    font-size: 12.5px; font-family: inherit; color: var(--text-secondary);
+    cursor: pointer; text-align: left; width: 100%;
+    transition: background .1s;
+  }
+  .nav-item svg { width: 16px; height: 16px; flex: none; color: var(--text-tertiary); transition: color .1s; }
+  .nav-item:hover { background: #EAEAEF; color: var(--text-primary); }
+  .nav-item:hover svg { color: var(--text-secondary); }
+  .nav-item.active { background: var(--accent-bg); color: var(--accent-text); font-weight: 500; }
+  .nav-item.active svg { color: var(--accent); }
+  .nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .nav .ver { margin-top: auto; padding: 7px 10px; font-size: 11px; color: var(--text-tertiary); }
+
+  .content { flex: 1; min-width: 0; overflow: auto; }
+  .page { display: none; padding: 14px 16px; }
+  .page.active { display: block; }
+  .page-title { font-size: 15px; font-weight: 500; margin-bottom: 2px; }
+  .page-sub { font-size: 12px; color: var(--text-tertiary); margin-bottom: 14px; }
+
+  /* 操作条 */
+  .actionbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .btn {
+    font-family: inherit; font-size: 12.5px; cursor: pointer;
+    padding: 7px 12px; border-radius: var(--r-btn);
+    border: 1px solid var(--border); background: var(--bg-primary); color: var(--text-primary);
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: background .1s, border-color .1s;
+  }
+  .btn:hover { background: var(--bg-tertiary); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+  .btn.primary:hover { background: #E8372C; }
+  .kbd {
+    font-family: "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+    font-size: 11px; opacity: .72;
+  }
+
+  /* 搜索行 */
+  .searchrow { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .searchrow input {
+    flex: 1; min-width: 0; font-family: inherit; font-size: 12.5px;
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--r-btn);
+    color: var(--text-primary); background: var(--bg-primary);
+  }
+  .searchrow input:focus { outline: none; border-color: var(--accent); }
+  .meta-line { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
+
+  /* 历史卡片 */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 10px; }
+  .card {
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: var(--r-card); overflow: hidden; position: relative;
+    transition: border-color .12s;
+  }
+  .card:hover { border-color: #C7C7CE; }
+  .card:hover .card-acts { opacity: 1; pointer-events: auto; }
+  .thumb { height: 84px; position: relative; overflow: hidden; }
+  .t-light { background: #F0F0F3; }
+  .t-dark { background: #1E1E24; }
+  .thumb .bar { height: 12px; background: #33333A; }
+  .thumb .ln { height: 4px; border-radius: 2px; background: #CFCFD6; margin: 4px 9px 0; }
+  .thumb .ln.dim { background: #DCDCE2; }
+  .t-dark .ln { background: #3B3B46; height: 3px; margin: 5px 9px 0; }
+  .t-dark .ln.hi { background: #7A3A34; }
+  .badge {
+    position: absolute; left: 7px; bottom: 7px; width: 17px; height: 17px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .arrowline {
+    position: absolute; right: 12px; top: 24px; width: 28px; height: 3px;
+    background: var(--accent); border-radius: 2px; transform: rotate(24deg);
+  }
+  .card-acts {
+    position: absolute; top: 6px; right: 6px; display: flex; gap: 4px;
+    opacity: 0; pointer-events: none; transition: opacity .12s;
+  }
+  .card-acts button {
+    font-family: inherit; font-size: 11px; border: none; cursor: pointer;
+    background: rgba(29, 29, 33, 0.86); color: #F5F5F7;
+    padding: 4px 8px; border-radius: 6px;
+  }
+  .card-info { padding: 7px 9px 9px; }
+  .card-name { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .card-ocr { font-size: 11px; color: var(--text-secondary); margin-top: 3px;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty { padding: 40px 0; text-align: center; color: var(--text-tertiary); font-size: 12.5px; }
+
+  /* 设置页通用 */
+  .group {
+    background: var(--bg-secondary); border-radius: var(--r-card);
+    padding: 12px 14px; margin-bottom: 12px;
+  }
+  .row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 9px 0; border-bottom: 1px solid var(--border);
+  }
+  .group .row:last-child { border-bottom: none; }
+  .row .lbl { font-size: 12.5px; }
+  .row .lbl .hint { display: block; font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; }
+  .row .ctl { display: flex; align-items: center; gap: 8px; }
+  .switch { position: relative; width: 40px; height: 22px; flex: none; display: inline-block; }
+  .switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .switch i {
+    position: absolute; inset: 0; border-radius: 11px; background: #C9C9CF;
+    transition: background .15s; pointer-events: none;
+  }
+  .switch i::after {
+    content: ""; position: absolute; left: 2px; top: 2px; width: 18px; height: 18px;
+    border-radius: 50%; background: #fff; transition: left .15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .switch input:checked + i { background: var(--accent); }
+  .switch input:checked + i::after { left: 20px; }
+  .switch input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type=range] { width: 150px; accent-color: var(--accent); }
+  input[type=color] { width: 36px; height: 26px; border: 1px solid var(--border);
+                      border-radius: 6px; background: none; padding: 2px; cursor: pointer; }
+  .num { font-size: 11.5px; color: var(--text-tertiary); width: 26px; text-align: right;
+         font-variant-numeric: tabular-nums; }
+  .pathchip {
+    font-family: "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+    font-size: 11.5px; color: var(--text-secondary);
+    background: var(--bg-tertiary); border-radius: 6px; padding: 4px 8px;
+  }
+
+  /* 黑名单 & 审计 */
+  .list { border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+  .list .li {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 12px; border-bottom: 1px solid var(--border); font-size: 12.5px;
+  }
+  .list .li:last-child { border-bottom: none; }
+  .list .li .tag { font-size: 11px; color: var(--text-tertiary); }
+  .list .li button {
+    font-family: inherit; font-size: 11.5px; color: #185FA5; background: none;
+    border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px;
+  }
+  .list .li button:hover { text-decoration: underline; }
+  .addrow { display: flex; gap: 8px; margin: 10px 0 14px; }
+  .addrow input {
+    flex: 1; min-width: 0; font-family: inherit; font-size: 12.5px;
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--r-btn);
+  }
+  .addrow input:focus { outline: none; border-color: var(--accent); }
+  .audit {
+    background: #1D1D21; border-radius: var(--r-card); padding: 10px 12px;
+    font-family: "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+    font-size: 11px; line-height: 1.95; color: #C9C9CF;
+  }
+  .audit .t { color: #77777D; }
+  .audit .ok { color: #34C98E; }
+  .audit .err { color: #FF6B5E; }
+
+  /* toast */
+  .toast {
+    position: absolute; right: 14px; bottom: 14px; z-index: 50;
+    background: #1D1D21; border: 1px solid rgba(255,255,255,0.14);
+    color: #F5F5F7; border-radius: var(--r-toast);
+    padding: 9px 13px; font-size: 12px;
+    display: flex; align-items: center; gap: 8px;
+    animation: toast-up .18s ease-out;
+  }
+  .win[data-os="macos"] .toast { right: 14px; bottom: auto; top: 52px; animation-name: toast-down; }
+  .toast i { width: 7px; height: 7px; border-radius: 50%; background: #34C98E; flex: none; }
+  @keyframes toast-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes toast-down { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="proto-bar">
+  <span class="title">定影主面板原型 v1.0</span>
+  <div class="seg" role="group" aria-label="平台切换">
+    <button type="button" data-os="win" aria-pressed="true">Windows 11</button>
+    <button type="button" data-os="macos" aria-pressed="false">macOS</button>
+  </div>
+  <span class="proto-note">切换后自动变：窗口控制 / 快捷键写法 / 路径 / 反馈位置 / 圆角与字体</span>
+</div>
+
+<div class="win" data-os="win" id="win">
+
+  <div class="titlebar">
+    <div class="traffic" aria-hidden="true">
+      <i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i>
+    </div>
+    <div class="brandline">
+      <span class="brandchip" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round">
+          <path d="M4 4h6M4 4v6M20 4h-6M20 4v6M4 20h6M4 20v-6M20 20h-6M20 20v-6"/>
+        </svg>
+      </span>
+      <span class="brandname">定影 Onceglance</span>
+      <span class="agent-dot" id="agentDot" title="Agent 调用：开启"></span>
+    </div>
+    <div class="winctrl" aria-hidden="true"><span>—</span><span>☐</span><span>✕</span></div>
+  </div>
+
+  <div class="body">
+    <nav class="nav" aria-label="主导航">
+      <button class="nav-item active" data-page="history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>历史
+      </button>
+      <button class="nav-item" data-page="theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>标注主题
+      </button>
+      <button class="nav-item" data-page="agent">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-3.6 8-10V5.5L12 2 4 5.5V12c0 6.4 8 10 8 10Z"/></svg>Agent 与隐私
+      </button>
+      <button class="nav-item" data-page="general">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>通用
+      </button>
+      <div class="ver">v0.1.0 · MIT</div>
+    </nav>
+
+    <main class="content">
+
+      <section class="page active" id="page-history" aria-label="历史">
+        <div class="actionbar">
+          <button class="btn primary" data-toast="已复制 · 本地完成">区域截图 <span class="kbd os" data-win="Alt+Shift+A" data-mac="⌥⇧A"></span></button>
+          <button class="btn" data-toast="已复制窗口截图 · 本地完成">窗口 <span class="kbd os" data-win="Alt+Shift+W" data-mac="⌥⇧W"></span></button>
+          <button class="btn" data-toast="已复制 216 字 · 本地完成">取字 <span class="kbd os" data-win="Alt+Shift+T" data-mac="⌥⇧T"></span></button>
+          <button class="btn" data-toast="长截图：框选区域后开始滚动">长截图 <span class="kbd os" data-win="Alt+Shift+L" data-mac="⌥⇧L"></span></button>
+        </div>
+        <div class="searchrow">
+          <input id="search" type="text" placeholder="搜索历史（含 OCR 全文）…" aria-label="搜索历史">
+          <span class="meta-line"><span class="os" data-win="Pictures\Onceglance" data-mac="~/Pictures/Onceglance"></span> · <span id="count">8</span> 张</span>
+        </div>
+        <div class="grid" id="grid"></div>
+        <div class="empty" id="empty" hidden>没有匹配的截图，换个关键词试试</div>
+      </section>
+
+      <section class="page" id="page-theme" aria-label="标注主题">
+        <div class="page-title">标注主题</div>
+        <div class="page-sub">Agent 标注与编辑器自动继承，一次设置两边一致</div>
+        <div class="group">
+          <div class="row"><span class="lbl">主题色</span><span class="ctl"><input type="color" value="#FF3B30" aria-label="主题色"></span></div>
+          <div class="row"><span class="lbl">序号直径 <span class="num" data-out="diam">56</span></span><span class="ctl"><input type="range" min="24" max="120" value="56" data-bind="diam"></span></div>
+          <div class="row"><span class="lbl">箭头宽度 <span class="num" data-out="arrow">8</span></span><span class="ctl"><input type="range" min="2" max="24" value="8" data-bind="arrow"></span></div>
+          <div class="row"><span class="lbl">标签字号 <span class="num" data-out="badge">44</span></span><span class="ctl"><input type="range" min="16" max="96" value="44" data-bind="badge"></span></div>
+          <div class="row"><span class="lbl">圆角 <span class="num" data-out="radius">8</span></span><span class="ctl"><input type="range" min="0" max="32" value="8" data-bind="radius"></span></div>
+          <div class="row"><span class="lbl">标注目标时自动绘制边框</span><span class="ctl"><label class="switch"><input type="checkbox" checked aria-label="自动绘制边框"><i></i></label></span></div>
+          <div class="row"><span class="lbl">Spotlight 暗化非目标区域</span><span class="ctl"><label class="switch"><input type="checkbox" aria-label="Spotlight"><i></i></label></span></div>
+        </div>
+        <button class="btn primary" data-toast="主题已保存">保存主题</button>
+      </section>
+
+      <section class="page" id="page-agent" aria-label="Agent 与隐私">
+        <div class="page-title">Agent 与隐私</div>
+        <div class="page-sub">全部本地运行，零云端。你可以随时切断 Agent 的访问。</div>
+        <div class="group">
+          <div class="row">
+            <span class="lbl">允许 Agent 调用<span class="hint">关闭后 CLI / MCP 的截图请求一律拒绝（退出码 5），只读命令不受影响</span></span>
+            <span class="ctl"><label class="switch"><input type="checkbox" checked id="agentSwitch" aria-label="允许 Agent 调用"><i></i></label></span>
+          </div>
+          <div class="row" id="agentState" style="border-bottom:none">
+            <span class="lbl" style="color:var(--success)">当前状态：允许（Agent 可调用截图、OCR、标注）</span>
+          </div>
+        </div>
+        <div class="page-title" style="font-size:13px">隐私 App 黑名单</div>
+        <div class="page-sub">命中即拒绝截图，不留成图，Agent 收到明确错误（退出码 6）</div>
+        <div class="list">
+          <div class="li"><span>1Password</span><span class="tag">内置</span></div>
+          <div class="li"><span>Bitwarden</span><span class="tag">内置</span></div>
+          <div class="li"><span>KeePass</span><span class="tag">内置</span></div>
+          <div class="li"><span>招商银行</span><button type="button" data-remove>移除</button></div>
+        </div>
+        <div class="addrow">
+          <input type="text" placeholder="按进程名或窗口标题关键字添加…" aria-label="添加黑名单关键字">
+          <button class="btn" data-toast="已加入黑名单">添加</button>
+        </div>
+        <div class="page-title" style="font-size:13px">审计日志</div>
+        <div class="page-sub">只记录元数据（时间 / 命令 / 耗时 / 状态），永不记录图像与识别正文 · 保留 30 天</div>
+        <div class="audit">
+          <div><span class="t">14:30:12</span> ocr · 812ms · <span class="ok">ok</span></div>
+          <div><span class="t">14:29:55</span> capture region · 214ms · <span class="ok">ok</span></div>
+          <div><span class="t">14:28:31</span> capture window · 189ms · <span class="ok">ok</span> · vscode</div>
+          <div><span class="t">14:27:02</span> capture window · 拒绝 · <span class="err">黑名单命中（退出码 6）</span> · 1password</div>
+        </div>
+      </section>
+
+      <section class="page" id="page-general" aria-label="通用">
+        <div class="page-title">通用</div>
+        <div class="page-sub">路径、启动与语言</div>
+        <div class="group">
+          <div class="row">
+            <span class="lbl">落盘目录<span class="hint">按日期分子目录，CLI / MCP 立即感知</span></span>
+            <span class="ctl"><span class="pathchip os" data-win="Pictures\Onceglance" data-mac="~/Pictures/Onceglance"></span></span>
+          </div>
+          <div class="row">
+            <span class="lbl">开机自启<span class="hint">默认关闭</span></span>
+            <span class="ctl"><label class="switch"><input type="checkbox" aria-label="开机自启"><i></i></label></span>
+          </div>
+          <div class="row">
+            <span class="lbl">截图后默认动作</span>
+            <span class="ctl meta-line">复制图片</span>
+          </div>
+          <div class="row">
+            <span class="lbl">语言</span>
+            <span class="ctl meta-line">简体中文</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="row">
+            <span class="lbl">关于定影<span class="hint">v0.1.0 Alpha · MIT 开源 · 零云端 零遥测</span></span>
+            <span class="ctl"><button class="btn" data-toast="演示原型：此处打开 README">检查更新</button></span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var win = document.getElementById("win");
+
+  /* ---------- 平台切换 ---------- */
+  function setOS(os) {
+    win.setAttribute("data-os", os);
+    document.querySelectorAll(".seg button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.os === os));
+    });
+    document.querySelectorAll(".os").forEach(function (el) {
+      el.textContent = os === "macos" ? el.dataset.mac : el.dataset.win;
+    });
+  }
+  document.querySelectorAll(".seg button").forEach(function (b) {
+    b.addEventListener("click", function () { setOS(b.dataset.os); });
+    b.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      var btns = Array.prototype.slice.call(document.querySelectorAll(".seg button"));
+      var i = btns.indexOf(b) + (e.key === "ArrowRight" ? 1 : -1);
+      i = (i + btns.length) % btns.length;
+      btns[i].focus(); btns[i].click(); e.preventDefault();
+    });
+  });
+
+  /* ---------- 导航 ---------- */
+  var navItems = Array.prototype.slice.call(document.querySelectorAll(".nav-item"));
+  navItems.forEach(function (item) {
+    item.addEventListener("click", function () {
+      navItems.forEach(function (n) { n.classList.remove("active"); });
+      document.querySelectorAll(".page").forEach(function (p) { p.classList.remove("active"); });
+      item.classList.add("active");
+      document.getElementById("page-" + item.dataset.page).classList.add("active");
+    });
+    item.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      var i = navItems.indexOf(item) + (e.key === "ArrowDown" ? 1 : -1);
+      i = (i + navItems.length) % navItems.length;
+      navItems[i].focus(); navItems[i].click(); e.preventDefault();
+    });
+  });
+
+  /* ---------- 历史卡片（演示数据） ---------- */
+  var DEMO = [
+    { name: "143012-window-a1b2-ann.png", meta: "今天 14:30 · 衍生图 · 2 步标注", ocr: "数据看板 导出报表 设置 筛选", thumb: "light", badge: "1", arrow: true },
+    { name: "142955-region-f8c3.png", meta: "今天 14:29 · 原图 · 1920×1080", ocr: "登录 个人中心 退出登录", thumb: "light" },
+    { name: "142831-window-b2d1.png", meta: "今天 14:28 · 原图 · VS Code", ocr: "error cannot find module", thumb: "dark", hi: true },
+    { name: "135720-scroll-c4d9.png", meta: "今天 13:57 · 长截图 · 4 段拼接", ocr: "第一章 安装 1.1 系统要求", thumb: "light" },
+    { name: "112104-region-e5f0-ann.png", meta: "昨天 11:21 · 衍生图 · 5 步标注", ocr: "文件 另存为 导出 PDF", thumb: "light", badge: "5" },
+    { name: "110847-window-a6a1.png", meta: "昨天 11:08 · 原图 · Chrome", ocr: "AI 原生截图工具 让 Agent 看见", thumb: "light" },
+    { name: "093312-region-b7c2.png", meta: "昨天 09:33 · 原图 · 1512×982", ocr: "设置 蓝牙和设备 网络个性化", thumb: "light" },
+    { name: "182009-window-d8b3.png", meta: "9月16日 18:20 · 原图 · 微信", ocr: "文件传输助手 图片已保存", thumb: "light" }
+  ];
+
+  var grid = document.getElementById("grid");
+  var emptyEl = document.getElementById("empty");
+  var countEl = document.getElementById("count");
+
+  function thumbHTML(d) {
+    var inner = "";
+    if (d.thumb === "dark") {
+      inner = '<div class="ln" style="width:44%;background:#4A4A55"></div>' +
+              '<div class="ln" style="width:88%"></div>' +
+              '<div class="ln" style="width:76%"></div>' +
+              '<div class="ln hi" style="width:58%"></div>';
+    } else {
+      inner = '<div class="bar"></div>' +
+              '<div class="ln" style="width:58%"></div>' +
+              '<div class="ln dim" style="width:82%"></div>' +
+              '<div class="ln dim" style="width:64%"></div>' +
+              '<div class="ln" style="width:40%"></div>';
+    }
+    var extras = "";
+    if (d.badge) extras += '<span class="badge">' + d.badge + "</span>";
+    if (d.arrow) extras += '<span class="arrowline"></span>';
+    return '<div class="thumb t-' + d.thumb + '">' + inner + extras + "</div>";
+  }
+
+  function render(list) {
+    grid.innerHTML = "";
+    list.forEach(function (d) {
+      var card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML =
+        thumbHTML(d) +
+        '<div class="card-acts"><button type="button" data-toast="演示原型：编辑 ' + d.name + '">编辑</button>' +
+        '<button type="button" data-toast="演示原型：在资源管理器中打开">打开</button></div>' +
+        '<div class="card-info">' +
+        '<div class="card-name">' + d.name + "</div>" +
+        '<div class="card-meta">' + d.meta + "</div>" +
+        '<div class="card-ocr">「' + d.ocr + "…」</div></div>";
+      grid.appendChild(card);
+    });
+    emptyEl.hidden = list.length > 0;
+    countEl.textContent = String(list.length);
+  }
+  render(DEMO);
+
+  document.getElementById("search").addEventListener("input", function (e) {
+    var q = e.target.value.trim().toLowerCase();
+    render(q ? DEMO.filter(function (d) {
+      return (d.name + " " + d.ocr + " " + d.meta).toLowerCase().indexOf(q) >= 0;
+    }) : DEMO);
+  });
+
+  /* ---------- 滑杆数值回显 ---------- */
+  document.querySelectorAll("input[data-bind]").forEach(function (r) {
+    r.addEventListener("input", function () {
+      document.querySelector('[data-out="' + r.dataset.bind + '"]').textContent = r.value;
+    });
+  });
+
+  /* ---------- Agent 总开关 ---------- */
+  var agentSwitch = document.getElementById("agentSwitch");
+  var agentDot = document.getElementById("agentDot");
+  var agentState = document.querySelector("#agentState .lbl");
+  agentSwitch.addEventListener("change", function () {
+    var on = agentSwitch.checked;
+    agentDot.classList.toggle("off", !on);
+    agentDot.title = "Agent 调用：" + (on ? "开启" : "已关闭");
+    agentState.textContent = on
+      ? "当前状态：允许（Agent 可调用截图、OCR、标注）"
+      : "当前状态：已切断（截图类调用返回退出码 5，历史与状态查询不受影响）";
+    agentState.style.color = on ? "var(--success)" : "var(--accent-text)";
+    showToast(on ? "已允许 Agent 调用" : "已切断 Agent 调用（退出码 5）");
+  });
+
+  /* ---------- 黑名单移除（演示） ---------- */
+  document.querySelectorAll("[data-remove]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var li = b.closest(".li");
+      li.parentNode.removeChild(li);
+      showToast("已移除黑名单条目");
+    });
+  });
+
+  /* ---------- toast ---------- */
+  var toastTimer = null;
+  function showToast(text) {
+    var old = win.querySelector(".toast");
+    if (old) old.parentNode.removeChild(old);
+    var t = document.createElement("div");
+    t.className = "toast";
+    t.setAttribute("role", "status");
+    t.innerHTML = "<i></i><span></span>";
+    t.querySelector("span").textContent = text;
+    win.appendChild(t);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      if (t.parentNode) t.parentNode.removeChild(t);
+    }, 3000);
+  }
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest("[data-toast]");
+    if (el) showToast(el.getAttribute("data-toast"));
+  });
+})();
+</script>
+</body>
+</html>

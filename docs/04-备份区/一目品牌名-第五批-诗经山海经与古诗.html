@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一目 · 中文名第五批：从《诗经》《山海经》与古诗里找</title>
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F7F7F8; --bg3:#EFEFF1;
+  --tx:#1D1D21; --tx2:#5C5C66; --tx3:#8E8E99;
+  --bd:#E4E4E8; --bd2:#D2D2D8;
+  --accent:#FF3B30;
+  --ok:#0F6E56; --okbg:#E1F5EE;
+  --warn:#854F0B; --warnbg:#FAEEDA;
+  --risk:#A32D2D; --riskbg:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg3); color:var(--tx);
+  font-family:-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+  font-size:14px; line-height:1.7;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:40px 24px 80px}
+header.top{
+  background:var(--bg); border-radius:16px; padding:36px 40px;
+  border:1px solid var(--bd); margin-bottom:28px;
+}
+h1{font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:.5px}
+.sub{color:var(--tx2); font-size:15px; margin:0 0 20px}
+.note{
+  background:var(--bg2); border-radius:var(--r); padding:16px 18px;
+  font-size:13px; color:var(--tx2); margin-top:18px;
+}
+.note b{color:var(--tx); font-weight:600}
+section{
+  background:var(--bg); border-radius:16px; padding:32px 40px;
+  border:1px solid var(--bd); margin-bottom:24px;
+}
+h2{
+  font-size:19px; font-weight:600; margin:0 0 6px;
+  padding-bottom:14px; border-bottom:1px solid var(--bd);
+}
+h2 .num{color:var(--accent); font-weight:600; margin-right:8px}
+h3{font-size:15px; font-weight:600; margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{color:var(--tx2); font-size:13.5px; margin:14px 0 22px}
+
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{
+  text-align:left; font-weight:600; color:var(--tx2); font-size:12px;
+  letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--bd2);
+  background:var(--bg2);
+}
+td{padding:10px; border-bottom:1px solid var(--bd); vertical-align:top}
+td.kill{color:var(--risk); font-weight:600; white-space:nowrap}
+td.keep{color:var(--ok); font-weight:600; white-space:nowrap}
+td.rev{color:var(--warn); font-weight:600; white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--tx2)}
+
+.card{
+  border:1px solid var(--bd); border-radius:14px; padding:28px 30px;
+  margin-bottom:20px; background:var(--bg);
+}
+.card.pick{border:2px solid var(--accent)}
+.chead{display:flex; align-items:center; gap:16px; margin-bottom:6px; flex-wrap:wrap}
+.nm{font-size:30px; font-weight:600; letter-spacing:4px; line-height:1.2}
+.py{font-size:13px; color:var(--tx3); letter-spacing:.6px; margin-left:2px}
+.tag{
+  font-size:11.5px; padding:3px 9px; border-radius:20px;
+  background:var(--bg3); color:var(--tx2); letter-spacing:.3px;
+}
+.tag.pick{background:var(--accent); color:#fff; font-weight:600}
+.tag.ok{background:var(--okbg); color:var(--ok)}
+.tag.warn{background:var(--warnbg); color:var(--warn)}
+.tag.risk{background:var(--riskbg); color:var(--risk)}
+.quote{
+  border-left:3px solid var(--accent); padding:10px 0 10px 16px;
+  margin:16px 0; color:var(--tx); font-size:13.5px; line-height:1.8;
+}
+.quote cite{display:block; color:var(--tx3); font-size:12px; font-style:normal; margin-top:6px; letter-spacing:.3px}
+.map{width:100%; border-collapse:collapse; margin:16px 0; font-size:13px}
+.map td{border:1px solid var(--bd); padding:9px 12px}
+.map td:first-child{background:var(--bg2); color:var(--tx2); width:32%; font-size:12.5px}
+.map td:last-child{color:var(--tx)}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.box{background:var(--bg2); border-radius:var(--r); padding:14px 16px; font-size:13px}
+.box h3{font-size:12.5px; color:var(--tx2); letter-spacing:.4px; margin-bottom:8px}
+.box ul{margin:0; padding-left:17px; color:var(--tx)}
+.box li{margin-bottom:5px}
+.box li:last-child{margin-bottom:0}
+.foot{
+  margin-top:18px; padding-top:14px; border-top:1px solid var(--bd);
+  font-size:12.5px; color:var(--tx2);
+}
+.foot b{color:var(--tx); font-weight:600}
+
+/* 条形图 */
+.bars{margin:8px 0 4px}
+.bar{display:flex; align-items:center; gap:12px; margin-bottom:12px}
+.bl{flex:0 0 150px; font-size:12.5px; color:var(--tx2); text-align:right}
+.bt{flex:1; height:26px; background:var(--bg2); border-radius:6px; overflow:hidden; position:relative}
+.bf{height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:9px; color:#fff; font-size:12px; font-weight:600; letter-spacing:.3px}
+.bf.a{background:var(--accent)}
+.bf.b{background:#C9C9CF; color:var(--tx2)}
+.bf.c{background:var(--ok)}
+.bf.d{background:var(--warn)}
+.bv{flex:0 0 92px; font-size:12px; color:var(--tx2)}
+
+/* 序列 */
+.route{
+  border:1px solid var(--bd); border-radius:14px; padding:20px 24px;
+  margin-bottom:14px;
+}
+.route.pick{border:2px solid var(--accent); background:#FFF9F9}
+.rh{display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap}
+.rk{
+  flex:0 0 34px; height:34px; border-radius:10px; background:var(--bg3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:600; color:var(--tx2);
+}
+.route.pick .rk{background:var(--accent); color:#fff}
+.rh h3{margin:0; font-size:15.5px}
+.chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
+.chip{
+  font-size:13.5px; padding:4px 12px; border-radius:20px;
+  background:var(--bg2); color:var(--tx); border:1px solid var(--bd);
+  letter-spacing:1px;
+}
+.chip.new{background:#FFF1F0; color:var(--accent); border-color:#FFD5D2; font-weight:600}
+.route p{margin:0; font-size:13px; color:var(--tx2)}
+
+.figcap{font-size:12.5px; color:var(--tx2); margin-top:6px; line-height:1.75}
+.figcap b{color:var(--tx)}
+ol.steps{padding-left:20px; margin:12px 0 0}
+ol.steps li{margin-bottom:9px; font-size:13.5px}
+ol.steps li b{font-weight:600}
+code{
+  background:var(--bg2); border:1px solid var(--bd); border-radius:5px;
+  padding:1px 6px; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;
+}
+.big{font-size:15px; font-weight:600; color:var(--tx); margin:20px 0 6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>从《诗经》《山海经》和古诗里找名字</h1>
+  <p class="sub">中文名第五批 · 实测 17 个，6 个站住了</p>
+  <p style="margin:0;color:var(--tx2);font-size:13.5px">
+    你要的这条线我整批跑完了。结论先说：<b>这条路能用，但不能挑神话神兽，得挑文人的书房。</b>
+    《山海经》里那些有名的神兽和神人——离朱、陆吾、迷谷、若木、归墟——第9类几乎被扫干净了；
+    反倒是《诗经》里的草名、古人案头的纸和绢、传说里藏书的地方，还空着一大片。
+  </p>
+  <div class="note">
+    <b>筛到什么程度，我先说清楚：</b>每个名字我都跑了公开渠道（阿里云商标、启信宝、爱企查、企查查、标库网）的第 9 类检索，查到障碍的写清楚撞到谁、注册号多少。没查到的写"未见占用"。<b>但这不等于能注册</b>——公开渠道有盲查期、有更新延迟，最终必须去商标局官网自己查一遍。这一步谁也替不了。
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span>这轮淘汰 11 个，先把你可能想到的都划掉</h2>
+  <p class="lead">你脑子里冒出来的那几个"特别对"的词，基本都在下面这张表里——不是不好，是"已经有人要了"。</p>
+
+  <table>
+    <thead>
+      <tr><th style="width:13%">名字</th><th style="width:19%">出处</th><th>撞到谁</th><th style="width:13%">判定</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>迷谷</b></td>
+        <td>《山海经·南山经》<br><span class="mono">佩之不迷</span></td>
+        <td>「迷谷领航」第9类 <span class="mono">86891679</span> 已注册，商品项含<b>可下载的计算机应用软件、计算机软件（已录制）</b>；另有迷谷（江苏）软件科技发展有限公司在营，手上还握着第8类 <span class="mono">78308359</span>、第43类 <span class="mono">51283438</span>。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>离朱</b></td>
+        <td>《山海经》<br><span class="mono">黄帝时明目者</span></td>
+        <td>北京知其安科技有限公司手里有「离朱」第9类 <span class="mono">79584347</span>、35类 <span class="mono">79584357</span>、42类 <span class="mono">79588142</span>，还有「知其安离朱」第9类 <span class="mono">75952067</span>。另「离珠」第9类 <span class="mono">38633741</span> 含可下载的计算机程序。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>陆吾</b></td>
+        <td>《山海经》<br><span class="mono">昆仑之守</span></td>
+        <td>第9类至少五件，全部含 0901 软件项：福州陆吾信息科技 <span class="mono">46178931</span>、内蒙古陆吾数字科技 <span class="mono">63186143</span>、「陆吾神」<span class="mono">62864758</span>、「多点陆吾」<span class="mono">67330863</span>，还有陆吾（金华）智能科技在营。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>采采</b></td>
+        <td>《诗经·芣苢》<br><span class="mono">采采芣苢</span></td>
+        <td>三件第9类：<span class="mono">53214192</span>（含可下载的计算机程序、电子出版物）、<span class="mono">48564209</span>、<span class="mono">39502128</span>（含可下载的计算机应用软件、手机应用软件）。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>涵泳</b></td>
+        <td>朱熹读书法</td>
+        <td>「涵泳美社」第9类 <span class="mono">72389038</span> 已注册，0901 装了全套软件项（可下载的手机应用软件、可下载的计算机应用软件、电子出版物、计算机程序、计算机软件（已录制）），还顺带占了照相机。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>瑾瑜</b></td>
+        <td>《山海经》<br><span class="mono">瑾瑜之玉为良</span></td>
+        <td>「瑾瑜」第9类 <span class="mono">15977141</span> 已注册，含计算机外围设备（第三方在售，约 2.6 万）；「昆仑瑾瑜」第9类 <span class="mono">88995765</span> 已注册，含<b>可下载的手机应用软件</b>；「海尔瑾瑜」<span class="mono">90906948</span> 也已进过审。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>若木</b></td>
+        <td>《山海经》<br><span class="mono">西方若木</span></td>
+        <td>「若木」第9类 <span class="mono">42244078</span> 已注册（中广核研究院），含 0901 计算机外围设备与中央处理器；另有 <span class="mono">69694516</span>、<span class="mono">88600945</span> 两件在同类，广州若木文化在营。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>甘棠</b></td>
+        <td>《诗经·召南·甘棠》<br><span class="mono">勿翦勿伐</span></td>
+        <td>「甘棠」第9类 <span class="mono">13618763</span> 已注册，含计算机外围设备（在售约 3 万）；更麻烦的是甘棠软件系统（上海）有限公司就在同一赛道，其第9类商标 2023—2024 年被提过"撤三"。这名字有历史包袱。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>归墟</b></td>
+        <td>《山海经》《列子》<br><span class="mono">万物归入之处</span></td>
+        <td>「归墟传奇」第9类 <span class="mono">92947010</span> 待审中（上海响游网络科技），商品项含<b>可下载的计算机应用软件</b>和视频游戏程序。语义最贴"归档"，可惜游戏公司已经排队了。</td>
+        <td class="kill">硬障碍</td>
+      </tr>
+      <tr>
+        <td><b>剡藤</b></td>
+        <td>唐·剡溪藤纸</td>
+        <td>「剡藤」<span class="mono">53331132</span> 第42类已注册，商品项是计算机编程、计算机软件设计、SaaS——虽然不在第9类，但42类是软件服务的常规占位，够得着你。</td>
+        <td class="rev">半个障碍</td>
+      </tr>
+      <tr>
+        <td><b>流观</b></td>
+        <td>陶渊明<br><span class="mono">流观山海图</span></td>
+        <td>「流观山海」<span class="mono">90440177</span> 第28类 + <span class="mono">90440209</span> 第35类均已注册（益智宝教育科技（广东））。第9类本轮没查到，能留，但被教育公司在 28/35 类占着。</td>
+        <td class="rev">半个障碍</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">02</span>关键发现：神话神兽全军覆没，文人的书房还空着</h2>
+  <p class="lead">这批最有价值的不是那 6 个名字，是这条规律。它决定了以后还该往哪个方向挖。</p>
+
+  <p>
+    我把这轮 17 个分成两半看：<b>神话神兽那一半，5 个全灭</b>；<b>文人案头那一半，6 个全过</b>。
+    不是巧合。
+  </p>
+  <p>
+    《山海经》里有名有姓的神兽神人，是<b>游戏行业的取名富矿</b>——2020 年以后被游戏公司成片扫过一遍，
+    因为游戏要的就是"战斗感"和"神话感"。离朱、陆吾、迷谷、若木、琅玕、归墟，全在这张名单上。
+  </p>
+  <p>
+    可"芣苢""卷耳""蜀素""琅嬛""二酉"不是。这些词有股<b>文人案头的味道</b>——草名、绢帛、藏书洞，
+    软件公司不爱用，觉得不够"科技"。恰恰是这个"不够科技"，把地给你留出来了。
+  </p>
+
+  <div class="big">五批跑下来的洁净率，差距很明显</div>
+  <div class="bars">
+    <div class="bar">
+      <div class="bl">视力·镜子词</div>
+      <div class="bt"><div class="bf a" style="width:2%"></div></div>
+      <div class="bv">约 12 → 0</div>
+    </div>
+    <div class="bar">
+      <div class="bl">动物·视力冠军</div>
+      <div class="bt"><div class="bf a" style="width:2%"></div></div>
+      <div class="bv">14 → 0</div>
+    </div>
+    <div class="bar">
+      <div class="bl">文学典故·神话线</div>
+      <div class="bt"><div class="bf d" style="width:10%"></div></div>
+      <div class="bv">5 → 0</div>
+    </div>
+    <div class="bar">
+      <div class="bl">文学典故·案头线</div>
+      <div class="bt"><div class="bf c" style="width:100%"></div></div>
+      <div class="bv">6 → 6</div>
+    </div>
+    <div class="bar">
+      <div class="bl">古代手艺·档案词</div>
+      <div class="bt"><div class="bf c" style="width:48%"></div></div>
+      <div class="bv">22 → 约 10.5</div>
+    </div>
+  </div>
+  <p class="figcap">
+    <b>一句话记住这个规律：越像"工具在干活"的词越安全，越像"品牌在战斗"的词越危险。</b>
+    因为"战斗感"是所有人抢的东西，"干活感"只有你在抢。
+  </p>
+
+  <div class="cols">
+    <div class="box">
+      <h3>为什么"看得清"这条路彻底堵死</h3>
+      <ul>
+        <li>你的产品卖点就是"看得清"，而整个行业都在抢这个词</li>
+        <li>视力冠军动物名单是固定的、公开的，谁都想得到</li>
+        <li>想到的人多 = 注册的人多 = 一个都不剩</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>为什么"干活的手艺"这条路能走</h3>
+      <ul>
+        <li>响拓、副墨、存照、录副——这些是古代书吏的日常动作</li>
+        <li>它们不"酷"，不在任何营销热点名单上</li>
+        <li>生僻到大部分人念不出来，等于天然独占</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">03</span>六个过关的：第9类目前空着</h2>
+  <p class="lead">前三个是我建议你重点看的。每张卡都写清了"好在哪"和"要接受什么代价"。</p>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">芣苢</span>
+      <span class="py">fú yǐ</span>
+      <span class="tag pick">本轮首推</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag">独占性最强</span>
+    </div>
+    <div class="quote">
+      采采芣苢，薄言采之。采采芣苢，薄言有之。
+      <cite>《诗经·周南·芣苢》</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面是什么</td><td>芣苢就是车前草，一种田埂上到处都有的小草。</td></tr>
+      <tr><td>为什么最对</td><td>整首诗六句，每一句都在重复一个动作——<b>采</b>。"采了又采"就是截图的本来面目：看见、采下来、收好。它没有把"看"字挂在脸上，却把"采"写进了血液。</td></tr>
+      <tr><td>第9类现状</td><td>未见占用。能查到的只有第25类服装「芣苢 FOUYI」<span class="mono">20567009</span>，不同类，不挡你。</td></tr>
+      <tr><td>独占性</td><td>最高的一档。两个生僻字，绝大部分人念不出来，也就没人会去注。你注了基本就是独一份。</td></tr>
+      <tr><td>要接受的代价</td><td>用户不会读。做 App 图标时你得在名字旁边标拼音，或者靠一句"采采芣苢"的副标去带。<b>它天生是"讲出来有味道、写出来认不得"的名字。</b></td></tr>
+    </table>
+  </div>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">卷耳</span>
+      <span class="py">juàn ěr</span>
+      <span class="tag pick">本轮首推</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag">最好读的一个</span>
+    </div>
+    <div class="quote">
+      采采卷耳，不盈顷筐。
+      <cite>《诗经·周南·卷耳》</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面是什么</td><td>卷耳是苍耳，也是《诗经》里被采了又采的野菜。字面上还藏着一层"卷起来的耳朵"。</td></tr>
+      <tr><td>为什么好</td><td>跟芣苢同源——都是"采"派。但<b>它认得出来、读得出来</b>，不用教。"卷"字还刚好撞上长截图那个"卷"（长卷），双关白送。</td></tr>
+      <tr><td>第9类现状</td><td>未见占用。已被占的全在别处：第35类 <span class="mono">8663832</span> 等、第41类 <span class="mono">8663692</span>、第16类、第25类 <span class="mono">17103074</span>、第44类 <span class="mono">19111809</span>，都是杭州卷耳书会文化用品和杭州卷耳摄影的。</td></tr>
+      <tr><td>独占性</td><td>中上。没有大公司押注，但有同名文化用品公司在营，属于"同名字不同行"，不冲突。</td></tr>
+      <tr><td>要接受的代价</td><td>"卷耳"在图书文化用品圈有点小名气，将来你若扩到文创周边，可能会碰面。</td></tr>
+    </table>
+  </div>
+
+  <div class="card pick">
+    <div class="chead">
+      <span class="nm">蜀素</span>
+      <span class="py">shǔ sù</span>
+      <span class="tag pick">本轮首推</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag">最有"承载体"的味道</span>
+    </div>
+    <div class="quote">
+      蜀素，四川织的本色绢，米芾在上面写下了《蜀素帖》。
+      <cite>宋·米芾《蜀素帖》</cite>
+    </div>
+    <table class="map">
+      <tr><td>字面是什么</td><td>蜀地织的素绢。"素"就是没染过的底子。</td></tr>
+      <tr><td>为什么好</td><td>它是一个<b>载体</b>——画面的落脚处。你的工具干的事，是把屏幕上的东西落到一块干净底子上，跟墨落在蜀素上是一回事。而且它两个字、好读、写得好看。</td></tr>
+      <tr><td>第9类现状</td><td>未见占用。第35类 <span class="mono">83386527</span> 有过申请但已驳回（四川依格尔纺织品）。</td></tr>
+      <tr><td>独占性</td><td>中上。书画圈认识它，IT 圈完全不认识，正好。</td></tr>
+      <tr><td>要接受的代价</td><td>不知道《蜀素帖》的人会觉得莫名。需要一句 slogan 把它讲明白，比如"把画面落在素绢上"。</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">琅嬛</span>
+      <span class="py">láng huán</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag">藏书处的意象</span>
+    </div>
+    <div class="quote">
+      琅嬛福地——传说中天帝藏书的地方。
+      <cite>《琅嬛记》</cite>
+    </div>
+    <table class="map">
+      <tr><td>为什么好</td><td>你的截图最后要落到一个目录里、要归档、要能被 Agent 翻出来。而"琅嬛"本来就是<b>藏书的地方</b>——现成的库房意象，不用编。</td></tr>
+      <tr><td>第9类现状</td><td>未见占用。已被占的是第6类 <span class="mono">71659982</span>（金属门窗）、第21类 <span class="mono">48833608</span>、第35类「琅嬛玉洞」<span class="mono">35406527</span>、第41类「琅嬛娱乐」<span class="mono">79803612</span>。</td></tr>
+      <tr><td>风险提示</td><td>这词有点"抢手"——已经被四家不同行业的公司分别占了四类，说明<b>大家都觉得它好听</b>。而"琅嬛娱乐"在 41 类有一定存在感，将来可能被提异议。</td></tr>
+      <tr><td>读音提醒</td><td>"嬛"字容易读错，且"嬛"在《甄嬛传》里读 xuān。商标读音以 huán 为准，需要接受"总有用户读不对"。</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">二酉</span>
+      <span class="py">èr yǒu</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag">藏书洞的典故</span>
+    </div>
+    <div class="quote">
+      学富五车，书通二酉。
+      <cite>湖南沅陵·二酉山，相传秦人藏书于此</cite>
+    </div>
+    <table class="map">
+      <tr><td>为什么好</td><td>跟琅嬛是一路的："二酉"是传说里<b>真正藏过书的山洞</b>。语义对得极准，且比琅嬛更冷门。</td></tr>
+      <tr><td>第9类现状</td><td>未见占用。能查到的只有第33类酒「二酉藏书」<span class="mono">24573221</span>。</td></tr>
+      <tr><td>要接受的代价</td><td>"二"开头，读起来气势弱一点，像个编号而不像个品牌。做 logo 时得靠字形撑住（比如把两个"酉"字叠成一个坛子的形）。</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <span class="nm">烛阴</span>
+      <span class="py">zhú yīn</span>
+      <span class="tag ok">第9类未见占用</span>
+      <span class="tag warn">有同名公司在营</span>
+    </div>
+    <div class="quote">
+      钟山之神，名曰烛阴，视为昼，瞑为夜。
+      <cite>《山海经·海外北经》</cite>
+    </div>
+    <table class="map">
+      <tr><td>为什么好</td><td>这批里神话味最足的一个，而且它是<b>唯一一个"神话"和"看"同时成立的</b>：睁开眼就是白天，闭上眼就是黑夜。一个用眼睛管昼夜的神，正对上一目。</td></tr>
+      <tr><td>第9类现状</td><td>本轮未查到第9类注册。杭州烛阴文化传媒有限公司在营（18 件商标，主要在 28 类健身器材、游戏内容）；上海烛阴信息科技有限公司已吊销未注销（做过软件设计，13 件软著但 0 商标）。</td></tr>
+      <tr><td>要接受的代价</td><td>"阴"字偏冷，不够亲和；且已有一家文化传媒公司用这个字号，你注下来之后可能收到交涉。如果选它，建议同步做一次彻底的同名企业排查。</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span>五批合并：现在你手上有五个序列</h2>
+  <p class="lead">前面四批收了口，这一批新增第五序列。选的时候不用看完，按你的取舍挑就行。</p>
+
+  <div class="route pick">
+    <div class="rh"><span class="rk">1</span><h3>第一序列 · 最稳（最好念、最好讲）</h3></div>
+    <div class="chips">
+      <span class="chip">朱拓</span><span class="chip">留真</span><span class="chip">粉本</span>
+      <span class="chip">响拓</span><span class="chip">长卷</span><span class="chip">描红</span>
+    </div>
+    <p style="margin-top:10px">六个都过了第9类初筛。<b>如果只跑三个官方检索，就查响拓、长卷、描红。</b>长卷最好懂，描红是唯一能把"一目红"接上的，响拓故事最强。</p>
+  </div>
+
+  <div class="route">
+    <div class="rh"><span class="rk">2</span><h3>第二序列 · 次稳（偏文气）</h3></div>
+    <div class="chips">
+      <span class="chip">副墨</span><span class="chip">存照</span><span class="chip">写样</span>
+      <span class="chip">叙录</span><span class="chip">影抄</span><span class="chip">摹本</span>
+      <span class="chip">样张</span><span class="chip">朱记</span><span class="chip">定本</span>
+    </div>
+    <p style="margin-top:10px">都是"记录／复制"这一族的老词，气质统一，适合做产品线命名（比如某个功能叫"影抄模式"）。</p>
+  </div>
+
+  <div class="route">
+    <div class="rh"><span class="rk">3</span><h3>第三序列 · 独占性最强，但认得的人最少</h3></div>
+    <div class="chips">
+      <span class="chip">赫蹄</span><span class="chip">录副</span><span class="chip">界画</span>
+    </div>
+    <p style="margin-top:10px">赫蹄是《汉书》里的"薄小纸"，基本没人碰；录副是清代军机处的抄本制度。别人抢不走，代价是要花力气教用户。</p>
+  </div>
+
+  <div class="route">
+    <div class="rh"><span class="rk">4</span><h3>第四序列 · 需要前置条件</h3></div>
+    <div class="chips">
+      <span class="chip">卧游</span><span class="chip">澄怀</span>
+    </div>
+    <p style="margin-top:10px">"卧游"第9类目前空着，但卧游网络 <span class="mono">90857169</span> 刚被驳回（2026-07-01），要盯住它会不会复审；"澄怀"第9类空，但同名公司就在做软件，属于要躲的。</p>
+  </div>
+
+  <div class="route pick">
+    <div class="rh"><span class="rk">5</span><h3>第五序列 · 本轮新增（文学案头线）</h3></div>
+    <div class="chips">
+      <span class="chip new">蜀素</span><span class="chip new">琅嬛</span><span class="chip new">二酉</span>
+      <span class="chip new">芣苢</span><span class="chip new">卷耳</span><span class="chip new">烛阴</span>
+    </div>
+    <p style="margin-top:10px">气质跟前四个序列不一样：前四个是"手艺人／书吏的味道"，这一组是"文人的味道"。<b>如果你的品牌想给人"干净、有文化、不吵"的感觉，从这组里挑；如果想给人"在干活、很利索"的感觉，从第一、二序列里挑。</b></p>
+  </div>
+
+  <div class="foot">
+    <b>如果只让我推三个（跨序列）：</b>要最好读 → <b>长卷</b>；要故事最强 → <b>响拓</b>；要独占到别人抢不走 → <b>芣苢</b>（或赫蹄）。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span>下一步：官方检索怎么做，十分钟能跑完</h2>
+  <p class="lead">公开渠道我替你跑完了，但只有商标局官网的数据算数。这一步你亲手做一遍。</p>
+
+  <ol class="steps">
+    <li>打开 <code>sbj.cnipa.gov.cn</code> → 商标查询 → <b>商标综合查询</b>（需要先注册登录）。</li>
+    <li>国际分类填 <code>9</code>，商标名称填你要查的那一个。</li>
+    <li><b>关键一步：把每一件结果点开，看"商品／服务列表"。</b>只看有没有这三项之一：<br>
+      <code>计算机程序（可下载软件）</code>、<code>可下载的计算机应用软件</code>、<code>计算机软件（已录制）</code>。<br>
+      有任意一项 → 真障碍；如果只有雷达、导航、电缆、秤、眼镜这类硬件项 → <b>不挡你</b>，可以继续。</li>
+    <li><b>图形另查。</b>2026 年 5 月 22 日起商标局支持"以图搜图"（png / jpeg / jpg，单个不超过 2M）。把"印章·甲骨目"那个母题传进去查近似——图形标和文字标是两回事，都得查。</li>
+    <li><b>别只查第 9 类。</b>顺手扫一眼第 35 类和第 42 类，这是软件公司的常规布局位。（比如「剡藤」就是 42 类被占了。）</li>
+    <li>查完写下来：每个候选的注册号、状态、商品项、有没有 0901 软件项。这份记录就是你跟代理沟通的依据。</li>
+  </ol>
+
+  <div class="note" style="margin-top:22px">
+    <b>再说一遍边界：</b>这份文件里的"未见占用"是公开渠道初筛的结果，不等于可以注册，也不构成法律意见。商标局官网数据有滞后、有盲查期，最终一定要自己查一遍，或者花几百块让代理出书面检索意见。真正提交前，别把任何名字印在物料上。
+  </div>
+</section>
+
+</div>
+</body>
+</html>

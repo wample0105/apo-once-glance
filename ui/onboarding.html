@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>欢迎使用定影</title>
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+  body {
+    height: 100vh; overflow: hidden;
+    background: var(--bg-primary);
+    display: flex; flex-direction: column;
+    font-size: 12.5px; user-select: none;
+    -webkit-app-region: drag;
+  }
+  button, a { -webkit-app-region: no-drag; }
+  header { padding: 18px 22px 0; }
+  header .t { font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  header .s { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
+  .steps { display: flex; gap: 6px; padding: 14px 22px 0; }
+  .steps i { height: 4px; border-radius: 2px; flex: 1; background: var(--border); }
+  .steps i.on { background: var(--accent); }
+  main { flex: 1; padding: 16px 22px; overflow: auto; -webkit-app-region: no-drag; }
+  .step { display: none; }
+  .step.on { display: block; animation: fade .18s ease-out; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .check { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 12.5px; }
+  .check .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); flex: none; }
+  .check.ok .dot { background: var(--success); }
+  .check.bad .dot { background: var(--accent); }
+  .bigkey {
+    text-align: center; padding: 26px 0 18px;
+  }
+  .bigkey .k {
+    display: inline-block; font-family: var(--mono); font-size: 22px;
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 22px;
+  }
+  .bigkey .d { font-size: 12px; color: var(--text-tertiary); margin-top: 12px; }
+  .done-cn { text-align: center; font-size: 13px; padding: 12px 0 4px; }
+  .result {
+    background: var(--bg-secondary); border-radius: var(--r-card);
+    padding: 12px; text-align: center; margin-top: 12px;
+  }
+  .result img { max-width: 100%; border-radius: 6px; }
+  footer {
+    display: flex; gap: 8px; align-items: center;
+    padding: 12px 22px 16px; -webkit-app-region: no-drag;
+  }
+  footer .sp { flex: 1; }
+  .btn { min-width: 90px; justify-content: center; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="t"><img alt="" style="width:22px;height:22px;border-radius:5px" id="brand">欢迎使用定影 Onceglance</div>
+    <div class="s">让 Agent 看见你的屏幕 · 本地优先 · 零云端</div>
+  </header>
+  <div class="steps"><i class="on" data-s="1"></i><i data-s="2"></i><i data-s="3"></i></div>
+  <main>
+    <!-- 第 1 步 · 环境自检 -->
+    <div class="step on" id="s1">
+      <p style="margin-bottom:10px;line-height:1.7">正在检查运行环境——正常的话只需几秒。</p>
+      <div id="checks"></div>
+    </div>
+    <!-- 第 2 步 · 试一次 -->
+    <div class="step" id="s2">
+      <div class="bigkey">
+        <div class="k">Alt + Shift + A</div>
+        <div class="d">按下这组键，框选屏幕上的任意区域，松手即完成第一次截图</div>
+      </div>
+      <div class="result" id="s2-result" style="display:none">
+        <div style="font-weight:500;color:var(--success)">✓ 已复制，可以直接粘贴了</div>
+        <img id="s2-thumb" style="margin-top:8px" alt="">
+      </div>
+      <div style="text-align:center;margin-top:10px">
+        <button class="btn ghost" id="s2-skip">跳过，下次再说</button>
+      </div>
+    </div>
+    <!-- 第 3 步 · 接 Agent？（可跳过） -->
+    <div class="step" id="s3">
+      <p style="line-height:1.7;margin-bottom:12px">定影可以成为你手中 Agent 的「眼睛」：Agent 自己截图、取字、标注，替你把操作写成教程。也可以先跳过，纯快捷键一样完整好用。</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn" id="s3-install">安装 CLI 与 Skill（一条命令，之后可交给 Agent 代跑）</button>
+        <button class="btn" id="s3-agentpage">查看 MCP 配置（已接入 Agent 的进阶用户）</button>
+        <button class="btn ghost" id="s3-skip">先跳过</button>
+      </div>
+    </div>
+    <!-- 完成页 -->
+    <div class="step" id="s4">
+      <div class="done-cn">定影已在后台运行，随时按 <b>Alt+Shift+A</b> 截图。</div>
+    </div>
+  </main>
+  <footer>
+    <button class="btn ghost" id="prev" style="visibility:hidden">上一步</button>
+    <span class="sp"></span>
+    <button class="btn primary" id="next">下一步</button>
+  </footer>
+  <script src="js/onboarding.js"></script>
+</body>
+</html>

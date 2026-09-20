@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>长截图</title>
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+  html, body { background: transparent; overflow: hidden; }
+  .bar {
+    display: flex; align-items: center; gap: 10px;
+    height: 100%;
+    background: var(--ov-surface);
+    border: 1px solid var(--ov-border);
+    border-radius: var(--r-tool);
+    color: var(--ov-fg);
+    font-size: 12px;
+    padding: 6px 10px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+    white-space: nowrap;
+    animation: fadein 0.15s ease-out;
+  }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  #stat b { color: #fff; }
+  #rollback {
+    color: var(--stitch-low);
+    display: none;
+  }
+  .btn-done {
+    border: none; background: var(--accent); color: #fff;
+    font-weight: 500; font-size: 12px;
+    padding: 5px 12px; border-radius: 7px; cursor: pointer;
+  }
+  .btn-done:hover { background: var(--accent-hover); }
+  .btn-done.bottom { animation: pulse 0.3s ease-out; }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.14); } 100% { transform: scale(1); } }
+  .btn-x {
+    border: none; background: transparent; color: var(--ov-fg-dim);
+    padding: 5px 8px; border-radius: 7px; cursor: pointer;
+  }
+  .btn-x:hover { color: var(--ov-fg); background: var(--ov-surface-2); }
+  .kbd { font-family: var(--mono); font-size: 11px; opacity: 0.72; }
+</style>
+</head>
+<body role="status" aria-live="polite">
+  <div class="bar">
+    <span id="rollback">回滚中 · 不记录</span>
+    <span id="stat">已 1 段 · -- px</span>
+    <button class="btn-done" id="done">完成 <span class="kbd">↵</span></button>
+    <button class="btn-x" id="x" title="取消（不落盘）">✕</button>
+  </div>
+  <script src="js/endbar.js"></script>
+</body>
+</html>

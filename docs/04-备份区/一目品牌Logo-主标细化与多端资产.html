@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一目 Onceglance · 主标细化与多端资产规范</title>
+<style>
+  :root{
+    --red:#FF3B30; --ink:#1D1D21; --fg:#55555A; --fg3:#8E8E93;
+    --bg:#F2F2F5; --card:#FFFFFF; --border:#E5E5EA; --soft:#FAFAFC;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"SF Pro Text","PingFang SC","Microsoft YaHei UI","Segoe UI",sans-serif;
+    padding:36px 28px 64px;line-height:1.6}
+  .wrap{max-width:1120px;margin:0 auto}
+  header h1{font-size:26px;font-weight:700;letter-spacing:.5px}
+  header .sub{color:var(--fg);font-size:13.5px;margin-top:6px}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .chip{font-size:12px;color:var(--fg);background:var(--card);border:1px solid var(--border);
+    border-radius:999px;padding:3px 12px}
+  .chip b{color:var(--red);font-weight:600}
+  .legend{margin-top:16px;font-size:12.5px;color:var(--fg3)}
+  section.card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+    padding:22px 24px;margin-top:22px}
+  .chead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .no{font-size:13px;font-weight:700;color:var(--red);letter-spacing:1px}
+  .cname{font-size:19px;font-weight:700}
+  .ctag{font-size:13px;color:var(--fg)}
+  .lead{font-size:13.5px;color:var(--fg);margin-top:12px}
+  .gridwrap{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:18px}
+  .gridwrap svg{flex:none;background:var(--soft);border:1px solid var(--border);border-radius:12px}
+  .spec{font-size:13px;color:var(--fg);flex:1;min-width:260px}
+  .spec dt{color:var(--ink);font-weight:600;margin-top:10px;font-size:13px}
+  .spec dt:first-child{margin-top:0}
+  .spec dd{font-size:12.5px;color:var(--fg);margin-left:0;line-height:1.7}
+  .spec code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:12px;
+    background:var(--soft);border:1px solid var(--border);border-radius:5px;padding:1px 5px}
+  .ladder{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end;margin-top:18px;
+    border:1px solid var(--border);border-radius:12px;padding:22px 24px;background:var(--soft)}
+  .sz{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .sz i{display:flex;align-items:center;justify-content:center;font-style:normal}
+  .sz span{font-size:11px;color:var(--fg3);white-space:nowrap}
+  .sz b{font-size:11px;color:var(--red);font-weight:600}
+  .notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px 24px;
+    margin-top:16px;font-size:13px;color:var(--fg)}
+  .notes b{color:var(--ink);font-weight:600}
+  .lr{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:18px}
+  .lr>div{border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;
+    align-items:center;justify-content:center;min-height:170px}
+  .lr .dark{background:#1D1D21;border-color:#1D1D21}
+  .lr .soft{background:var(--soft)}
+  .lab{font-size:11px;color:var(--fg3);margin-top:8px;text-align:center}
+  table.t{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:14px}
+  table.t th,table.t td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  table.t th{color:var(--fg3);font-weight:500}
+  table.t td:first-child{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:12px;white-space:nowrap}
+  table.t tr:last-child td{border-bottom:none}
+  .bad{color:#B3271C;font-weight:600}
+  .good{color:#0E6E4E;font-weight:600}
+  .do-dont{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:16px}
+  .dd{border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;background:var(--soft)}
+  .dd i{display:flex;align-items:center;justify-content:center;height:76px;font-style:normal}
+  .dd p{font-size:11.5px;color:var(--fg);margin-top:8px;line-height:1.5}
+  .dd p em{font-style:normal;font-weight:600;display:block;margin-bottom:2px}
+  .dd.no p em{color:#B3271C}
+  .dd.yes p em{color:#0E6E4E}
+  footer.card{background:#1D1D21;border-color:#1D1D21;color:#F5F5F7}
+  footer .cname{color:#F5F5F7}
+  ol.rank{margin:12px 0 0 18px;font-size:13.5px;line-height:2}
+  ol.rank b{color:var(--red)}
+  .next{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.15);
+    font-size:13px;color:#C9C9CF}
+  code.k{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:12px;
+    background:rgba(255,255,255,.1);border-radius:4px;padding:1px 5px;color:#F5F5F7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>一目 Onceglance · 主标细化与多端资产 <span style="color:var(--red)">已定稿</span></h1>
+  <div class="sub">主标方向已定：<b>印章 · 甲骨目</b>。本页是它的施工图——比例网格、安全边距、最小尺寸、字标定制、多端资产与禁用态，全部按此执行。</div>
+  <div class="meta">
+    <span class="chip">品牌红 <b>#FF3B30</b></span>
+    <span class="chip">墨色 <b>#1D1D21</b></span>
+    <span class="chip">资产 <b>12</b> 个 SVG + <b>27</b> 个 PNG</span>
+    <span class="chip">2026-09-18 · 定稿</span>
+  </div>
+  <div class="legend">所有图形以 48×48 为基准网格绘制，等比缩放。矢量源文件在 <code style="font-size:12px">assets/logo/</code>，位图在 <code style="font-size:12px">assets/logo/png/</code>。</div>
+</header>
+
+<!-- ============ 1 比例网格 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">01</span><span class="cname">比例网格</span>
+    <span class="ctag">48 网格上的每一个坐标，都是可复现的</span></div>
+  <div class="lead">图形不是"看着差不多"画出来的。章体、眼形、瞳仁的位置关系全部落在 48 网格上，任何人按下面的数值重画，出来的必须是同一枚标。</div>
+  <div class="gridwrap">
+    <svg viewBox="0 0 340 360" width="340" height="360" role="img" aria-label="主标比例网格">
+      <title>主标比例网格（48×48）</title>
+      <defs>
+        <pattern id="g4" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M20 0V20M0 20H20" fill="none" stroke="#EDEDF0" stroke-width="1"/>
+        </pattern>
+        <pattern id="g12" width="60" height="60" patternUnits="userSpaceOnUse">
+          <path d="M60 0V60M0 60H60" fill="none" stroke="#DCDCE2" stroke-width="1"/>
+        </pattern>
+      </defs>
+      <rect x="40" y="50" width="240" height="240" fill="url(#g4)"/>
+      <rect x="40" y="50" width="240" height="240" fill="url(#g12)"/>
+      <rect x="40" y="50" width="240" height="240" fill="none" stroke="#C9C9CF" stroke-width="1"/>
+
+      <line x1="160" y1="34" x2="160" y2="300" stroke="#FF3B30" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+      <line x1="40" y1="120" x2="280" y2="120" stroke="#FF3B30" stroke-width="1" stroke-dasharray="3 3" opacity="0.28"/>
+      <line x1="40" y1="220" x2="280" y2="220" stroke="#FF3B30" stroke-width="1" stroke-dasharray="3 3" opacity="0.28"/>
+      <line x1="40" y1="146" x2="280" y2="146" stroke="#FF3B30" stroke-width="1" stroke-dasharray="3 3" opacity="0.28"/>
+      <line x1="40" y1="194" x2="280" y2="194" stroke="#FF3B30" stroke-width="1" stroke-dasharray="3 3" opacity="0.28"/>
+      <line x1="82.5" y1="50" x2="82.5" y2="290" stroke="#FF3B30" stroke-width="1" stroke-dasharray="3 3" opacity="0.28"/>
+      <line x1="237.5" y1="50" x2="237.5" y2="290" stroke="#FF3B30" stroke-width="1" stroke-dasharray="3 3" opacity="0.28"/>
+
+      <g transform="translate(40 50) scale(5)">
+        <rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/>
+        <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+        <path d="M24 19.2V28.8" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+      </g>
+
+      <line x1="82.5" y1="314" x2="82.5" y2="320" stroke="#8E8E93" stroke-width="1"/>
+      <line x1="237.5" y1="314" x2="237.5" y2="320" stroke="#8E8E93" stroke-width="1"/>
+      <line x1="82.5" y1="317" x2="237.5" y2="317" stroke="#8E8E93" stroke-width="1"/>
+      <text x="160" y="334" font-size="11" fill="#55555A" text-anchor="middle" font-family="ui-monospace,Consolas,monospace">31</text>
+
+      <line x1="20" y1="120" x2="14" y2="120" stroke="#8E8E93" stroke-width="1"/>
+      <line x1="20" y1="220" x2="14" y2="220" stroke="#8E8E93" stroke-width="1"/>
+      <line x1="17" y1="120" x2="17" y2="220" stroke="#8E8E93" stroke-width="1"/>
+      <text x="17" y="176" font-size="11" fill="#55555A" text-anchor="middle" font-family="ui-monospace,Consolas,monospace">20</text>
+
+      <text x="62" y="66" font-size="10.5" fill="#8E8E93" font-family="ui-monospace,Consolas,monospace">4</text>
+      <text x="296" y="54" font-size="10.5" fill="#8E8E93" font-family="ui-monospace,Consolas,monospace">48</text>
+    </svg>
+    <dl class="spec">
+      <dt>章体</dt>
+      <dd><code>x=4 y=4 w=40 h=40 rx=10</code>　圆角半径 = 边长的 25%，48 网格内缩 4 单位，留出光学呼吸。</dd>
+      <dt>眼形（目）</dt>
+      <dd>水平跨 <code>8.5 → 39.5</code>（宽 31，占章宽 77.5%）；垂直跨 <code>14 → 34</code>（高 20，占章高 50%）。左右到章体各 4.5，上下各 10——眼形横长，上下必须多留，否则显扁。</dd>
+      <dt>瞳仁</dt>
+      <dd>中轴 <code>x=24</code>，纵向 <code>19.2 → 28.8</code>（长 9.6）。端点不顶到眼形上下沿，两端各留约 1.6，避免糊在一起。</dd>
+      <dt>线宽</dt>
+      <dd>眼形与瞳仁同为 <code>3.4</code>，两端圆头（round）。等粗是甲骨象形字的本色，不许一粗一细。</dd>
+      <dt>居中</dt>
+      <dd>眼形与瞳仁的几何中心 <code>(24,24)</code> 与章体中心重合，不偏上不偏下。</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============ 2 安全边距 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">02</span><span class="cname">安全边距</span>
+    <span class="ctag">X = 章体边长的 25%，四周不得少于 X</span></div>
+  <div class="lead">边距不够，标就会被旁边的文字、图标、图片边缘"咬"住。下面虚线框内是禁区，任何元素不得进入。</div>
+  <div class="gridwrap">
+    <svg viewBox="0 0 380 380" width="380" height="380" role="img" aria-label="安全边距">
+      <title>安全边距（X = 章体边长 25%）</title>
+      <rect x="40" y="40" width="300" height="300" fill="none" stroke="#FF3B30" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.75"/>
+      <g transform="translate(70 70) scale(5)">
+        <rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/>
+        <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+        <path d="M24 19.2V28.8" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+      </g>
+      <line x1="65" y1="40" x2="65" y2="90" stroke="#8E8E93" stroke-width="1"/>
+      <line x1="60" y1="40" x2="70" y2="40" stroke="#8E8E93" stroke-width="1"/>
+      <line x1="60" y1="90" x2="70" y2="90" stroke="#8E8E93" stroke-width="1"/>
+      <text x="54" y="70" font-size="12" fill="#55555A" text-anchor="end" font-family="ui-monospace,Consolas,monospace">X</text>
+      <text x="190" y="372" font-size="11.5" fill="#8E8E93" text-anchor="middle">虚线内为安全区 · 内容不得越界</text>
+    </svg>
+    <dl class="spec">
+      <dt>X 的取法</dt>
+      <dd><code>X = 章体边长 × 25%</code>。以 48 网格计，X = 10 单位。</dd>
+      <dt>换算成像素</dt>
+      <dd>24px 章 → 边距 6px；32px → 8px；48px → 12px；512px 应用图标 → 128px。</dd>
+      <dt>最紧也不能少于</dt>
+      <dd>0.75X。低于这个值就直接换用"章体 + 文字随行"的排法，不要硬挤。</dd>
+      <dt>同排多个标</dt>
+      <dd>两个标并排时，间距按两个 X 计，不是共用一个 X。</dd>
+      <dt>背景要求</dt>
+      <dd>标下方的背景对比度需 ≥ 3:1。花哨照片、渐变上使用时，必须垫一块纯色底或加深遮罩。</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============ 3 尺寸分级 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">03</span><span class="cname">尺寸分级</span>
+    <span class="ctag">一条硬规则：大尺寸描边，小尺寸实心</span></div>
+  <div class="lead">描边目靠两条细线表达"眼"，线条在 32px 以下会糊成灰边。所以 32px 起改用实心眼——用面积代替线条，形状不变、语义不变。</div>
+  <div class="ladder">
+    <div class="sz">
+      <i style="width:48px;height:48px"><svg width="48" height="48" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg></i>
+      <b>48px</b><span>描边目 · 应用图标 / 启动页</span>
+    </div>
+    <div class="sz">
+      <i style="width:40px;height:40px"><svg width="40" height="40" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg></i>
+      <b>40px</b><span>描边目 · 标题栏品牌章上限</span>
+    </div>
+    <div class="sz">
+      <i style="width:32px;height:32px"><svg width="32" height="32" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M7.5 24C11.6 17 17.4 13.5 24 13.5C30.6 13.5 36.4 17 40.5 24C36.4 31 30.6 34.5 24 34.5C17.4 34.5 11.6 31 7.5 24Z" fill="#fff"/><rect x="21.3" y="18.6" width="5.4" height="10.8" rx="2.7" fill="#FF3B30"/></svg></i>
+      <b>32px</b><span>实心眼 · 切换点</span>
+    </div>
+    <div class="sz">
+      <i style="width:24px;height:24px"><svg width="24" height="24" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M7.5 24C11.6 17 17.4 13.5 24 13.5C30.6 13.5 36.4 17 40.5 24C36.4 31 30.6 34.5 24 34.5C17.4 34.5 11.6 31 7.5 24Z" fill="#fff"/><rect x="21.3" y="18.6" width="5.4" height="10.8" rx="2.7" fill="#FF3B30"/></svg></i>
+      <b>24px</b><span>实心眼 · 界面内 / 托盘</span>
+    </div>
+    <div class="sz">
+      <i style="width:16px;height:16px"><svg width="16" height="16" viewBox="0 0 48 48"><rect x="2" y="2" width="44" height="44" rx="12" fill="#FF3B30"/><path d="M6.5 24C11 16.5 17.2 13 24 13C30.8 13 37 16.5 41.5 24C37 31.5 30.8 35 24 35C17.2 35 11 31.5 6.5 24Z" fill="#fff"/><rect x="21" y="18.8" width="6" height="10.4" rx="3" fill="#FF3B30"/></svg></i>
+      <b>16px</b><span>实心眼 + 瞳槽加粗 · 最小尺寸</span>
+    </div>
+    <div class="sz">
+      <i style="width:16px;height:16px;background:#F2F2F5;border:1px dashed #C9C9CF;border-radius:6px"><svg width="14" height="14" viewBox="0 0 48 48" opacity="0.28"><rect x="4" y="4" width="40" height="40" rx="10" fill="#8E8E93"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg></i>
+      <b style="color:#8E8E93">禁用</b><span>16px 以下不用本标</span>
+    </div>
+  </div>
+  <div class="notes">
+    <div><b>≥ 48px：</b>描边目。眼形轮廓 + 竖瞳，线条感最足，是完整形态。</div>
+    <div><b>40–47px：</b>仍可用描边目，但只限标题栏品牌章这种静态场景，不做动画。</div>
+    <div><b>32px 及以下：</b>实心眼。白色实心眼 + 圆角红瞳槽，形状语义完全一致。</div>
+    <div><b>16px：</b>瞳槽加粗（5.4 → 6 宽）。16px 下那一道竖线只剩 2px，不加粗会消失。</div>
+    <div><b>16px 以下：</b>不使用本标。改用纯色方块，或退化为「一」字。这不是妥协，是不让标变糊。</div>
+    <div><b>不许中间态：</b>不存在"44px 用实心"这种自由选择，切换点固定在 32px，避免各端各自为政。</div>
+  </div>
+</section>
+
+<!-- ============ 4 字标 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">04</span><span class="cname">字标 lockup</span>
+    <span class="ctag">章是主，字是辅，永不抢位</span></div>
+  <div class="lead">三种排法，按可用宽度选，不许自己临时拼。中文在上、英文在下并左对齐；章体与文字块的高度必须视觉齐平。</div>
+  <div class="lr">
+    <div>
+      <div>
+        <svg width="208" height="64" viewBox="0 0 208 64" role="img" aria-label="横版字标">
+          <g transform="translate(8 8)">
+            <rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/>
+            <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+            <path d="M24 19.2V28.8" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+          </g>
+          <text x="67.2" y="33" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" font-size="27" font-weight="500" letter-spacing="1.6" fill="#1D1D21">一目</text>
+          <text x="68" y="48" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" font-size="11" font-weight="400" letter-spacing="2.6" fill="#1D1D21" opacity="0.62">Onceglance</text>
+        </svg>
+      </div>
+      <div class="lab">横版完整字标 · 章左字右 · 最小整高 56px</div>
+    </div>
+    <div>
+      <div>
+        <svg width="132" height="64" viewBox="0 0 132 64" role="img" aria-label="精简字标">
+          <g transform="translate(8 8)">
+            <rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/>
+            <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+            <path d="M24 19.2V28.8" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+          </g>
+          <text x="67.2" y="44" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" font-size="27" font-weight="500" letter-spacing="1.6" fill="#1D1D21">一目</text>
+        </svg>
+      </div>
+      <div class="lab">精简字标 · 去英文行 · 最小整高 28px</div>
+    </div>
+    <div class="dark">
+      <div>
+        <svg width="208" height="64" viewBox="0 0 208 64" role="img" aria-label="深底横版字标">
+          <g transform="translate(8 8)">
+            <rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/>
+            <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+            <path d="M24 19.2V28.8" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+          </g>
+          <text x="67.2" y="33" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" font-size="27" font-weight="500" letter-spacing="1.6" fill="#F5F5F7">一目</text>
+          <text x="68" y="48" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" font-size="11" font-weight="400" letter-spacing="2.6" fill="#F5F5F7" opacity="0.62">Onceglance</text>
+        </svg>
+      </div>
+      <div class="lab" style="color:#8E8E93">深底版 · 字色换 F5F5F7，不透明度不变</div>
+    </div>
+    <div>
+      <div>
+        <svg width="104" height="108" viewBox="0 0 104 108" role="img" aria-label="竖版字标">
+          <g transform="translate(28 4)">
+            <rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/>
+            <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+            <path d="M24 19.2V28.8" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+          </g>
+          <text x="51.3" y="82" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" font-size="25" font-weight="500" letter-spacing="1.5" text-anchor="middle" fill="#1D1D21">一目</text>
+          <text x="50.8" y="98" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" font-size="10" font-weight="400" letter-spacing="2.4" text-anchor="middle" fill="#1D1D21" opacity="0.62">Onceglance</text>
+        </svg>
+      </div>
+      <div class="lab">竖版字标 · 章上字下 · 居中轴对齐</div>
+    </div>
+  </div>
+
+  <dl class="spec" style="margin-top:22px">
+    <dt>中文「一目」</dt>
+    <dd>字号 = 章体边长 × <code>0.68</code>（48 网格里即 27）；字重 <code>500</code>；字距 <code>+1.6</code>（约 0.06em）；颜色墨色。</dd>
+    <dt>英文「Onceglance」</dt>
+    <dd>字号 = 中文字号 × <code>0.41</code>（即 11）；字重 <code>400</code>；字距 <code>+2.6</code>（约 0.24em）——英文小，必须靠字距拉开才不糊；颜色墨色 <code>62%</code>，永远比中文淡一档。</dd>
+    <dt>基线关系</dt>
+    <dd>中文基线比章体中心低 1 单位，英文基线再低 15（≈ 中文字号的 0.56）。文字块整体的视觉中心落在章体中心上，误差不超过 2 单位。</dd>
+    <dt>章字间距</dt>
+    <dd>文字块左缘距章体右缘 <code>11.2</code> 单位 ≈ 章体边长的 28%，即一个 X。不许更紧。</dd>
+    <dt>什么时候不许用字标</dt>
+    <dd>整高 < 56px 时去掉英文行，用精简字标；整高 < 28px 时（例如 24–40px 的标题栏）<b>不用字标</b>——标题栏里是"24px 章 + 界面字体文字"，不是把字标等比缩小。字标内 8px 的英文没有可读性，缩出来只会脏。</dd>
+    <dt>字体</dt>
+    <dd>字标用 <code>PingFang SC → Microsoft YaHei → Noto Sans SC</code> 系统栈。正式物料里文字必须<b>转曲</b>，避免跨机器字体替换走形；当前 SVG 内的 text 仅作排布示意。</dd>
+  </dl>
+</section>
+
+<!-- ============ 5 资产清单 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">05</span><span class="cname">多端资产清单</span>
+    <span class="ctag">14 个矢量 + 29 个位图，已导出到仓库</span></div>
+  <div class="lead">矢量源在 <code>assets/logo/</code>，位图在 <code>assets/logo/png/</code>。开发时优先引矢量；只有系统强制要求位图的场合（应用图标、托盘、favicon）才用 PNG。</div>
+  <table class="t">
+    <tr><th>文件</th><th>用途</th><th>基准尺寸</th><th>用哪一版字形</th></tr>
+    <tr><td>onceglance-mark.svg</td><td>主标标准版，≥48px 通用</td><td>48×48</td><td>描边目</td></tr>
+    <tr><td>onceglance-mark-small.svg</td><td>主标小尺寸版，≤32px</td><td>32×32</td><td>实心眼</td></tr>
+    <tr><td>onceglance-mark-line.svg</td><td>线描版，浅底极简 / 双色印刷</td><td>48×48</td><td>描边目</td></tr>
+    <tr><td>onceglance-mono-dark.svg</td><td>单色深，浅底（线条镂空）</td><td>48×48</td><td>描边目（挖空）</td></tr>
+    <tr><td>onceglance-mono-light.svg</td><td>单色浅，深底 / 照片上</td><td>48×48</td><td>描边目（挖空）</td></tr>
+    <tr><td>onceglance-appicon-macos.svg</td><td>macOS 应用图标（超椭圆底）</td><td>512×512</td><td>描边目</td></tr>
+    <tr><td>onceglance-appicon-windows.svg</td><td>Windows 应用图标（圆角方底）</td><td>512×512</td><td>描边目</td></tr>
+    <tr><td>onceglance-tray-windows.svg</td><td>Windows 托盘 / 任务栏</td><td>20×20</td><td>实心眼</td></tr>
+    <tr><td>onceglance-tray-macos-template.svg</td><td>macOS 菜单栏模板图标（无底纯形，系统自动反色）</td><td>18×18</td><td>实心眼（挖空）</td></tr>
+    <tr><td>onceglance-favicon.svg</td><td>网站图标</td><td>32×32</td><td>实心眼</td></tr>
+    <tr><td>onceglance-lockup-horizontal.svg</td><td>横版完整字标（章 + 中文 + 英文）</td><td>208×64</td><td>描边目</td></tr>
+    <tr><td>onceglance-lockup-compact.svg</td><td>精简字标（章 + 中文）</td><td>132×64</td><td>描边目</td></tr>
+    <tr><td>onceglance-lockup-vertical.svg</td><td>竖版字标（章上字下）</td><td>104×108</td><td>描边目</td></tr>
+    <tr><td>onceglance-badge-success.svg</td><td>成功态徽标（印章延展用法）</td><td>24×24</td><td>圆形变体</td></tr>
+  </table>
+
+  <table class="t">
+    <tr><th>位图分组（png/）</th><th>包含尺寸</th><th>用途</th></tr>
+    <tr><td>appicon-macos-*.png</td><td>1024 · 512 · 256 · 128 · 64 · 32 · 16</td><td>macOS icns 打包源</td></tr>
+    <tr><td>appicon-windows-*.png</td><td>1024 · 256 · 128 · 64 · 48 · 32 · 16</td><td>Windows ico 打包源</td></tr>
+    <tr><td>tray-windows-*.png</td><td>32 · 24 · 20</td><td>Windows 托盘（含高 DPI 2x）</td></tr>
+    <tr><td>tray-macos-*.png</td><td>36 · 18</td><td>macOS 菜单栏 1x / 2x</td></tr>
+    <tr><td>favicon-*.png</td><td>48 · 32 · 16</td><td>网站 favicon（PNG 兜底）</td></tr>
+    <tr><td>mark-*.png</td><td>256 · 128 · 64</td><td>通用位图（物料、README、PPT）</td></tr>
+    <tr><td>mark-small-*.png</td><td>32 · 16</td><td>小尺寸位图</td></tr>
+    <tr><td>mono-dark-*.png / mono-light-*.png</td><td>256</td><td>单色物料</td></tr>
+  </table>
+
+  <div class="notes">
+    <div><b>打包一条命令：</b>Tauri 项目直接用 <code>npx tauri icon assets/logo/png/appicon-windows-1024.png</code>，会自动生成 ico / icns / 各平台尺寸，不用手工拼。</div>
+    <div><b>macOS icns 手工法：</b>把 appicon-macos 的 16/32/64/128/256/512/1024 按 <code>icon_NxN.png</code> 与 <code>icon_NxN@2x.png</code> 命名放进 <code>.iconset</code>，再跑 <code>iconutil -c icns</code>。</div>
+    <div><b>PNG 底色：</b>全部 32 位带透明通道。托盘与 favicon 依赖透明，不要用白色底图替换。</div>
+    <div><b>macOS 菜单栏为什么无底：</b>系统会给模板图标自动反色（浅色栏变黑、深色栏变白），带红底的方章在菜单栏里不出效果，所以那里用无底纯眼形。</div>
+  </div>
+</section>
+
+<!-- ============ 6 变体与禁用 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">06</span><span class="cname">用色变体与禁用态</span>
+    <span class="ctag">四种合法变体，六种禁止动作</span></div>
+  <div class="lead">变体是预先定义好的四套，按底色和工艺挑一套用，不要自己调色。</div>
+  <div class="do-dont">
+    <div class="dd yes"><i><svg width="72" height="72" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg></i><p><em>标准</em>红章白目。默认用它，浅底深底都能放。</p></div>
+    <div class="dd yes"><i><svg width="72" height="72" viewBox="0 0 48 48"><defs><mask id="vD"><rect width="48" height="48" fill="#fff"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#000" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" fill="none" stroke="#000" stroke-width="3.4" stroke-linecap="round"/></mask></defs><rect x="4" y="4" width="40" height="40" rx="10" fill="#1D1D21" mask="url(#vD)"/></svg></i><p><em>单色深</em>墨色章、线条镂空。单色印刷、激光刻印、浅底文档用。</p></div>
+    <div class="dd yes"><i style="background:#1D1D21;border-radius:10px"><svg width="72" height="72" viewBox="0 0 48 48"><defs><mask id="vL"><rect width="48" height="48" fill="#fff"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#000" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" fill="none" stroke="#000" stroke-width="3.4" stroke-linecap="round"/></mask></defs><rect x="4" y="4" width="40" height="40" rx="10" fill="#F5F5F7" mask="url(#vL)"/></svg></i><p><em>单色浅</em>白色章、线条镂空。深底、照片、视频角标用。</p></div>
+    <div class="dd yes"><i><svg width="72" height="72" viewBox="0 0 48 48"><rect x="5.7" y="5.7" width="36.6" height="36.6" rx="8.6" fill="#FFFFFF" stroke="#FF3B30" stroke-width="3.4"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FF3B30" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" fill="none" stroke="#FF3B30" stroke-width="3.4" stroke-linecap="round"/></svg></i><p><em>线描版</em>白底红章红线。极简排版、浅底大留白、两色印刷用。</p></div>
+  </div>
+
+  <div class="lead" style="margin-top:26px">以下六种做法一律禁止。右边一列是照抄进来的错误示范，谁改谁负责回滚。</div>
+  <div class="do-dont">
+    <div class="dd no"><i><svg width="112" height="72" viewBox="0 0 48 48" preserveAspectRatio="none"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg></i><p><em>拉伸变形</em>等比缩放，宽高比永远锁定 1:1。</p></div>
+    <div class="dd no"><i><svg width="72" height="72" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="0" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg></i><p><em>改圆角</em>圆角固定为边长 25%，既不能改成直角也不能改成全圆。</p></div>
+    <div class="dd no"><i><svg width="72" height="72" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linejoin="round"/><path d="M30 19.2V28.8" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg></i><p><em>瞳仁偏轴</em>瞳仁必须在中轴 x=24，偏一点就不像"目"了。</p></div>
+    <div class="dd no"><i><svg width="72" height="72" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M7.5 24C11.6 17 17.4 13.5 24 13.5C30.6 13.5 36.4 17 40.5 24C36.4 31 30.6 34.5 24 34.5C17.4 34.5 11.6 31 7.5 24Z" fill="#fff"/></svg></i><p><em>丢瞳仁</em>眼形不能单独当标用，那条竖瞳是"看"的核心。</p></div>
+    <div class="dd no"><i><svg width="72" height="72" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="10" fill="#2F6BFF"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg></i><p><em>换色</em>只有 #FF3B30 与黑白四套。改色等于换品牌。</p></div>
+    <div class="dd no"><i><svg width="72" height="72" viewBox="0 0 48 48"><rect x="3" y="3" width="42" height="42" rx="11" fill="#FF3B30" stroke="#1D1D21" stroke-width="2"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg></i><p><em>加描边或投影</em>标本身不带轮廓、不带阴影、不加外发光。</p></div>
+  </div>
+</section>
+
+<!-- ============ 落地 ============ -->
+<footer class="card">
+  <div class="chead"><span class="no">落地</span><span class="cname">接下来照这个顺序做</span></div>
+  <ol class="rank">
+    <li><b>接进代码：</b>标题栏品牌章、托盘、菜单栏、favicon 四处直接引用 <code class="k">assets/logo/</code> 的矢量，不许各画各的。原型的品牌章已按此换图。</li>
+    <li><b>打包图标：</b>跑一次 <code class="k">npx tauri icon assets/logo/png/appicon-windows-1024.png</code>，再把生成的 icns/ico 按平台替换。</li>
+    <li><b>规范沉淀：</b>比例网格、安全边距、尺寸分级、字标参数已写进 <code class="k">docs/ui-design.md §5.7</code>，改标必须同步改那一节。</li>
+    <li><b>待补（还没做的）：</b>安装包界面截图用的品牌插图、官网首图、周边物料；这些属于市场物料，等产品形态稳定后再出，避免现在做了又改。</li>
+  </ol>
+  <div class="next">这一版是"能用"的定稿，不是"完美"的定稿。真正的检验在落地之后：把标放进 16px 托盘、放进深色覆盖层、放进安装包图标，看它在真实环境里是不是还认得出——认得出就不用再动，认不出再回来调尺寸分级，而不是重开一轮提案。</div>
+</footer>
+
+
+</div>
+</body>
+</html>

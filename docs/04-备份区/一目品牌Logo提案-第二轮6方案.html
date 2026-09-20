@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一目 Onceglance · 品牌 Logo 提案（第二轮 6 方案）</title>
+<style>
+  :root{
+    --red:#FF3B30; --ink:#1D1D21; --fg:#55555A; --fg3:#8E8E93;
+    --bg:#F2F2F5; --card:#FFFFFF; --border:#E5E5EA;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"SF Pro Text","PingFang SC","Microsoft YaHei UI","Segoe UI",sans-serif;
+    padding:36px 28px 64px;line-height:1.6}
+  .wrap{max-width:1180px;margin:0 auto}
+  header h1{font-size:26px;font-weight:700;letter-spacing:.5px}
+  header .sub{color:var(--fg);font-size:13.5px;margin-top:6px}
+  header .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .chip{font-size:12px;color:var(--fg);background:var(--card);border:1px solid var(--border);
+    border-radius:999px;padding:3px 12px}
+  .chip b{color:var(--red);font-weight:600}
+  .legend{margin-top:16px;font-size:12.5px;color:var(--fg3)}
+  section.card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+    padding:22px 24px;margin-top:22px}
+  .chead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .no{font-size:13px;font-weight:700;color:var(--red);letter-spacing:1px}
+  .cname{font-size:19px;font-weight:700}
+  .ctag{font-size:13px;color:var(--fg)}
+  .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
+  .tile{border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;
+    height:150px;color:var(--ink)}
+  .tile.light{background:#FFFFFF}
+  .tile.dark{background:#1D1D21;border-color:#1D1D21;color:#F5F5F7}
+  .tile.lockup{grid-column:span 2;justify-content:flex-start;padding-left:26px}
+  .lab{font-size:11px;color:var(--fg3);margin-top:6px;text-align:center}
+  .ladder{display:flex;gap:14px;border:1px solid var(--border);border-radius:12px;height:150px;
+    padding:0 20px;justify-content:center;align-items:center}
+  .sz{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .sz i{display:flex;align-items:center;justify-content:center;background:#FAFAFC;border:1px solid var(--border);
+    border-radius:8px;font-style:normal}
+  .sz span{font-size:10.5px;color:var(--fg3)}
+  .notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 22px;margin-top:16px;
+    font-size:13px;color:var(--fg)}
+  .notes b{color:var(--ink);font-weight:600}
+  .wordmark{display:flex;align-items:center;gap:15px}
+  .wordmark .cn{font-size:37px;font-weight:700;letter-spacing:3px;line-height:1}
+  .wordmark .en{font-size:26px;font-weight:600;color:var(--fg);letter-spacing:.4px;line-height:1;margin-top:6px}
+  .wordmark .col{display:flex;flex-direction:column;gap:3px}
+  footer.card{background:#1D1D21;border-color:#1D1D21;color:#F5F5F7}
+  footer .chead .cname{color:#F5F5F7}
+  ol.rank{margin:12px 0 0 18px;font-size:13.5px;line-height:2}
+  ol.rank b{color:var(--red)}
+  .next{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.15);
+    font-size:13px;color:#C9C9CF}
+  table.all{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:14px}
+  table.all th,table.all td{text-align:left;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.13);
+    vertical-align:top}
+  table.all th{color:#8E8E93;font-weight:500}
+  table.all td:first-child{color:var(--red);font-weight:600;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>一目 Onceglance · 品牌 Logo 提案 <span style="color:var(--red)">第二轮 6 方案</span></h1>
+  <div class="sub">第一轮是几何语言的六种切法，这一轮换六种完全不同的视觉语言：汉字、文档、图层、极简符号、连接关系、东方印章。</div>
+  <div class="meta">
+    <span class="chip">接第一轮 · 编号 07–12</span>
+    <span class="chip">品牌红 <b>#FF3B30</b></span>
+    <span class="chip">墨色 <b>#1D1D21</b></span>
+    <span class="chip">2026-09-18 · 提案稿</span>
+  </div>
+  <div class="legend">每案同样给：浅色底 / 深色底（暗取景语言）/ 图标 + 字标组合 / 64-32-16px 尺寸压力测试。16px 均有专门的简化画法，不是简单缩小。</div>
+</header>
+
+<!-- ============ 方案七 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">方案 07</span><span class="cname">目 · Glyph</span>
+    <span class="ctag">把汉字「目」做成取景框——名字、含义、图形三合一</span></div>
+  <div class="row">
+    <div><div class="tile light">
+      <svg width="88" height="88" viewBox="0 0 48 48" role="img" aria-label="目字标">
+        <rect x="10" y="4.5" width="28" height="39" rx="7.5" stroke="currentColor" stroke-width="3.6" fill="none"/>
+        <rect x="16.5" y="15" width="15" height="3.4" rx="1.7" fill="currentColor" opacity=".55"/>
+        <rect x="16.5" y="29.6" width="15" height="4.4" rx="2.2" fill="#FF3B30"/>
+      </svg></div><div class="lab">浅色底 · 主标</div></div>
+    <div><div class="tile dark">
+      <svg width="88" height="88" viewBox="0 0 48 48" role="img" aria-label="目字标深色">
+        <rect x="10" y="4.5" width="28" height="39" rx="7.5" stroke="currentColor" stroke-width="3.6" fill="none"/>
+        <rect x="16.5" y="15" width="15" height="3.4" rx="1.7" fill="currentColor" opacity=".45"/>
+        <rect x="16.5" y="29.6" width="15" height="4.4" rx="2.2" fill="#FF3B30"/>
+      </svg></div><div class="lab">深色底 · 覆盖层 / 暗取景</div></div>
+    <div class="tile lockup">
+      <div class="wordmark">
+        <svg width="44" height="44" viewBox="0 0 48 48" style="color:#1D1D21">
+          <rect x="10" y="4.5" width="28" height="39" rx="7.5" stroke="currentColor" stroke-width="3.6" fill="none"/>
+          <rect x="16.5" y="15" width="15" height="3.4" rx="1.7" fill="currentColor" opacity=".55"/>
+          <rect x="16.5" y="29.6" width="15" height="4.4" rx="2.2" fill="#FF3B30"/>
+        </svg>
+        <div class="col"><span class="cn">一目</span><span class="en">Onceglance</span></div>
+      </div>
+    </div>
+    <div><div class="ladder">
+      <span class="sz"><i style="width:64px;height:64px"><svg width="52" height="52" viewBox="0 0 48 48" style="color:#1D1D21"><rect x="10" y="4.5" width="28" height="39" rx="7.5" stroke="currentColor" stroke-width="3.6" fill="none"/><rect x="16.5" y="15" width="15" height="3.4" rx="1.7" fill="currentColor" opacity=".55"/><rect x="16.5" y="29.6" width="15" height="4.4" rx="2.2" fill="#FF3B30"/></svg></i><span>64</span></span>
+      <span class="sz"><i style="width:40px;height:40px"><svg width="30" height="30" viewBox="0 0 48 48" style="color:#1D1D21"><rect x="9" y="4" width="30" height="40" rx="8" stroke="currentColor" stroke-width="4.4" fill="none"/><rect x="16" y="14.5" width="16" height="4.4" rx="2.2" fill="currentColor" opacity=".55"/><rect x="16" y="29" width="16" height="5.4" rx="2.7" fill="#FF3B30"/></svg></i><span>32</span></span>
+      <span class="sz"><i style="width:26px;height:26px"><svg width="18" height="18" viewBox="0 0 48 48" style="color:#1D1D21"><rect x="8" y="3" width="32" height="42" rx="9" stroke="currentColor" stroke-width="5.5" fill="none"/><rect x="17" y="28" width="14" height="7" rx="3.5" fill="#FF3B30"/></svg></i><span>16（去上横，保红横）</span></span>
+    </div><div class="lab">尺寸压力测试</div></div>
+  </div>
+  <div class="notes">
+    <div><b>语义：</b>「目」本身就是「眼」，也是「条目、目次」（教程的步骤）。汉字形状本身就是取景框，红横 = 「一」。一个图形说完名字。</div>
+    <div><b>延展：</b>框内红横可替换成进度、选中态；「目」字骨架可做中文标准字与竖排印章。</div>
+    <div><b>风险：</b>字标性强，英文场景（once 命令行 / GitHub）辨识依赖字标辅助；对不看汉字的海外用户只是"一个框"。</div>
+  </div>
+</section>
+
+<!-- ============ 方案八 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">方案 08</span><span class="cname">折页 · Fold</span>
+    <span class="ctag">截图变成一篇教程文档——「替你把操作变成教程」的直译</span></div>
+  <div class="row">
+    <div><div class="tile light">
+      <svg width="88" height="88" viewBox="0 0 48 48" role="img" aria-label="折页">
+        <path d="M30 5.5 11 5.5A5.5 5.5 0 0 0 5.5 11L5.5 37A5.5 5.5 0 0 0 11 42.5L37 42.5A5.5 5.5 0 0 0 42.5 37L42.5 18Z"
+          stroke="currentColor" stroke-width="3.4" stroke-linejoin="round" fill="none"/>
+        <path d="M30 5.5 30 13A5 5 0 0 0 35 18L42.5 18" stroke="#FF3B30" stroke-width="3.2"
+          stroke-linejoin="round" fill="none"/>
+        <rect x="12" y="25" width="19" height="3.2" rx="1.6" fill="currentColor" opacity=".45"/>
+        <rect x="12" y="32" width="12" height="3.2" rx="1.6" fill="currentColor" opacity=".45"/>
+      </svg></div><div class="lab">浅色底 · 主标</div></div>
+    <div><div class="tile dark">
+      <svg width="88" height="88" viewBox="0 0 48 48" role="img" aria-label="折页深色">
+        <path d="M30 5.5 11 5.5A5.5 5.5 0 0 0 5.5 11L5.5 37A5.5 5.5 0 0 0 11 42.5L37 42.5A5.5 5.5 0 0 0 42.5 37L42.5 18Z"
+          stroke="currentColor" stroke-width="3.4" stroke-linejoin="round" fill="none"/>
+        <path d="M30 5.5 30 13A5 5 0 0 0 35 18L42.5 18" stroke="#FF3B30" stroke-width="3.2"
+          stroke-linejoin="round" fill="none"/>
+        <rect x="12" y="25" width="19" height="3.2" rx="1.6" fill="currentColor" opacity=".35"/>
+        <rect x="12" y="32" width="12" height="3.2" rx="1.6" fill="currentColor" opacity=".35"/>
+      </svg></div><div class="lab">深色底 · 覆盖层 / 暗取景</div></div>
+    <div class="tile lockup">
+      <div class="wordmark">
+        <svg width="44" height="44" viewBox="0 0 48 48" style="color:#1D1D21">
+          <path d="M30 5.5 11 5.5A5.5 5.5 0 0 0 5.5 11L5.5 37A5.5 5.5 0 0 0 11 42.5L37 42.5A5.5 5.5 0 0 0 42.5 37L42.5 18Z"
+            stroke="currentColor" stroke-width="3.4" stroke-linejoin="round" fill="none"/>
+          <path d="M30 5.5 30 13A5 5 0 0 0 35 18L42.5 18" stroke="#FF3B30" stroke-width="3.2" stroke-linejoin="round" fill="none"/>
+          <rect x="12" y="25" width="19" height="3.2" rx="1.6" fill="currentColor" opacity=".45"/>
+          <rect x="12" y="32" width="12" height="3.2" rx="1.6" fill="currentColor" opacity=".45"/>
+        </svg>
+        <div class="col"><span class="cn">一目</span><span class="en">Onceglance</span></div>
+      </div>
+    </div>
+    <div><div class="ladder">
+      <span class="sz"><i style="width:64px;height:64px"><svg width="50" height="50" viewBox="0 0 48 48" style="color:#1D1D21"><path d="M30 5.5 11 5.5A5.5 5.5 0 0 0 5.5 11L5.5 37A5.5 5.5 0 0 0 11 42.5L37 42.5A5.5 5.5 0 0 0 42.5 37L42.5 18Z" stroke="currentColor" stroke-width="3.4" stroke-linejoin="round" fill="none"/><path d="M30 5.5 30 13A5 5 0 0 0 35 18L42.5 18" stroke="#FF3B30" stroke-width="3.2" stroke-linejoin="round" fill="none"/><rect x="12" y="25" width="19" height="3.2" rx="1.6" fill="currentColor" opacity=".45"/><rect x="12" y="32" width="12" height="3.2" rx="1.6" fill="currentColor" opacity=".45"/></svg></i><span>64</span></span>
+      <span class="sz"><i style="width:40px;height:40px"><svg width="30" height="30" viewBox="0 0 48 48" style="color:#1D1D21"><path d="M30 5.5 11 5.5A5.5 5.5 0 0 0 5.5 11L5.5 37A5.5 5.5 0 0 0 11 42.5L37 42.5A5.5 5.5 0 0 0 42.5 37L42.5 18Z" stroke="currentColor" stroke-width="4.2" stroke-linejoin="round" fill="none"/><path d="M30 5.5 30 13A5 5 0 0 0 35 18L42.5 18" stroke="#FF3B30" stroke-width="4.2" stroke-linejoin="round" fill="none"/><rect x="12" y="26" width="19" height="4" rx="2" fill="currentColor" opacity=".45"/><rect x="12" y="33" width="12" height="4" rx="2" fill="currentColor" opacity=".45"/></svg></i><span>32</span></span>
+      <span class="sz"><i style="width:26px;height:26px"><svg width="18" height="18" viewBox="0 0 48 48" style="color:#1D1D21"><path d="M30 4 10 4A6 6 0 0 0 4 10L4 38A6 6 0 0 0 10 44L38 44A6 6 0 0 0 44 38L44 18Z" stroke="currentColor" stroke-width="5.5" stroke-linejoin="round" fill="none"/><path d="M30 4 30 13A5 5 0 0 0 35 18L44 18" stroke="#FF3B30" stroke-width="5.5" stroke-linejoin="round" fill="none"/></svg></i><span>16（只留红折角）</span></span>
+    </div><div class="lab">尺寸压力测试</div></div>
+  </div>
+  <div class="notes">
+    <div><b>语义：</b>折角 = 文档，红色折角 = 那张截图变成了文章。产品最终交付物就是一篇教程，这是最"结果导向"的一案。</div>
+    <div><b>延展：</b>折角可做"正在生成"动效；图标家族天然覆盖导出、另存、Skill 文档等场景。</div>
+    <div><b>风险：</b>「文档」符号极其常见（笔记、网盘、办公工具都在用），独占性弱，要靠红折角立差异。</div>
+  </div>
+</section>
+
+<!-- ============ 方案九 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">方案 09</span><span class="cname">图层 · Layer</span>
+    <span class="ctag">三层错位堆叠——原图永不覆盖，版本一层层长出来</span></div>
+  <div class="row">
+    <div><div class="tile light">
+      <svg width="88" height="88" viewBox="0 0 48 48" role="img" aria-label="图层">
+        <rect x="15" y="7" width="26" height="8.5" rx="4.25" fill="currentColor" opacity=".22"/>
+        <rect x="11" y="19.5" width="26" height="8.5" rx="4.25" fill="currentColor" opacity=".45"/>
+        <rect x="7" y="32" width="26" height="8.5" rx="4.25" fill="#FF3B30"/>
+      </svg></div><div class="lab">浅色底 · 主标</div></div>
+    <div><div class="tile dark">
+      <svg width="88" height="88" viewBox="0 0 48 48" role="img" aria-label="图层深色">
+        <rect x="15" y="7" width="26" height="8.5" rx="4.25" fill="currentColor" opacity=".18"/>
+        <rect x="11" y="19.5" width="26" height="8.5" rx="4.25" fill="currentColor" opacity=".38"/>
+        <rect x="7" y="32" width="26" height="8.5" rx="4.25" fill="#FF3B30"/>
+      </svg></div><div class="lab">深色底 · 覆盖层 / 暗取景</div></div>
+    <div class="tile lockup">
+      <div class="wordmark">
+        <svg width="44" height="44" viewBox="0 0 48 48" style="color:#1D1D21">
+          <rect x="15" y="7" width="26" height="8.5" rx="4.25" fill="currentColor" opacity=".22"/>
+          <rect x="11" y="19.5" width="26" height="8.5" rx="4.25" fill="currentColor" opacity=".45"/>
+          <rect x="7" y="32" width="26" height="8.5" rx="4.25" fill="#FF3B30"/>
+        </svg>
+        <div class="col"><span class="cn">一目</span><span class="en">Onceglance</span></div>
+      </div>
+    </div>
+    <div><div class="ladder">
+      <span class="sz"><i style="width:64px;height:64px"><svg width="52" height="52" viewBox="0 0 48 48" style="color:#1D1D21"><rect x="15" y="7" width="26" height="8.5" rx="4.25" fill="currentColor" opacity=".22"/><rect x="11" y="19.5" width="26" height="8.5" rx="4.25" fill="currentColor" opacity=".45"/><rect x="7" y="32" width="26" height="8.5" rx="4.25" fill="#FF3B30"/></svg></i><span>64</span></span>
+      <span class="sz"><i style="width:40px;height:40px"><svg width="30" height="30" viewBox="0 0 48 48" style="color:#1D1D21"><rect x="15" y="5" width="28" height="10" rx="5" fill="currentColor" opacity=".22"/><rect x="10.5" y="19" width="28" height="10" rx="5" fill="currentColor" opacity=".45"/><rect x="6" y="33" width="28" height="10" rx="5" fill="#FF3B30"/></svg></i><span>32</span></span>
+      <span class="sz"><i style="width:26px;height:26px"><svg width="18" height="18" viewBox="0 0 48 48" style="color:#1D1D21"><rect x="15" y="4" width="29" height="12" rx="6" fill="currentColor" opacity=".25"/><rect x="10" y="18" width="29" height="12" rx="6" fill="currentColor" opacity=".5"/><rect x="5" y="32" width="29" height="12" rx="6" fill="#FF3B30"/></svg></i><span>16</span></span>
+    </div><div class="lab">尺寸压力测试</div></div>
+  </div>
+  <div class="notes">
+    <div><b>语义：</b>三层 = 原图 / 标注 v1 / v2，红色永远在最上层（最新版本），也隐喻"一层层把图做成教程"。对应产品最硬的承诺：衍生图永不覆盖原图。</div>
+    <div><b>延展：</b>层数可动态化（记录文件数越多层越多），做成"成长"型品牌资产；也适合做图层、版本、历史等功能图标。</div>
+    <div><b>风险：</b>偏抽象，第一眼不一定联想到截图；与设计软件类产品（图层概念）的符号重叠。</div>
+  </div>
+</section>
+
+<!-- ============ 方案十 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">方案 10</span><span class="cname">括号 · Brackets</span>
+    <span class="ctag">取景括号 + 红色焦点——最极简的一案，OSD 取景符风格</span></div>
+  <div class="row">
+    <div><div class="tile light">
+      <svg width="92" height="92" viewBox="0 0 48 48" role="img" aria-label="括号">
+        <g stroke="currentColor" stroke-width="3.8" stroke-linecap="round" fill="none">
+          <path d="M19 7h-6a4 4 0 0 0-4 4v7"/><path d="M8 30v7a4 4 0 0 0 4 4h7"/>
+          <path d="M29 7h6a4 4 0 0 1 4 4v7"/><path d="M40 30v7a4 4 0 0 1-4 4h-7"/>
+        </g>
+        <circle cx="24" cy="24" r="10" stroke="#FF3B30" stroke-width="2.4" opacity=".28" fill="none"/>
+        <circle cx="24" cy="24" r="5.4" fill="#FF3B30"/>
+      </svg></div><div class="lab">浅色底 · 主标</div></div>
+    <div><div class="tile dark">
+      <svg width="92" height="92" viewBox="0 0 48 48" role="img" aria-label="括号深色">
+        <g stroke="currentColor" stroke-width="3.8" stroke-linecap="round" fill="none">
+          <path d="M19 7h-6a4 4 0 0 0-4 4v7"/><path d="M8 30v7a4 4 0 0 0 4 4h7"/>
+          <path d="M29 7h6a4 4 0 0 1 4 4v7"/><path d="M40 30v7a4 4 0 0 1-4 4h-7"/>
+        </g>
+        <circle cx="24" cy="24" r="10" stroke="#FF3B30" stroke-width="2.4" opacity=".35" fill="none"/>
+        <circle cx="24" cy="24" r="5.4" fill="#FF3B30"/>
+      </svg></div><div class="lab">深色底 · 覆盖层 / 暗取景</div></div>
+    <div class="tile lockup">
+      <div class="wordmark">
+        <svg width="44" height="44" viewBox="0 0 48 48" style="color:#1D1D21">
+          <g stroke="currentColor" stroke-width="3.8" stroke-linecap="round" fill="none">
+            <path d="M19 7h-6a4 4 0 0 0-4 4v7"/><path d="M8 30v7a4 4 0 0 0 4 4h7"/>
+            <path d="M29 7h6a4 4 0 0 1 4 4v7"/><path d="M40 30v7a4 4 0 0 1-4 4h-7"/>
+          </g>
+          <circle cx="24" cy="24" r="10" stroke="#FF3B30" stroke-width="2.4" opacity=".28" fill="none"/>
+          <circle cx="24" cy="24" r="5.4" fill="#FF3B30"/>
+        </svg>
+        <div class="col"><span class="cn">一目</span><span class="en">Onceglance</span></div>
+      </div>
+    </div>
+    <div><div class="ladder">
+      <span class="sz"><i style="width:64px;height:64px"><svg width="52" height="52" viewBox="0 0 48 48" style="color:#1D1D21"><g stroke="currentColor" stroke-width="3.8" stroke-linecap="round" fill="none"><path d="M19 7h-6a4 4 0 0 0-4 4v7"/><path d="M8 30v7a4 4 0 0 0 4 4h7"/><path d="M29 7h6a4 4 0 0 1 4 4v7"/><path d="M40 30v7a4 4 0 0 1-4 4h-7"/></g><circle cx="24" cy="24" r="10" stroke="#FF3B30" stroke-width="2.4" opacity=".28" fill="none"/><circle cx="24" cy="24" r="5.4" fill="#FF3B30"/></svg></i><span>64</span></span>
+      <span class="sz"><i style="width:40px;height:40px"><svg width="30" height="30" viewBox="0 0 48 48" style="color:#1D1D21"><g stroke="currentColor" stroke-width="4.4" stroke-linecap="round" fill="none"><path d="M20 6h-6a5 5 0 0 0-5 5v6"/><path d="M9 31v6a5 5 0 0 0 5 5h6"/><path d="M28 6h6a5 5 0 0 1 5 5v6"/><path d="M39 31v6a5 5 0 0 1-5 5h-6"/></g><circle cx="24" cy="24" r="11" stroke="#FF3B30" stroke-width="2.6" opacity=".28" fill="none"/><circle cx="24" cy="24" r="6" fill="#FF3B30"/></svg></i><span>32</span></span>
+      <span class="sz"><i style="width:26px;height:26px"><svg width="18" height="18" viewBox="0 0 48 48" style="color:#1D1D21"><g stroke="currentColor" stroke-width="6" stroke-linecap="round" fill="none"><path d="M20 5h-6a6 6 0 0 0-6 6v5"/><path d="M8 32v5a6 6 0 0 0 6 6h6"/><path d="M28 5h6a6 6 0 0 1 6 6v5"/><path d="M40 32v5a6 6 0 0 1-6 6h-6"/></g><circle cx="24" cy="24" r="7" fill="#FF3B30"/></svg></i><span>16（去聚焦环）</span></span>
+    </div><div class="lab">尺寸压力测试</div></div>
+  </div>
+  <div class="notes">
+    <div><b>语义：</b>左右括号 = 取景范围，红点 = 焦点。产品气质是"界面退后、内容是主角"，这案图形也是：留白极大，安静。</div>
+    <div><b>延展：</b>红点位置可做焦点追踪动画；括号开合可做框选动效，是本产品交互的天然复制。</div>
+    <div><b>风险：</b>过于克制，货架（应用商店/官网首屏）上冲击力不足；与某些"扫码/对焦"类图标近似。</div>
+  </div>
+</section>
+
+<!-- ============ 方案十一 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">方案 11</span><span class="cname">桥接 · Bridge</span>
+    <span class="ctag">两个方块一条红链——把屏幕递给 Agent</span></div>
+  <div class="row">
+    <div><div class="tile light">
+      <svg width="92" height="76" viewBox="0 0 48 48" role="img" aria-label="桥接">
+        <rect x="4" y="15" width="14" height="18" rx="4.5" stroke="currentColor" stroke-width="3.4" fill="none"/>
+        <rect x="30" y="15" width="14" height="18" rx="4.5" stroke="currentColor" stroke-width="3.4" fill="none"/>
+        <rect x="7.5" y="21.5" width="7" height="2.6" rx="1.3" fill="currentColor" opacity=".5"/>
+        <path d="M21 24h1.6M25.4 24h1.6" stroke="#FF3B30" stroke-width="3.4" stroke-linecap="round"/>
+        <circle cx="24" cy="24" r="3.4" fill="#FF3B30"/>
+      </svg></div><div class="lab">浅色底 · 主标</div></div>
+    <div><div class="tile dark">
+      <svg width="92" height="76" viewBox="0 0 48 48" role="img" aria-label="桥接深色">
+        <rect x="4" y="15" width="14" height="18" rx="4.5" stroke="currentColor" stroke-width="3.4" fill="none"/>
+        <rect x="30" y="15" width="14" height="18" rx="4.5" stroke="currentColor" stroke-width="3.4" fill="none"/>
+        <rect x="7.5" y="21.5" width="7" height="2.6" rx="1.3" fill="currentColor" opacity=".4"/>
+        <path d="M21 24h1.6M25.4 24h1.6" stroke="#FF3B30" stroke-width="3.4" stroke-linecap="round"/>
+        <circle cx="24" cy="24" r="3.4" fill="#FF3B30"/>
+      </svg></div><div class="lab">深色底 · 覆盖层 / 暗取景</div></div>
+    <div class="tile lockup">
+      <div class="wordmark">
+        <svg width="46" height="40" viewBox="0 0 48 48" style="color:#1D1D21">
+          <rect x="4" y="15" width="14" height="18" rx="4.5" stroke="currentColor" stroke-width="3.4" fill="none"/>
+          <rect x="30" y="15" width="14" height="18" rx="4.5" stroke="currentColor" stroke-width="3.4" fill="none"/>
+          <rect x="7.5" y="21.5" width="7" height="2.6" rx="1.3" fill="currentColor" opacity=".5"/>
+          <path d="M21 24h1.6M25.4 24h1.6" stroke="#FF3B30" stroke-width="3.4" stroke-linecap="round"/>
+          <circle cx="24" cy="24" r="3.4" fill="#FF3B30"/>
+        </svg>
+        <div class="col"><span class="cn">一目</span><span class="en">Onceglance</span></div>
+      </div>
+    </div>
+    <div><div class="ladder">
+      <span class="sz"><i style="width:64px;height:64px"><svg width="52" height="52" viewBox="0 0 48 48" style="color:#1D1D21"><rect x="4" y="15" width="14" height="18" rx="4.5" stroke="currentColor" stroke-width="3.4" fill="none"/><rect x="30" y="15" width="14" height="18" rx="4.5" stroke="currentColor" stroke-width="3.4" fill="none"/><rect x="7.5" y="21.5" width="7" height="2.6" rx="1.3" fill="currentColor" opacity=".5"/><path d="M21 24h1.6M25.4 24h1.6" stroke="#FF3B30" stroke-width="3.4" stroke-linecap="round"/><circle cx="24" cy="24" r="3.4" fill="#FF3B30"/></svg></i><span>64</span></span>
+      <span class="sz"><i style="width:40px;height:40px"><svg width="32" height="32" viewBox="0 0 48 48" style="color:#1D1D21"><rect x="3" y="14" width="15" height="20" rx="5" stroke="currentColor" stroke-width="4.2" fill="none"/><rect x="30" y="14" width="15" height="20" rx="5" stroke="currentColor" stroke-width="4.2" fill="none"/><path d="M20 24h2M26 24h2" stroke="#FF3B30" stroke-width="4.2" stroke-linecap="round"/><circle cx="24" cy="24" r="4" fill="#FF3B30"/></svg></i><span>32</span></span>
+      <span class="sz"><i style="width:26px;height:26px"><svg width="20" height="20" viewBox="0 0 48 48" style="color:#1D1D21"><rect x="2" y="13" width="16" height="22" rx="5" stroke="currentColor" stroke-width="5.5" fill="none"/><rect x="30" y="13" width="16" height="22" rx="5" stroke="currentColor" stroke-width="5.5" fill="none"/><circle cx="24" cy="24" r="5" fill="#FF3B30"/></svg></i><span>16（只留红链节点）</span></span>
+    </div><div class="lab">尺寸压力测试</div></div>
+  </div>
+  <div class="notes">
+    <div><b>语义：</b>左方块 = 你的屏幕，右方块 = Agent，中间红链 = MCP / CLI 桥接。产品最独一无二的能力就是这条链，它值得成为标识本身。</div>
+    <div><b>延展：</b>红链可做"连接成功/正在传输"状态动画；方块内可替换成窗口、终端、对话等具体对象做功能图标家族。</div>
+    <div><b>风险：</b>横长构图，方形 App 图标需要压缩间距；"两个方块连线"在开发工具类产品中不算罕见。</div>
+  </div>
+</section>
+
+<!-- ============ 方案十二 ============ -->
+<section class="card">
+  <div class="chead"><span class="no">方案 12</span><span class="cname">印章 · 甲骨目</span>
+    <span class="ctag">朱红方章 + 甲骨文「目」——东方气质，落款感（已定稿）</span></div>
+  <div class="row">
+    <div><div class="tile light">
+      <svg width="88" height="88" viewBox="0 0 48 48" role="img" aria-label="甲骨目印章">
+        <rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/>
+        <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+        <path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+      </svg></div><div class="lab">浅色底 · 主标</div></div>
+    <div><div class="tile dark">
+      <svg width="88" height="88" viewBox="0 0 48 48" role="img" aria-label="甲骨目印章深色">
+        <rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/>
+        <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+        <path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+      </svg></div><div class="lab">深色底 · 覆盖层 / 暗取景</div></div>
+    <div class="tile lockup">
+      <div class="wordmark">
+        <svg width="46" height="46" viewBox="0 0 48 48">
+          <rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/>
+          <path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+          <path d="M24 19.2V28.8" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+        </svg>
+        <div class="col"><span class="cn">一目</span><span class="en">Onceglance</span></div>
+      </div>
+    </div>
+    <div><div class="ladder">
+      <span class="sz"><i style="width:64px;height:64px"><svg width="52" height="52" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="10" fill="#FF3B30"/><path d="M8.5 24C12.2 17.2 17.5 14 24 14C30.5 14 35.8 17.2 39.5 24C35.8 30.8 30.5 34 24 34C17.5 34 12.2 30.8 8.5 24Z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linejoin="round"/><path d="M24 19.2V28.8" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg></i><span>64 · 描边目</span></span>
+      <span class="sz"><i style="width:40px;height:40px"><svg width="30" height="30" viewBox="0 0 48 48"><rect x="3" y="3" width="42" height="42" rx="11" fill="#FF3B30"/><path d="M7.5 24C11.6 17 17.4 13.5 24 13.5C30.6 13.5 36.4 17 40.5 24C36.4 31 30.6 34.5 24 34.5C17.4 34.5 11.6 31 7.5 24Z" fill="#fff"/><rect x="21.3" y="18.6" width="5.4" height="10.8" rx="2.7" fill="#FF3B30"/></svg></i><span>32 · 转实心眼</span></span>
+      <span class="sz"><i style="width:26px;height:26px"><svg width="18" height="18" viewBox="0 0 48 48"><rect x="2" y="2" width="44" height="44" rx="12" fill="#FF3B30"/><path d="M6.5 24C11 16.5 17.2 13 24 13C30.8 13 37 16.5 41.5 24C37 31.5 30.8 35 24 35C17.2 35 11 31.5 6.5 24Z" fill="#fff"/><rect x="21" y="18.8" width="6" height="10.4" rx="3" fill="#FF3B30"/></svg></i><span>16 · 最小尺寸</span></span>
+    </div><div class="lab">尺寸压力测试</div></div>
+  </div>
+  <div class="notes">
+    <div><b>语义：</b>朱红方章 + 白色「目」。字取甲骨文的目——横置的一只眼睛，中间一竖是瞳仁，这是汉字「目」最早的形状，也是「一眼看过去」这个动作本身的画像。印章 = 落款、署名、"这一笔是我画的"，与工具"给内容盖章"同构。</div>
+    <div><b>延展：</b>瞳仁落在中轴上，可做加载动效的呼吸点；印章形态天然适合"已保存 / 已确认"的成功态标记。要与原型标题栏那枚品牌章同源，一处定稿、处处同图。</div>
+    <div><b>风险：</b>整块红面积较大，与"一目红只做点睛"需权衡——大尺寸（应用图标 / 启动页）用实心章，界面内小尺寸改用线描版本。眼形是横向的，放进方形章里必须留足上下边距，否则会显得扁。32px 以下转为实心眼，32px 是描边目的底线。</div>
+  </div>
+</section>
+
+<!-- ============ 推荐与全案对照 ============ -->
+<footer class="card">
+  <div class="chead"><span class="no">建议</span><span class="cname">第二轮推荐与 12 案总览</span></div>
+  <ol class="rank">
+    <li><b>已定稿 方案 12 印章（甲骨目）：</b>用户拍板字形取甲骨文的「目」——横置的眼睛 + 中轴瞳仁。理由：一、篆刻本就是「篆书 + 印章」的组合，把字换成象形字才算把它做"正"；二、甲骨目是四案里唯一不用人教就看得出是"眼睛"的；三、它同时表达"看"与"落款"，正好是「一目」二字。</li>
+    <li><b>尺寸分级（硬规则）：</b>≥48px 用描边目（眼轮廓 + 竖瞳）；≤32px 转实心眼（白色实心眼 + 红竖瞳槽），线条不再靠细描边撑；32px 是描边目的底线。</li>
+    <li>方案 07 目：汉字正楷做标，中文场景记名效率最高，作为<b>字标备用字形</b>保留（不是主标）。</li>
+    <li>方案 08 折页 / 方案 11 桥接：分别对应"变成教程"和"接上 Agent"两个核心价值，建议作为品牌插画 / 官网 Info 图标复用。</li>
+    <li>方案 09 图层 / 方案 10 括号：图形干净，适合做功能图标（版本、取景、对焦）与加载动效。</li>
+    <li>方案 E 甲骨目 = 12 案的最终字形；F 金文目 / G 小篆目 / H 小篆朱文印作为<b>品牌字体与物料延伸</b>保留（官网长图、周边、包装上用篆书更出味），不上界面。</li>
+  </ol>
+  <table class="all">
+    <tr><th>编号</th><th>名称</th><th>一句话</th><th>最适合承担</th></tr>
+    <tr><td>01</td><td>取景一</td><td>取景框 + 红横「一」</td><td>功能图标（取景语义）</td></tr>
+    <tr><td>02</td><td>一眼</td><td>眼睛 + 红瞳孔</td><td>品牌插画、空态插图</td></tr>
+    <tr><td>03</td><td>光圈 O</td><td>Onceglance 的 O 做镜头</td><td>海外 / CLI 场景物料</td></tr>
+    <tr><td>04</td><td>选区</td><td>红选区 + 光标</td><td>产品内选区样式、功能图标</td></tr>
+    <tr><td>05</td><td>扫描一</td><td>文字行 + 红色扫描线</td><td>识别中动效、横向物料</td></tr>
+    <tr><td>06</td><td>递图</td><td>气泡嵌取景框</td><td>Agent 协作插画</td></tr>
+    <tr><td>07</td><td>目</td><td>汉字「目」做成取景框</td><td>字标备用字形</td></tr>
+    <tr><td>08</td><td>折页</td><td>方框折角 + 红折角</td><td>导出类功能图标、官网图示</td></tr>
+    <tr><td>09</td><td>图层</td><td>三层错位、红层在最上</td><td>版本 / lineage 功能图标</td></tr>
+    <tr><td>10</td><td>括号</td><td>取景括号 + 红焦点</td><td>极简物料、对焦动效</td></tr>
+    <tr><td>11</td><td>桥接</td><td>两方块 + 红链</td><td>Agent 接入页、官网图示</td></tr>
+    <tr><td>12</td><td>印章 · 甲骨目</td><td>朱红方章 + 甲骨文「目」</td><td><b>主标（已定稿）</b></td></tr>
+  </table>
+  <div class="next">定稿说明：<b>主标 = 方案 12 印章，字形取甲骨文「目」（E 案）</b>。下一步做<b>主标细化</b>：比例网格、安全边距、最小尺寸（64 / 32 / 16 三档，含字形分级）、字标定制（「一目 Onceglance」中英并排的字距与基线）、多端图标资产（应用图标 / 托盘 16-20px / favicon / 安装包）与单色禁用态，全部沉淀进 ui-design.md 设计令牌并同步原型标题栏品牌章。</div>
+</footer>
+
+</div>
+</body>
+</html>

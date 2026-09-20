@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>定影通知</title>
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+  html, body { background: transparent; overflow: hidden; }
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 100%;
+    background: var(--ov-surface);
+    border: 1px solid var(--ov-border);
+    border-radius: var(--r-toast);
+    color: var(--ov-fg);
+    font-size: 12.5px;
+    padding: 10px 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    animation: rise 0.18s ease-out;
+    overflow: hidden;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .dot.success { background: var(--success); }
+  .dot.error { background: #FF6B60; }
+  .dot.warn { background: var(--stitch-low); }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .toast { animation: none; }
+  }
+</style>
+</head>
+<body role="status" aria-live="polite">
+  <div class="toast" id="toast">
+    <span class="dot success" id="dot"></span>
+    <span id="text"></span>
+  </div>
+  <script src="js/toast.js"></script>
+</body>
+</html>

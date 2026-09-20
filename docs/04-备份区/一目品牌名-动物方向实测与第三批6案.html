@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一目 · 动物方向实测与第三批 6 案</title>
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F7F7F8; --bg3:#EFEFF1;
+  --tx:#1D1D21; --tx2:#5C5C66; --tx3:#8E8E99;
+  --bd:#E4E4E8; --bd2:#D2D2D8;
+  --accent:#FF3B30;
+  --ok:#0F6E56; --okbg:#E1F5EE;
+  --warn:#854F0B; --warnbg:#FAEEDA;
+  --risk:#A32D2D; --riskbg:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg3); color:var(--tx);
+  font-family:-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+  font-size:14px; line-height:1.7;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:40px 24px 80px}
+header.top{
+  background:var(--bg); border-radius:16px; padding:36px 40px;
+  border:1px solid var(--bd); margin-bottom:28px;
+}
+h1{font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:.5px}
+.sub{color:var(--tx2); font-size:15px; margin:0 0 20px}
+.note{
+  background:var(--bg2); border-radius:var(--r); padding:16px 18px;
+  font-size:13px; color:var(--tx2); margin-top:18px;
+}
+.note b{color:var(--tx); font-weight:600}
+section{
+  background:var(--bg); border-radius:16px; padding:32px 40px;
+  border:1px solid var(--bd); margin-bottom:24px;
+}
+h2{
+  font-size:19px; font-weight:600; margin:0 0 6px;
+  padding-bottom:14px; border-bottom:1px solid var(--bd);
+}
+h2 .num{color:var(--accent); font-weight:600; margin-right:8px}
+h3{font-size:15px; font-weight:600; margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{color:var(--tx2); font-size:13.5px; margin:14px 0 22px}
+
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{
+  text-align:left; font-weight:600; color:var(--tx2); font-size:12px;
+  letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--bd2);
+  background:var(--bg2);
+}
+td{padding:10px; border-bottom:1px solid var(--bd); vertical-align:top}
+td.kill{color:var(--risk); font-weight:600; white-space:nowrap}
+td.keep{color:var(--ok); font-weight:600; white-space:nowrap}
+td.rev{color:var(--warn); font-weight:600; white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--tx2)}
+
+.card{
+  border:1px solid var(--bd); border-radius:14px; padding:28px 30px;
+  margin-bottom:20px; background:var(--bg);
+}
+.card.pick{border:2px solid var(--accent)}
+.chead{display:flex; align-items:center; gap:16px; margin-bottom:6px; flex-wrap:wrap}
+.nm{font-size:30px; font-weight:600; letter-spacing:4px; line-height:1.2}
+.py{font-size:13px; color:var(--tx3); letter-spacing:.6px; margin-left:2px}
+.tag{
+  font-size:11.5px; padding:3px 9px; border-radius:20px;
+  background:var(--bg3); color:var(--tx2); letter-spacing:.3px;
+}
+.tag.pick{background:var(--accent); color:#fff; font-weight:600}
+.tag.ok{background:var(--okbg); color:var(--ok)}
+.tag.warn{background:var(--warnbg); color:var(--warn)}
+.tag.risk{background:var(--riskbg); color:var(--risk)}
+.quote{
+  border-left:3px solid var(--accent); padding:10px 0 10px 16px;
+  margin:16px 0; color:var(--tx); font-size:13.5px; line-height:1.8;
+}
+.quote cite{display:block; color:var(--tx3); font-size:12px; font-style:normal; margin-top:6px; letter-spacing:.3px}
+.map{width:100%; border-collapse:collapse; margin:16px 0; font-size:13px}
+.map td{border:1px solid var(--bd); padding:9px 12px}
+.map td:first-child{background:var(--bg2); color:var(--tx2); width:34%; font-size:12.5px}
+.map td:last-child{color:var(--tx)}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.box{background:var(--bg2); border-radius:var(--r); padding:14px 16px; font-size:13px}
+.box h3{font-size:12.5px; color:var(--tx2); letter-spacing:.4px; margin-bottom:8px}
+.box ul{margin:0; padding-left:17px; color:var(--tx)}
+.box li{margin-bottom:5px}
+.box li:last-child{margin-bottom:0}
+.foot{
+  margin-top:18px; padding-top:14px; border-top:1px solid var(--bd);
+  font-size:12.5px; color:var(--tx2);
+}
+.foot b{color:var(--tx); font-weight:600}
+
+/* 散点图 */
+.chart{margin:22px 0 8px}
+.figcap{font-size:12.5px; color:var(--tx2); margin-top:6px; line-height:1.75}
+.figcap b{color:var(--tx)}
+
+/* 路线选择 */
+.route{
+  border:1px solid var(--bd); border-radius:14px; padding:22px 24px;
+  margin-bottom:14px; display:flex; gap:18px; align-items:flex-start;
+}
+.route.pick{border:2px solid var(--accent); background:#FFF9F9}
+.rk{
+  flex:0 0 40px; height:40px; border-radius:11px; background:var(--bg3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; font-weight:600; color:var(--tx2);
+}
+.route.pick .rk{background:var(--accent); color:#fff}
+.rb{flex:1}
+.rb h3{margin-bottom:6px; font-size:15.5px}
+.rb p{margin:0; font-size:13px; color:var(--tx2)}
+.rb p+p{margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>跟截图相关的名字，为什么反而都注不了</h1>
+  <p class="sub">动物方向实测记录 + 从"老手艺"里新挖的 6 个</p>
+  <p style="margin:0;color:var(--tx2);font-size:13.5px">
+    你说"跟截图意思相关的词难道不多吗，动物名称也行"——这话没错，相关的词确实多。所以这一轮我没再猜，直接去查了：动物方向查了 6 个，跟截图直接相关的词也查了一批。结果是——<b>能想到的，基本都被占了</b>。下面是证据，以及我换了思路之后找到的 6 个还能站住的。
+  </p>
+  <div class="note">
+    <b>这轮和上一轮的做法一样：先查，再给你看。</b>没查过就递上来的名字，等于让你白跑一趟。所以下面出现的每一个名字，都至少过了一遍公开渠道的初筛。
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span>先回答你的问题：相关的词确实多，但正好是反的</h2>
+  <p class="lead">把两轮试过的名字全放在一张图上，规律一眼就出来了。</p>
+
+  <div class="chart">
+  <svg viewBox="0 0 680 400" style="width:100%;height:auto">
+    <!-- 机会区 -->
+    <rect x="370" y="34" width="272" height="126" fill="#E1F5EE" opacity="0.65" rx="8"/>
+    <text x="380" y="52" font-size="11.5" fill="#0F6E56" font-weight="600">还有机会的地方</text>
+
+    <!-- 红海区 -->
+    <rect x="428" y="192" width="214" height="158" fill="#FCEBEB" opacity="0.75" rx="8"/>
+    <text x="438" y="210" font-size="11.5" fill="#A32D2D" font-weight="600">想到的名字，基本堆在这</text>
+
+    <!-- 坐标轴 -->
+    <line x1="70" y1="350" x2="650" y2="350" stroke="#D2D2D8" stroke-width="1"/>
+    <line x1="70" y1="30" x2="70" y2="350" stroke="#D2D2D8" stroke-width="1"/>
+
+    <!-- 趋势线 -->
+    <line x1="300" y1="80" x2="625" y2="340" stroke="#B8B8C0" stroke-width="1.6" stroke-dasharray="6 5"/>
+    <text x="330" y="180" font-size="12.5" fill="#8E8E99" transform="rotate(32 330 180)">越像 → 越注不了</text>
+
+    <!-- 已撞（红点） -->
+    <g fill="#FF3B30" opacity="0.82">
+      <circle cx="628" cy="334" r="5.5"/>
+      <circle cx="611" cy="325" r="5.5"/>
+      <circle cx="594" cy="331" r="5.5"/>
+      <circle cx="583" cy="337" r="5.5"/>
+      <circle cx="571" cy="328" r="5.5"/>
+      <circle cx="554" cy="319" r="5.5"/>
+      <circle cx="554" cy="331" r="5.5"/>
+      <circle cx="571" cy="313" r="5.5"/>
+      <circle cx="560" cy="319" r="5.5"/>
+      <circle cx="537" cy="313" r="5.5"/>
+      <circle cx="548" cy="325" r="5.5"/>
+      <circle cx="526" cy="334" r="5.5"/>
+      <circle cx="514" cy="322" r="5.5"/>
+      <circle cx="497" cy="303" r="5.5"/>
+      <circle cx="491" cy="313" r="5.5"/>
+      <circle cx="480" cy="306" r="5.5"/>
+      <circle cx="469" cy="300" r="5.5"/>
+      <circle cx="469" cy="257" r="5.5"/>
+      <circle cx="457" cy="251" r="5.5"/>
+      <circle cx="440" cy="241" r="5.5"/>
+      <circle cx="412" cy="226" r="5.5"/>
+      <circle cx="400" cy="210" r="5.5"/>
+    </g>
+
+    <!-- 还有机会（绿点） -->
+    <g fill="#0F6E56" opacity="0.9">
+      <circle cx="423" cy="102" r="5.5"/>
+      <circle cx="383" cy="77" r="5.5"/>
+      <circle cx="469" cy="96" r="6.5"/>
+      <circle cx="400" cy="104" r="5.5"/>
+      <circle cx="355" cy="96" r="5.5"/>
+      <circle cx="298" cy="86" r="5.5"/>
+      <circle cx="326" cy="117" r="5.5"/>
+      <circle cx="343" cy="108" r="5.5"/>
+    </g>
+
+    <!-- 关键标注 -->
+    <text x="505" y="326" font-size="11" fill="#A32D2D" text-anchor="end">重明鸟</text>
+    <text x="576" y="324" font-size="11" fill="#A32D2D">隼目</text>
+    <text x="469" y="84" font-size="11.5" fill="#0F6E56" text-anchor="middle" font-weight="600">粉本</text>
+    <text x="412" y="92" font-size="11" fill="#0F6E56" text-anchor="middle">朱拓</text>
+
+    <!-- 轴标题 -->
+    <text x="360" y="382" font-size="12" fill="#5C5C66" text-anchor="middle">跟"截图"的直觉相关度 →</text>
+    <text x="26" y="190" font-size="12" fill="#5C5C66" text-anchor="middle" transform="rotate(-90 26 190)">第 9 类能注册下来的可能性 →</text>
+  </svg>
+  </div>
+  <p class="figcap">
+    <b>图怎么看：</b>每个点是一个实测过的名字。红点是这轮和上轮查出来已经被占的，绿点是公开渠道没查到占用的。
+    <b>点在右下堆成一片，就是问题的全部答案</b>——跟产品越像的名字，越集中在"已经被占"的区域；反过来，还有机会的名字都飘到左上去了。
+    （点位是我按两轮实测的印象放的，示意用，不是精确测量。）
+  </p>
+</section>
+
+<section>
+  <h2><span class="num">02</span>动物方向：我查了 6 个，撞了 5 个半</h2>
+  <p class="lead">你提到动物，我认真试了，而且试的是"动物 + 目/瞳"这种看起来最聪明的组合。结果撞得比成语还狠。</p>
+
+  <table>
+    <tr>
+      <th style="width:76px">名字</th>
+      <th style="width:180px">谁占了</th>
+      <th style="width:110px">注册号 / 状态</th>
+      <th>关键商品项</th>
+      <th style="width:62px">结论</th>
+    </tr>
+    <tr>
+      <td><b>重明鸟</b></td>
+      <td><b>华为技术有限公司</b><br><span class="mono">北京超凡知识产权代理</span></td>
+      <td><span class="mono">52183719</span><br>已注册<br><span class="mono">2021-12-28</span></td>
+      <td>0901 <b>计算机程序(可下载软件)</b>、笔记本电脑、中央处理器、平板电脑；另有智能手机、摄像机、照相机</td>
+      <td class="kill">撞</td>
+    </tr>
+    <tr>
+      <td><b>蜻蜓</b></td>
+      <td>湖北蜻蜓互娱网络科技<br>北京至真健康科技<br>辽宁蜻蜓数字科技</td>
+      <td><span class="mono">48250310</span><br><span class="mono">59078437</span><br>均已注册</td>
+      <td>48250310 含 <b>可下载的计算机应用软件</b>、计算机程序(可下载软件)、计算机<br>59078437「蜻蜓云医」含 计算机程序(可下载软件)</td>
+      <td class="kill">撞</td>
+    </tr>
+    <tr>
+      <td><b>隼目</b></td>
+      <td><b>成都新眼度科技</b><br>另有杭州隼目信息科技（<span class="mono">falconeyes.cn</span>）</td>
+      <td><span class="mono">81603270</span><br>已注册<br><span class="mono">2025-06-14</span></td>
+      <td>0901 <b>可下载的计算机应用软件</b>、<b>计算机程序(可下载软件)</b>；另含光学玻璃、眼镜全线</td>
+      <td class="kill">撞</td>
+    </tr>
+    <tr>
+      <td><b>重瞳</b></td>
+      <td><span class="mono">—</span></td>
+      <td><span class="mono">77742512</span><br>已注册<br><span class="mono">2024-04-03</span></td>
+      <td>0901 <b>操作系统程序</b>；另含智能手机、学习机、全息投影仪、光学镜头、动画片</td>
+      <td class="kill">撞</td>
+    </tr>
+    <tr>
+      <td><b>翠鸟</b></td>
+      <td><span class="mono">—</span></td>
+      <td>9 类已注册</td>
+      <td>覆盖到眼镜群组（0921）区域</td>
+      <td class="kill">撞</td>
+    </tr>
+    <tr>
+      <td><b>鹘鹰</b></td>
+      <td>中国航空工业集团<br>沈阳飞机设计研究所</td>
+      <td><span class="mono">9842730</span><br>已注册<br>至 2032</td>
+      <td>雷达设备、导航仪器、信号发射器、控制板、电缆——<b>不含 0901 软件类商品项</b></td>
+      <td class="rev">不挡</td>
+    </tr>
+  </table>
+
+  <div class="note" style="margin-top:22px;background:var(--riskbg)">
+    <b>三条值得记住的细节：</b><br>
+    1. <b>重明鸟</b>——这是《山海经》里"双瞳"的瑞鸟，意思就是"看得比谁都清"。思路完全对，但华为 2020 年就申请、2021 年拿到证了。<br>
+    2. <b>隼目</b>——我原本最看好的一个（隼是视力最强的猛禽，"目"直接接你 Logo 里的那个目字）。结果成都一家叫"<b>新眼度</b>"的公司在 2024 年申请、2025 年拿证，核定商品和我们需要的<b>一字不差</b>；另外杭州还有一家"隼目信息科技"，官网英文名就叫 falconeyes。<br>
+    3. <b>蜻蜓</b>——撞得最彻底。三家公司在用，有第三方商标服务网站专门给它出"注册指南"。这类词已经不是"有没有人占"的问题，是"整条路都被人踩平了"。
+  </div>
+
+  <p style="margin-top:22px;margin-bottom:0">
+    <b>结论：动物方向不是不行，是"看起来就该是这个"的那一批不行。</b>
+    鹰、隼、鸮、蜻蜓、翠鸟、蝉——凡是跟"看得清"能联想到的动物，是所有人取名时的第一反应，二十年来被反复注册。你想到的，别人二十年前就想到了。
+  </p>
+</section>
+
+<section>
+  <h2><span class="num">03</span>换了三回思路，才想明白一件事</h2>
+  <p class="lead">前两轮我在"跟截图意思相近的词"里找，越找越挤。这一轮反过来问：截图到底是个什么动作，历史上有谁干过同样的事？</p>
+
+  <p style="margin-bottom:18px">
+    <b>截图这个动作，说到底是两件事："把屏幕上的一块原样取下来"，和"取下来之后要能给别的人照着重做"。</b>
+    这两件事，古代的手艺人都在做——而且各有一套专门的词。这些词有三个好处：<b>有真实出处、有画面、但商业上没什么人用</b>。
+  </p>
+
+  <table>
+    <tr><th style="width:120px">思路</th><th style="width:210px">为什么这个方向有戏</th><th>反面对照</th></tr>
+    <tr>
+      <td><b>A 取下来</b><br><span class="mono">拓 · 抄 · 摹</span></td>
+      <td>把器物或书本表面的一层"原样转移到别的地方"，这门手艺有一整套词：拓、影抄、摹、扑粉。跟截图是同一个动作，只是介质从石头、纸变成了屏幕。</td>
+      <td>不要用"截""切""抓"这类直白动词——太通用，全被占了。</td>
+    </tr>
+    <tr>
+      <td><b>B 留下来才有用</b><br><span class="mono">底稿 · 样张</span></td>
+      <td>截图不是为了"存"，是为了"给别人照着做"。所以"底稿""样板""样张"这一路的词，正好说的是产品交付出去以后那张图的作用——它就是别人照着做的底本。</td>
+      <td>不要用"图""谱""录"单字——单字太宽，一定有人占。上一轮「图录」就是这个毛病。</td>
+    </tr>
+    <tr>
+      <td><b>C 从行业生词里挑</b><br><span class="mono">不是挑好听的</span></td>
+      <td>两轮的规律很清楚了：<b>好听的词早就没了</b>（写照、见微、澄观、重明鸟全撞），<b>能活下来的都是某一行的生词</b>。生词冷门这件事，在商标上是优点、在传播上才是缺点。</td>
+      <td>不要再从"成语""诗词名句"里挑。那些是所有人取名的第一站。</td>
+    </tr>
+  </table>
+
+  <div class="note" style="margin-top:22px">
+    <b>顺带说个具体的好处：</b>生词冷门，但解释只要一句。而且一旦解释过，反而记得更牢——
+    "这名字哪来的？做拓片的行话。"比"这名字……挺好的"强得多。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span>第三批 6 个（都过了公开初筛）</h2>
+  <p class="lead">前两个我放了重点标。后面四个附了各自的短板，你看的时候别只看名字好听不好听。</p>
+
+  <!-- 1 粉本 -->
+  <div class="card pick">
+    <div class="chead">
+      <div class="nm">粉本</div>
+      <span class="py">fěn běn</span>
+      <span class="tag pick">首选</span>
+      <span class="tag ok">初筛干净</span>
+    </div>
+
+    <p style="color:var(--tx2);font-size:13px;margin-bottom:4px">中国画工的行话，指"底稿 / 底样"。元明画论里常见这个词。</p>
+
+    <div class="quote">
+      画工打底样，是在纸上沿墨线扎满细孔，把这张样覆在壁上或绢上，用一包粉（白垩或蛤粉）隔着孔拍打过去，粉透过细孔落在下面的画面上，留下一个个点；拿开样纸，依着这些粉点落墨，一幅画就"搬"到了新地方。
+      <br>这个做法本身就叫<b>扑粉</b>，那张被反复用、拓到哪都算数的底稿，就叫<b>粉本</b>。
+      <cite>出处：中国画传统术语，元明以来画论常用（如元·夏文彦《图绘宝鉴》）；技法记载见历代画工口诀。上段为技法概述，非原文引用。</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>粉本 = 反复使用的底稿</td><td>你截的那张图，被 Agent 拿去写成教程 → 那张图就是别人的粉本</td></tr>
+      <tr><td>扑粉 = 通过孔把图样"搬"到新地方</td><td>截图 = 把屏幕上的一块"搬"到别的地方（记到文件、送到 Agent）</td></tr>
+      <tr><td>依点落墨 = 照底稿走一遍</td><td>读者照教程做一遍</td></tr>
+    </table>
+
+    <div class="cols">
+      <div class="box">
+        <h3>好</h3>
+        <ul>
+          <li>公开渠道<b>没查到任何企业占用</b>，是这批最干净的之一</li>
+          <li>跟产品动作是同一件事，不用绕</li>
+          <li>两个字、软音、好念（fěn běn 都是上声转轻声，读起来顺）</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>短板</h3>
+        <ul>
+          <li>"粉"容易被误认成"粉色、化妆粉"，第一眼不知道跟截图有关</li>
+          <li>需要一句解释才能立住（但只需要一句）</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b>Onceglance 不动。中文若要配一个，用 <b>Master</b>（底稿 = master copy）比直译好。<br><b>定名前必须做：</b>第 06 节的中国商标网检索。</div>
+  </div>
+
+  <!-- 2 留真 -->
+  <div class="card pick">
+    <div class="chead">
+      <div class="nm">留真</div>
+      <span class="py">liú zhēn</span>
+      <span class="tag pick">首选</span>
+      <span class="tag ok">初筛干净</span>
+    </div>
+
+    <p style="color:var(--tx2);font-size:13px;margin-bottom:4px">文献学的词，出自清末杨守敬的《留真谱》。</p>
+
+    <div class="quote">
+      杨守敬去日本访书，见了大量中土已失传的宋元旧本。他把这些古书的首卷首页<b>影刻</b>下来，辑成一编，取名《留真谱》——所谓"留真"，就是让没见过原本的人也能看到它<b>真实的样子</b>，不至于被后世的翻刻、改字骗过去。
+      <cite>出处：杨守敬（1839—1915）编《留真谱》，1901 年刊行，中国最早的书影图录。这是一段可查的实在史实。</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>留真 = 把真实的样子留下来</td><td>截图 = 把屏幕上真实的样子留下来</td></tr>
+      <tr><td>怕被翻刻改字骗 → 所以要留真</td><td>怕口头转述失真 → 所以要截图（一图胜千言，就是这个意思）</td></tr>
+      <tr><td>《留真谱》= 一部图像汇编</td><td>一目 = 把一堆截图攒成一份能交出去的成品</td></tr>
+    </table>
+
+    <div class="cols">
+      <div class="box">
+        <h3>好</h3>
+        <ul>
+          <li>公开渠道<b>没查到企业占用</b></li>
+          <li>"留真"两个字本身就是产品价值主张——留住真实，不靠嘴说</li>
+          <li>没有生僻字，念出来就是普通话常用音，不用教怎么读</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>短板</h3>
+        <ul>
+          <li>字面偏文艺，硬工具的气质弱一点</li>
+          <li>"真"字在当下语境容易被往"真假"的争论上带</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b>Onceglance 不动。<b>Truecopy</b> 可以备选。</div>
+  </div>
+
+  <!-- 3 影抄 -->
+  <div class="card">
+    <div class="chead">
+      <div class="nm">影抄</div>
+      <span class="py">yǐng chāo</span>
+      <span class="tag ok">初筛干净</span>
+      <span class="tag warn">有歧义</span>
+    </div>
+
+    <p style="color:var(--tx2);font-size:13px;margin-bottom:4px">古籍版本学的专门词，明清藏书家的顶级手艺。</p>
+
+    <div class="quote">
+      碰到一本极难得的宋版书，买不起或买不到，就借来一册，用<b>薄纸覆在原本上</b>，一笔一笔照描——连版框的大小、行款的疏密、字的笔意都照原样摹下来。这么做出来的本子叫<b>影抄本</b>，最有名的是明末毛晋汲古阁的"影宋抄本"，藏书家公认它"下真迹一等"。
+      <cite>出处：古籍版本学术语。"影抄本""影宋抄本"是藏书目录里的标准类目，汲古阁毛氏为其中代表。</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>影 = 照原样 / 影子</td><td>截图取的就是屏幕的"影"</td></tr>
+      <tr><td>覆纸照描，一字不改</td><td>截图不改内容（不是说截图之后不能标注，是"取下来"这一步不改）</td></tr>
+      <tr><td>"下真迹一等"</td><td>截图不是原件，但足够替代原件（这正是这个产品的立足点）</td></tr>
+    </table>
+
+    <div class="cols">
+      <div class="box">
+        <h3>好</h3>
+        <ul>
+          <li>公开渠道<b>没查到企业占用</b></li>
+          <li>一个字"影"就把产品的意思说透了，而且是文化词不是技术词</li>
+          <li>"下真迹一等"这句话可以当品牌金句用</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>短板（要认真看）</h3>
+        <ul>
+          <li><b>"抄"字在中文日常语境里有"抄袭"的联想</b>，跟"截图给别人用"这件事放一起，容易被误读</li>
+          <li>在版本学里"抄"是中性的，但用户不在版本学里</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b>Onceglance 不动。<b>Facsimile</b> 正是"影抄本"的英文对应词，是罕见的精准对译。</div>
+  </div>
+
+  <!-- 4 朱记 -->
+  <div class="card">
+    <div class="chead">
+      <div class="nm">朱记</div>
+      <span class="py">zhū jì</span>
+      <span class="tag warn">需复核</span>
+    </div>
+
+    <p style="color:var(--tx2);font-size:13px;margin-bottom:4px">唐宋官印的一类形制，"红章"最早的名字之一。</p>
+
+    <div class="quote">
+      唐宋的官印里有一类，印文直接就是"某某朱记"，尺寸小、字用楷隶而不作篆书，给级别不高的官署使用。所谓朱记，就是<b>朱色的印记</b>——那几个红字盖在纸上，就是官府认过的凭证。
+      <cite>出处：中国古代官印制度术语，唐宋官印著录中"××朱记"是常见印文格式。</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>朱记 = 朱红色的印记</td><td>你的标记就是朱红（<span class="mono">#FF3B30</span>）圆角方章</td></tr>
+      <tr><td>盖在纸上 = 这份东西被认过</td><td>截完图盖上标注，这份东西就能交出去了</td></tr>
+      <tr><td>官印是有权威的凭证</td><td>"这是真的、我确认过"——截图在协作里的作用就是这个</td></tr>
+    </table>
+
+    <div class="cols">
+      <div class="box">
+        <h3>好</h3>
+        <ul>
+          <li><b>跟已定稿的 Logo 完全闭环</b>：朱记、朱红、朱拓——这已经是三条线指向同一个意象了</li>
+          <li>两个字、好念，不像生词</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>短板</h3>
+        <ul>
+          <li>查到一家「<b>朱记小眼镜</b>」<span class="mono">18183568</span>（9 类，2016-12-07 至 2026-12-06），商品项里有 <b>0901 计算机软件(已录制)</b>，构成部分障碍</li>
+          <li>「朱记」作为姓氏 + 记的招牌名，全国小店重名极多，品牌独特性偏弱</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b>Onceglance 不动。<b>Rubric</b> 意外地贴——rubric 本义就是"红字"，在英文里还引申出"规程、评分细则"，正好对上"教程"这层意思。</div>
+  </div>
+
+  <!-- 5 摹本 -->
+  <div class="card">
+    <div class="chead">
+      <div class="nm">摹本</div>
+      <span class="py">mó běn</span>
+      <span class="tag warn">需你自己查</span>
+    </div>
+
+    <p style="color:var(--tx2);font-size:13px;margin-bottom:4px">最不需要解释的一个。故宫的《兰亭序》神龙本，就是摹本。</p>
+
+    <div class="quote">
+      照着原作临摹复制出来的本子叫摹本。王羲之《兰亭序》真迹不在了，今天大家看到的是唐代冯承素的摹本——它不是原作，但它把原作的样子留住了，所以几百年里所有人都认它。
+      <cite>出处：书画鉴藏通用术语。"摹"（覆纸照描）与"临"（对着看再写）是两种不同的复制方式，摹本更接近原样。</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>摹本 = 照原样复制的本子</td><td>截图 = 屏幕的摹本</td></tr>
+      <tr><td>真迹没了，摹本还在起作用</td><td>界面会变、软件会换，截图留下来的是当时真实的样子</td></tr>
+    </table>
+
+    <div class="cols">
+      <div class="box">
+        <h3>好</h3>
+        <ul>
+          <li><b>最好懂</b>——说一句"屏幕的摹本"谁都明白，零解释成本</li>
+          <li>"摹"字本身就含"照着做"，跟教程天然同义</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>短板</h3>
+        <ul>
+          <li><b>太常用的词，占用概率高</b>，我没搜到明确企业占用，但也没搜到"干净"的证据——这一条<b>必须你自己去查</b></li>
+          <li>"摹本"隐含"不是原件、是替代品"，作为产品名略有折价感</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b>Onceglance 不动。</div>
+  </div>
+
+  <!-- 6 样张 -->
+  <div class="card">
+    <div class="chead">
+      <div class="nm">样张</div>
+      <span class="py">yàng zhāng</span>
+      <span class="tag warn">需你自己查</span>
+    </div>
+
+    <p style="color:var(--tx2);font-size:13px;margin-bottom:4px">印刷厂的行话。这批里最"接地气"的一个。</p>
+
+    <div class="quote">
+      印刷厂开机之前先打一张出来，叫样张——看颜色对不对、字有没有掉、版有没有歪。样张是给"拍板的人"看的：他看了这张，才决定整批要不要这么印。
+      <cite>出处：印刷业通用术语，"打样""样张"是印前标准工序。</cite>
+    </div>
+
+    <table class="map">
+      <tr><td>样张 = 先出一张，看对不对</td><td>先截一张，看清不清、够不够用</td></tr>
+      <tr><td>样张是给拍板的人看的凭据</td><td>截图是给同事、给 Agent、给读者看的凭据</td></tr>
+    </table>
+
+    <div class="cols">
+      <div class="box">
+        <h3>好</h3>
+        <ul>
+          <li><b>外行也能秒懂</b>，不用讲典故——如果这一轮的核心诉求是"别再费口舌"，就是这个</li>
+          <li>两个字，工整，界面里排字标也好看</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>短板</h3>
+        <ul>
+          <li>同样<b>没有拿到"干净"证据</b>，且它是印刷业高频词，预判占用概率是这批最高的</li>
+          <li>气质偏"厂"、偏传统制造，跟 AI 原生的调性差得最远</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot"><b>英文名建议：</b>Onceglance 不动。<b>Proof</b> 可以做彩蛋——proof 在印刷里就是"样张"，在逻辑里是"证明"，一语双关。</div>
+  </div>
+
+  <div class="note" style="margin-top:22px;background:var(--riskbg)">
+    <b>这一批里我主动淘汰的（免得你重复问）：</b>
+    「<b>书影</b>」——文献学术语本来很合适（拍书页样子），但一搜就出来重庆、北京、兰考三家"书影文化传媒"，北京那家还持有 2 个注册商标，撞了。
+    「<b>初拓</b>」——9 类已有人注册（2016-06-07 至 2026-06-06，含"计算机外围设备"，<b>没有</b>"可下载软件"项），目前在商标交易平台上挂着卖，报价 2.6 万。
+    这条路要说明的是：<b>现成的标是可以买的</b>，如果最后你就是想要某个被占的名字，花钱谈转让是一条正经路子，比硬申请被驳回划算。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span>两批一共 12 个候选，我替你先收一遍</h2>
+  <p class="lead">上一批 6 个 + 这一批 6 个 = 12 个。你都还没点头，所以我把它们并排放一起，按"能落地"排序，最后收口到 3 个。</p>
+
+  <table>
+    <tr>
+      <th style="width:70px">名字</th>
+      <th style="width:96px">出处</th>
+      <th style="width:82px">初筛</th>
+      <th style="width:60px">好懂度</th>
+      <th>一句话</th>
+    </tr>
+    <tr>
+      <td><b>朱拓</b></td><td>拓本·朱砂</td><td class="keep">干净</td><td>中</td>
+      <td>跟品牌色、Logo、名字三样闭环，最省事的一条路</td>
+    </tr>
+    <tr>
+      <td><b>叙录</b></td><td>刘向校书</td><td class="keep">最干净</td><td>低</td>
+      <td>三步动作一对一，但冷门，要一句解释</td>
+    </tr>
+    <tr>
+      <td><b>粉本</b></td><td>画工底稿</td><td class="keep">干净</td><td>低</td>
+      <td>产品动作的直译版，"底稿"这层意思最准</td>
+    </tr>
+    <tr>
+      <td><b>留真</b></td><td>《留真谱》</td><td class="keep">干净</td><td>中</td>
+      <td>名字本身就是价值主张，念着顺</td>
+    </tr>
+    <tr>
+      <td><b>影抄</b></td><td>版本学</td><td class="keep">干净</td><td>中</td>
+      <td>一个字说透，但"抄"有歧义</td>
+    </tr>
+    <tr>
+      <td><b>双钩</b></td><td>书法复制</td><td class="rev">需复核</td><td>中</td>
+      <td>动作感强，但钓鱼、武术也用，搜索会杂</td>
+    </tr>
+    <tr>
+      <td><b>朱记</b></td><td>唐宋官印</td><td class="rev">需复核</td><td>高</td>
+      <td>跟红方章闭环，但已有一件 9 类部分障碍</td>
+    </tr>
+    <tr>
+      <td><b>取象</b></td><td>《周易》</td><td class="rev">需复核</td><td>中</td>
+      <td>跟界面上已有的"取字"同词族</td>
+    </tr>
+    <tr>
+      <td><b>摹本</b></td><td>书画鉴藏</td><td class="rev">需复核</td><td>高</td>
+      <td>最好懂，但占用概率偏高</td>
+    </tr>
+    <tr>
+      <td><b>图录</b></td><td>金石学</td><td class="rev">需复核</td><td>高</td>
+      <td>望文生义指交付物，但 16 类大概率被占</td>
+    </tr>
+    <tr>
+      <td><b>蝉翼</b></td><td>拓本·蝉翼拓</td><td class="kill">风险偏高</td><td>中</td>
+      <td>最雅，但语义最弱，12 类已有「蝉翼」标</td>
+    </tr>
+    <tr>
+      <td><b>样张</b></td><td>印刷打样</td><td class="kill">预判占用高</td><td>最高</td>
+      <td>最接地气，但气质离 AI 最远</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top:30px">如果让我替你收口，就这三个</h3>
+  <p class="lead">理由不是"哪个最好听"，是<b>哪个最不容易走到一半翻车</b>。</p>
+
+  <div class="route pick">
+    <div class="rk">1</div>
+    <div class="rb">
+      <h3>朱拓 —— 综合成本最低</h3>
+      <p>它不是孤立的选项，是<b>跟已经花掉的工接得上</b>的那一个：品牌色朱红、Logo 红方章、名字用朱砂拓印，三样是一套东西。改名的代价在这里最小——你连设计稿都不用重画，只要换字标里的字。</p>
+      <p>唯一的缺点是需要一句解释。但那句话很短：<b>"朱拓，拓片里用朱砂的那一种，最讲究、最贵。"</b></p>
+    </div>
+  </div>
+
+  <div class="route pick">
+    <div class="rk">2</div>
+    <div class="rb">
+      <h3>留真 —— 名字本身就是卖点</h3>
+      <p>"留真"两个字不用解释就能感觉到在说什么，而且它描述的正好是这个产品解决的问题——<b>文字转述会失真，所以要把真实的样子留下来</b>。这句话可以直接印在官网首屏。</p>
+      <p>它跟文创、出版类品牌会有气质上的重叠，这是要接受的一点。</p>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rk">3</div>
+    <div class="rb">
+      <h3>粉本 —— 意思最准，但要接受它冷</h3>
+      <p>如果按"名字和产品动作的贴合度"排，粉本是 12 个里第一。截图就是给别人递一张粉本，这事说得不能再准了。</p>
+      <p>短板也清楚：第一眼没人知道这是什么。选它，等于接受"这个品牌名字需要被解释一次"。</p>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:24px">
+    <b>叙录、影抄 我放在第二梯队</b>，不是不好，是各有各的硬伤：叙录最干净但最冷，影抄最精准但"抄"字在中文里带贬义。你要是就喜欢这两个里的某一个，也能选，我照做，只是得把短板提前说清。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">06</span>定名前这一步，只能你来（我做不了）</h2>
+  <p class="lead">我这两轮做的都是公开渠道搜索。它不是商标局的检索，不构成法律意见，也做不到"证明没冲突"。真正的结论只有官方检索能给。</p>
+
+  <h3>第一步：查文字</h3>
+  <p>打开 <span class="mono">wcjs.sbj.cnipa.gov.cn</span>（商标网上检索系统），进「商标近似查询」。先把你选中的那 1–2 个词查一遍，重点看四个类别：</p>
+  <table style="margin:14px 0">
+    <tr><th style="width:120px">类别</th><th style="width:200px">管什么</th><th>看什么</th></tr>
+    <tr><td><b>第 9 类</b></td><td>计算机软件（最关键）</td><td>有没有在先注册或申请中的同名/近似标；<b>0901</b> 群组里有没有"可下载的计算机应用软件""计算机程序(可下载软件)"这两个商品项</td></tr>
+    <tr><td><b>第 42 类</b></td><td>软件开发、技术服务</td><td>以后做官网、SaaS 会涉及</td></tr>
+    <tr><td><b>第 35 类</b></td><td>广告销售</td><td>推广、做电商会涉及</td></tr>
+    <tr><td><b>第 16 类</b></td><td>印刷出版物</td><td>教程、文档类，最容易被忽略但很常被占</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--tx2)">查到结果后只看三样：<b>状态</b>（有效 / 驳回 / 无效 / 撤销）、<b>类似群</b>（0901 最关键）、<b>商品项</b>。状态是无效、或者没有 0901 商品项的，基本不构成障碍——上面「鹘鹰」就是这个情况。</p>
+
+  <h3 style="margin-top:26px">第二步：查图形</h3>
+  <p>不管最后叫什么，<b>「印章 · 甲骨目」这枚图形要单独查一次</b>。用国家知识产权局 2026-05-22 上线的「以图搜图」：</p>
+  <p class="mono" style="background:var(--bg2);padding:12px 16px;border-radius:var(--r);font-size:12.5px;line-height:1.9">
+    中国商标网 → 商标网上查询系统 → 商标近似查询 → 自动查询-查询方式 → 选「以图搜图」→ 上传图片<br>
+    图片要求：png / jpeg / jpg，不超过 2M
+  </p>
+  <p style="font-size:13px;color:var(--tx2)">用仓库里这两个文件（先转成 png）：<br>
+    <span class="mono">assets/logo/onceglance-mark.svg</span>（描边目，主标）<br>
+    <span class="mono">assets/logo/onceglance-mark-solid.svg</span>（实心眼，缩到小尺寸上传更稳）
+  </p>
+
+  <div class="note" style="margin-top:24px">
+    <b>第三步，别省的钱：</b>选定了之后，花几百块让商标代理出一份书面检索意见，再决定要不要正式申请。
+    这笔钱比事后被投诉、被迫改名便宜得多——<b>你已经因为"先定名、后查商标"多花了一轮工，这就是例子</b>。所以这次我先查了再给你，你也先查了再定。
+  </div>
+
+  <div class="note" style="margin-top:18px;background:var(--riskbg)">
+    <b>这份东西的性质，最后说清楚：</b>本页所有"初筛"结论都来自公开渠道（企业信息平台、搜索引擎、商标信息聚合站），<b>不是商标局的正式检索，不构成法律意见</b>。
+    商标局数据有 1–2 个月公示滞后；第三方平台数据不全，只能用来"发现冲突"，不能用来"证明没有冲突"。
+    特别是本页标了"<b>需你自己查</b>"和"<b>需复核</b>"的那几个，我只做到"没搜到占用"，没做到"确认干净"——这两件事的差别很大，请当成两件事看。
+  </div>
+</section>
+
+</div>
+</body>
+</html>

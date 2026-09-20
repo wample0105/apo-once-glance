@@ -1,0 +1,1034 @@
+//! 长截图 GUI 会话管理（说明书 §4.4：框选即开始、滚到哪截到哪、永不自动完成）。
+//! 会话在 Rust 侧持有拼接画布；覆盖层每个滚轮事件触发一次区域 BitBlt + push_frame。
+
+use crate::CapturedBitmap;
+use once_core::longshot::ScrollSession;
+use once_core::{capture, clipboard, history, settings, storage};
+use std::collections::HashMap;
+use std::sync::Mutex as StdMutex;
+use tauri::{AppHandle, Manager};
+
+struct ScrollState {
+    session: ScrollSession,
+    abs_x: i32,
+    abs_y: i32,
+    #[allow(dead_code)]
+    created: std::time::Instant,
+}
+
+static SCROLLS: std::sync::OnceLock<StdMutex<HashMap<u64, ScrollState>>> = std::sync::OnceLock::new();
+static SCROLL_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+static ACTIVE_SESSION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static REVIEW: std::sync::Mutex<Option<(u64, Vec<usize>)>> = std::sync::Mutex::new(None);
+
+fn scrolls() -> std::sync::MutexGuard<'static, HashMap<u64, ScrollState>> {
+    SCROLLS.get_or_init(|| StdMutex::new(HashMap::new())).lock().unwrap()
+}
+
+/// OnceError → String（命令层统一字符串错误）。
+fn oe(e: once_core::OnceError) -> String {
+    e.to_string()
+}
+
+#[tauri::command]
+pub async fn scroll_start(
+    app: AppHandle,
+    screen: usize,
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+) -> Result<serde_json::Value, String> {
+    let monitor = capture::monitors()
+        .into_iter()
+        .find(|m| m.index == screen)
+        .ok_or("显示器不存在".to_string())?;
+    let abs_x = monitor.rect.0 + x;
+    let abs_y = monitor.rect.1 + y;
+    let session = ScrollSession::new(w, h).map_err(oe)?;
+    let id = SCROLL_SEQ.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    scrolls().insert(id, ScrollState { session, abs_x, abs_y, created: std::time::Instant::now() });
+    ACTIVE_SESSION.store(id, std::sync::atomic::Ordering::SeqCst);
+
+    // 覆盖层鼠标穿透：滚轮必须落到下层应用，采集由轮询完成
+    set_overlay_passthrough(&app, true);
+    // 键盘钩子：Enter=完成 / Esc=取消（不依赖焦点）
+    install_scroll_keyboard_hook(&app);
+
+    // 结束条：独立不穿透小窗口，贴选区下沿外 8px（空间不足翻上方）
+    create_endbar_window(&app, monitor.rect.0 + x, monitor.rect.1 + y, w, h, id)?;
+
+    // 第 1 段：松手那一帧就是第 1 段（不需要"开始"动作）
+    let status = scroll_grab_inner(id)?;
+
+    // 轮询采样线程：120ms 一轮；每轮抓两帧（间隔 80ms）逐字节比对，
+    // 只在画面静止时拼接——滚动动画中的过渡帧直接丢弃（消除重影接缝）。
+    // 会话被移除/进入质检后自动退出。
+    let app2 = app.clone();
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_millis(120));
+        if !scrolls().contains_key(&id) {
+            break;
+        }
+        if REVIEW.lock().unwrap().as_ref().map(|r| r.0 == id).unwrap_or(false) {
+            break;
+        }
+        match scroll_grab_stable(id) {
+            Ok(v) => {
+                if std::env::var("ONCE_DEBUG").is_ok() {
+                    eprintln!("[scroll-worker] {}", v);
+                }
+                use tauri::Emitter;
+                let _ = app2.emit("scroll-progress", v);
+            }
+            Err(e) => {
+                eprintln!("[scroll-worker] grab error: {e}");
+                break;
+            }
+        }
+    });
+    Ok(serde_json::json!({ "session": id, "status": status }))
+}
+
+/// 创建结束条窗口（不穿透、可点击、置顶）。
+fn create_endbar_window(
+    app: &AppHandle,
+    abs_x: i32,
+    abs_y: i32,
+    w: u32,
+    h: u32,
+    session: u64,
+) -> Result<(), String> {
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+    if let Some(old) = app.get_webview_window("endbar") {
+        let _ = old.destroy();
+    }
+    let mons = capture::monitors();
+    let mon = mons
+        .iter()
+        .find(|m| abs_x >= m.rect.0 && abs_x < m.rect.0 + m.rect.2 && abs_y >= m.rect.1 && abs_y < m.rect.1 + m.rect.3)
+        .or_else(|| mons.first())
+        .ok_or("显示器不存在".to_string())?;
+    let bar_w = 340i32;
+    let bar_h = 44i32;
+    // 贴选区下沿外 8px；下方空间不足翻到上方（说明书 §4.4 结束条行为）
+    let sel_bottom = abs_y + h as i32;
+    let bx = abs_x.min(mon.rect.0 + mon.rect.2 - bar_w - 8).max(mon.rect.0 + 8);
+    let below = mon.rect.1 + mon.rect.3 - sel_bottom;
+    let by = if below >= bar_h + 20 {
+        sel_bottom + 8
+    } else {
+        (abs_y - bar_h - 8).max(mon.rect.1 + 8)
+    };
+    let win = WebviewWindowBuilder::new(
+        app,
+        "endbar",
+        WebviewUrl::App(format!("endbar.html?session={session}").into()),
+    )
+        .title("长截图")
+        .decorations(false)
+        .transparent(true)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .resizable(false)
+        .maximizable(false)
+        .minimizable(false)
+        .focused(false)
+        .visible(false)
+        .build()
+        .map_err(|e| e.to_string())?;
+    let _ = win.set_position(tauri::PhysicalPosition::new(bx, by));
+    let _ = win.set_size(tauri::PhysicalSize::new(bar_w as u32, bar_h as u32));
+    let _ = win.eval(&format!("window.__SESSION={{id:{session}}};"));
+    let _ = win.show();
+    Ok(())
+}
+
+fn destroy_endbar_window(app: &AppHandle) {
+    if let Some(win) = app.get_webview_window("endbar") {
+        let _ = win.destroy();
+    }
+}
+
+/// 覆盖层鼠标穿透（WS_EX_TRANSPARENT | WS_EX_LAYERED）。
+fn set_overlay_passthrough(app: &AppHandle, on: bool) {
+    use windows::Win32::UI::WindowsAndMessaging::{GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE};
+    let Some(win) = app.get_webview_window("overlay") else { return };
+    let Ok(hwnd) = win.hwnd() else { return };
+    unsafe {
+        let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+        const WS_EX_LAYERED: u32 = 0x0008_0000;
+        const WS_EX_TRANSPARENT: u32 = 0x0000_0020;
+        let new_ex = if on {
+            ex | WS_EX_LAYERED | WS_EX_TRANSPARENT
+        } else {
+            ex & !(WS_EX_LAYERED | WS_EX_TRANSPARENT)
+        };
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, new_ex as isize);
+    }
+}
+
+#[tauri::command]
+pub async fn scroll_grab(_app: AppHandle, session: u64) -> Result<serde_json::Value, String> {
+    scroll_grab_inner(session).map_err(|e| e.to_string())
+}
+
+/// 抓帧 + 稳定检测：两帧（间隔 80ms）完全一致才 push，动画过渡帧丢弃。
+fn scroll_grab_stable(id: u64) -> Result<serde_json::Value, String> {
+    if std::env::var("ONCE_DEBUG").is_err() {
+        // 正常路径保持安静
+    }
+    let (abs_x, abs_y, w, h) = {
+        let mut map = scrolls();
+        let st = map.get_mut(&id).ok_or("会话不存在（可能已结束）")?;
+        (st.abs_x, st.abs_y, st.session.width, st.session.height)
+    };
+    let first = capture::capture_region_px(abs_x, abs_y, w, h).map_err(|e| e.to_string())?;
+    std::thread::sleep(std::time::Duration::from_millis(80));
+    let second = capture::capture_region_px(abs_x, abs_y, w, h).map_err(|e| e.to_string())?;
+    if first.pixels != second.pixels {
+        // 画面仍在滚动/动画：丢弃，不拼接
+        return Ok(serde_json::json!({ "session": id, "status": "moving" }));
+    }
+    scroll_push_frame(id, &first.pixels)
+}
+
+fn scroll_grab_inner(id: u64) -> Result<serde_json::Value, String> {
+    let (abs_x, abs_y, w, h) = {
+        let mut map = scrolls();
+        let st = map.get_mut(&id).ok_or("会话不存在（可能已结束）")?;
+        (st.abs_x, st.abs_y, st.session.width, st.session.height)
+    };
+    let bmp = capture::capture_region_px(abs_x, abs_y, w, h).map_err(|e| e.to_string())?;
+    scroll_push_frame(id, &bmp.pixels)
+}
+
+fn scroll_push_frame(id: u64, pixels: &[u8]) -> Result<serde_json::Value, String> {
+    let mut map = scrolls();
+    let st = map.get_mut(&id).ok_or("会话不存在")?;
+    let r = st.session.push_frame(pixels).map_err(|e| e.to_string())?;
+    let status = match r {
+        once_core::longshot::PushResult::Appended { .. } => "appended",
+        once_core::longshot::PushResult::Duplicate => "duplicate",
+        once_core::longshot::PushResult::RolledBack => "rolledback",
+        once_core::longshot::PushResult::BottomReached => "bottom",
+    };
+    Ok(serde_json::json!({
+        "session": id,
+        "status": status,
+        "height": st.session.content_height(),
+        "segments": st.session.seam_count() + 1,
+        "failed_frames": st.session.failed_frame_count(),
+        "fixed_top": st.session.fixed_top,
+    }))
+}
+
+#[allow(dead_code)]
+fn scroll_grab_inner_old(id: u64) -> Result<serde_json::Value, String> {
+    let (abs_x, abs_y, w, h) = {
+        let mut map = scrolls();
+        let st = map.get_mut(&id).ok_or("会话不存在（可能已结束）")?;
+        (st.abs_x, st.abs_y, st.session.width, st.session.height)
+    };
+    let bmp = capture::capture_region_px(abs_x, abs_y, w, h).map_err(|e| e.to_string())?;
+    let mut map = scrolls();
+    let st = map.get_mut(&id).ok_or("会话不存在")?;
+    let r = st.session.push_frame(&bmp.pixels).map_err(oe)?;
+    let status = match r {
+        once_core::longshot::PushResult::Appended { .. } => "appended",
+        once_core::longshot::PushResult::Duplicate => "duplicate",
+        once_core::longshot::PushResult::RolledBack => "rolledback",
+        once_core::longshot::PushResult::BottomReached => "bottom",
+    };
+    Ok(serde_json::json!({
+        "session": id,
+        "status": status,
+        "height": st.session.content_height(),
+        "segments": st.session.seam_count() + 1,
+        "failed_frames": st.session.failed_frame_count(),
+        "fixed_top": st.session.fixed_top,
+    }))
+}
+
+#[tauri::command]
+pub async fn scroll_finish(app: AppHandle, session: u64) -> Result<serde_json::Value, String> {
+    scroll_finish_sync(app, session)
+}
+
+fn scroll_finish_sync(app: AppHandle, session_in: u64) -> Result<serde_json::Value, String> {
+    eprintln!("[scroll-finish] called session_in={session_in}");
+    // session<=0（endbar 的 URL 参数在 Tauri App URL 中不可用）→ 用活跃会话兜底
+    let session = if session_in == 0 {
+        ACTIVE_SESSION.load(std::sync::atomic::Ordering::SeqCst)
+    } else {
+        session_in
+    };
+    eprintln!("[scroll-finish] resolved session={session}");
+    ACTIVE_SESSION.store(0, std::sync::atomic::Ordering::SeqCst);
+    let mut st = {
+        let mut map = scrolls();
+        map.remove(&session).ok_or("会话不存在（可能已结束）")?
+    };
+    eprintln!("[scroll-finish] session removed, suspicious={}", st.session.suspicious_seams().len());
+    let suspicious = st.session.suspicious_seams();
+    if !suspicious.is_empty() {
+        // 有可疑接缝：把会话放回去，打开质检页
+        let seams: Vec<serde_json::Value> = suspicious
+            .iter()
+            .map(|s| serde_json::json!({ "y": s.y, "confidence": s.confidence }))
+            .collect();
+        let global_idx: Vec<usize> = st
+            .session
+            .seams()
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| s.confidence < once_core::longshot::CONFIDENCE_OK)
+            .map(|(i, _)| i)
+            .collect();
+        let (w, h, _) = st.session.export();
+        *REVIEW.lock().unwrap() = Some((session, global_idx.clone()));
+        scrolls().insert(session, st);
+        if let Err(e) = open_quality_sync(&app, session, w, h, global_idx.clone()) {
+            eprintln!("[scroll-finish] open quality FAILED: {e}");
+        }
+        return Ok(serde_json::json!({
+            "needs_review": true,
+            "seams": seams,
+            "seam_indexes": global_idx,
+            "width": w,
+            "height": h,
+        }));
+    }
+    eprintln!("[scroll-finish] saving...");
+    let outcome = save_scroll(&app, &mut st.session).map_err(|e| {
+        eprintln!("[scroll-finish] save FAILED: {e}");
+        e.to_string()
+    })?;
+    eprintln!("[scroll-finish] saved ok: {}", outcome["path"]);
+    destroy_endbar_window(&app);
+    Ok(serde_json::json!({ "needs_review": false, "saved": outcome }))
+}
+
+/// 保存长截图：kind=scroll，manifest 记录段数/人工修正次数（说明书 §4.4 阶段 3）。
+fn save_scroll(app: &AppHandle, session: &mut ScrollSession) -> Result<serde_json::Value, String> {
+    let (w, h, rgba) = session.export();
+    let bmp = CapturedBitmap { width: w, height: h, pixels: rgba, origin: (0, 0) };
+    let png = capture::encode_png(&bmp).map_err(|e| oe(e))?;
+    let s = settings::load();
+    let root = s.save_root();
+    let mut manifest = storage::Manifest {
+        id: String::new(),
+        file: String::new(),
+        kind: "scroll".into(),
+        created_at: storage::now_iso(),
+        width: w,
+        height: h,
+        screen: None,
+        dpi_scale: capture::monitors().first().map(|m| m.dpi_scale).unwrap_or(1.0),
+        screen_layout: Some(capture::screen_layout()),
+        source_window: None,
+        parent_id: None,
+        script_sha256: None,
+        ops_count: None,
+        segments: Some(session.seam_count() as u32 + 1),
+        manual_fixes: Some(session.manual_fix_count()),
+    };
+    let (id, paths) = storage::save_capture(&root, "scroll", &png, &mut manifest).map_err(oe)?;
+    history::upsert_capture(&history::HistoryRow {
+        id: id.clone(),
+        path: paths.png.to_string_lossy().into_owned(),
+        kind: "scroll".into(),
+        created_at: storage::now_iso(),
+        width: w,
+        height: h,
+        ocr_status: "none".into(),
+        ocr_text: String::new(),
+        ocr_preview: String::new(),
+        annotated: false,
+        parent_id: None,
+    })
+    .map_err(oe)?;
+    let clip = clipboard::ClipboardPayload {
+        png: Some(&png),
+        rgba: Some((&bmp.pixels, w, h)),
+        files: vec![paths.png.clone()],
+        text: None,
+    };
+    let clip_ok = clipboard::write(&clip).is_ok();
+    if clip_ok {
+        crate::deliver::toast(
+            app,
+            "success",
+            &format!("长截图已保存 · {} 段 · {}px", session.seam_count() + 1, h),
+        );
+    } else {
+        crate::deliver::toast(app, "warn", "长截图已保存，剪贴板写入失败（退出码 4）");
+    }
+    Ok(serde_json::json!({
+        "id": id,
+        "path": paths.png.to_string_lossy(),
+        "segments": session.seam_count() + 1,
+        "height": h,
+    }))
+}
+
+#[tauri::command]
+pub async fn scroll_cancel(app: AppHandle, session: u64) -> Result<(), String> {
+    scroll_cancel_sync(app, session)
+}
+
+fn scroll_cancel_sync(app: AppHandle, session: u64) -> Result<(), String> {
+    let session = if session == 0 {
+        ACTIVE_SESSION.load(std::sync::atomic::Ordering::SeqCst)
+    } else {
+        session
+    };
+    ACTIVE_SESSION.store(0, std::sync::atomic::Ordering::SeqCst);
+    destroy_endbar_window(&app);
+    // 覆盖层也一并销毁（Esc 取消后不应残留全屏窗口）
+    if let Some(w) = app.get_webview_window("overlay") {
+        let _ = w.destroy();
+    }
+    scrolls().remove(&session);
+    // Esc 取消：不落盘（说明书 §4.4 明确："取消就是取消"）
+    crate::deliver::toast(&app, "success", "已取消长截图");
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn scroll_adjust(
+    session: u64,
+    seam_index: usize,
+    delta: i64,
+) -> Result<serde_json::Value, String> {
+    let mut map = scrolls();
+    let st = map.get_mut(&session).ok_or("会话不存在")?;
+    st.session.adjust_seam(seam_index, delta).map_err(|e| e.to_string())?;
+    let remaining: Vec<usize> = st
+        .session
+        .seams()
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.confidence < once_core::longshot::CONFIDENCE_OK && !s.accepted)
+        .map(|(i, _)| i)
+        .collect();
+    Ok(serde_json::json!({ "ok": true, "remaining": remaining.len(), "height": st.session.content_height() }))
+}
+
+#[tauri::command]
+pub async fn scroll_accept_all(session: u64) -> Result<(), String> {
+    let mut map = scrolls();
+    let st = map.get_mut(&session).ok_or("会话不存在")?;
+    for i in 0..st.session.seam_count() {
+        let _ = st.session.adjust_seam(i, 0);
+    }
+    Ok(())
+}
+
+/// 质检后保存（确认并保存）。
+#[tauri::command]
+pub async fn scroll_save(app: AppHandle, session: u64) -> Result<serde_json::Value, String> {
+    let mut st = {
+        let mut map = scrolls();
+        map.remove(&session).ok_or("会话不存在（可能已结束）")?
+    };
+    let outcome = save_scroll(&app, &mut st.session).map_err(|e| e.to_string())?;
+    // 收尾：结束条/覆盖层/质检页一并销毁（WebView2 拦截 JS window.close()，统一在 Rust 侧关）
+    for label in ["endbar", "overlay", "quality"] {
+        if let Some(w) = app.get_webview_window(label) {
+            let _ = w.destroy();
+        }
+    }
+    Ok(serde_json::json!({ "saved": outcome }))
+}
+
+/// 超长图分段导出（LONG-5）：默认段高 8000，导出为 xxx-partN。
+#[tauri::command]
+pub async fn scroll_export_segments(
+    app: AppHandle,
+    session: u64,
+    segment_height: u32,
+) -> Result<serde_json::Value, String> {
+    let st = {
+        let mut map = scrolls();
+        map.remove(&session).ok_or("会话不存在（可能已结束）")?
+    };
+    let (w, h, rgba) = st.session.export();
+    let seg = segment_height.max(1000) as usize;
+    let rows_total = h as usize;
+    let mut parts: Vec<serde_json::Value> = Vec::new();
+    let mut part_idx = 1;
+    let mut y0 = 0usize;
+    let s = settings::load();
+    let root = s.save_root();
+    let row_bytes = w as usize * 4;
+    while y0 < rows_total {
+        let rows = (rows_total - y0).min(seg);
+        let mut part = Vec::with_capacity(rows * row_bytes);
+        for r in y0..y0 + rows {
+            let start = r * row_bytes;
+            part.extend_from_slice(&rgba[start..start + row_bytes]);
+        }
+        let bmp = CapturedBitmap { width: w, height: rows as u32, pixels: part, origin: (0, 0) };
+        let png = capture::encode_png(&bmp).map_err(|e| oe(e))?;
+        let mut manifest = storage::Manifest {
+            id: String::new(),
+            file: String::new(),
+            kind: "scroll".into(),
+            created_at: storage::now_iso(),
+            width: w,
+            height: rows as u32,
+            screen: None,
+            dpi_scale: 1.0,
+            screen_layout: None,
+            source_window: None,
+            parent_id: None,
+            script_sha256: None,
+            ops_count: None,
+            segments: Some(part_idx as u32),
+            manual_fixes: Some(st.session.manual_fix_count()),
+        };
+        let (_id, paths) = storage::save_capture(&root, "scroll", &png, &mut manifest).map_err(oe)?;
+        parts.push(serde_json::json!({ "path": paths.png.to_string_lossy(), "height": rows as u32 }));
+        part_idx += 1;
+        y0 += rows;
+    }
+    crate::deliver::toast(&app, "success", &format!("已分段导出 {} 部分", parts.len()));
+    Ok(serde_json::json!({ "parts": parts }))
+}
+
+/// 打开接缝质检窗口（只有可疑接缝时才出现——说明书 §4.4 阶段 3）。
+#[tauri::command]
+pub async fn open_quality_window(
+    app: AppHandle,
+    session: u64,
+    width: u32,
+    height: u32,
+    seams: Vec<usize>,
+) -> Result<(), String> {
+    let (session, seams) = if session == 0 {
+        REVIEW
+            .lock()
+            .unwrap()
+            .clone()
+            .ok_or("没有待质检会话".to_string())?
+    } else {
+        (session, seams)
+    };
+    open_quality_sync(&app, session, width, height, seams)
+}
+
+fn open_quality_sync(
+    app: &AppHandle,
+    session: u64,
+    width: u32,
+    height: u32,
+    seams: Vec<usize>,
+) -> Result<(), String> {
+    use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+    if let Some(old) = app.get_webview_window("quality") {
+        let _ = old.destroy();
+    }
+    let seams_q: Vec<String> = seams.iter().map(|s| s.to_string()).collect();
+    let win = WebviewWindowBuilder::new(app, "quality", WebviewUrl::App("quality.html".into()))
+        .title("长截图接缝质检")
+        .decorations(true)
+        .resizable(true)
+        .inner_size(860.0, 560.0)
+        .visible(false)
+        .build()
+        .map_err(|e| e.to_string())?;
+    let _ = win.eval(&format!(
+        "window.__SESSION={{id:{session},width:{width},height:{height},seams:{seams_q:?}}}; if(window.__QC_INIT)window.__QC_INIT();"
+    ));
+    let _ = win.show();
+    Ok(())
+}
+
+/// 质检页取会话参数（避免 eval 注入时序问题）。
+#[tauri::command]
+pub async fn scroll_get_review_session() -> Result<serde_json::Value, String> {
+    let r = REVIEW.lock().unwrap().clone().ok_or("没有待质检会话".to_string())?;
+    let map = scrolls();
+    let st = map.get(&r.0).ok_or("会话不存在")?;
+    let (w, h, _) = st.session.export();
+    Ok(serde_json::json!({ "id": r.0, "seams": r.1, "width": w, "height": h }))
+}
+
+/// 质检页预览：整图缩略（base64 PNG data URL）+ 各接缝当前 y 坐标。
+#[tauri::command]
+pub async fn scroll_preview(session: u64, max_w: u32) -> Result<serde_json::Value, String> {
+    use base64::Engine as _;
+    let map = scrolls();
+    let st = map.get(&session).ok_or("会话不存在")?;
+    let (w, h, rgba) = st.session.export();
+    let img = image::RgbaImage::from_raw(w, h, rgba).ok_or("画布无效")?;
+    let dynimg = image::DynamicImage::ImageRgba8(img);
+    let dynimg = if w > max_w {
+        let nh = (h as f64 * max_w as f64 / w as f64).round() as u32;
+        dynimg.resize_exact(max_w, nh, image::imageops::FilterType::Triangle)
+    } else {
+        dynimg
+    };
+    let mut cur = std::io::Cursor::new(Vec::new());
+    dynimg
+        .write_to(&mut cur, image::ImageFormat::Png)
+        .map_err(|e| e.to_string())?;
+    let url = format!("data:image/png;base64,{}", base64::engine::general_purpose::STANDARD.encode(cur.into_inner()));
+    let seam_ys: serde_json::Map<String, serde_json::Value> = st
+        .session
+        .seams()
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (i.to_string(), serde_json::json!(s.y)))
+        .collect();
+    Ok(serde_json::json!({ "url": url, "seam_ys": seam_ys, "width": w, "height": h }))
+}
+
+// ===== 采集期低级键盘钩子：Enter=完成 / Esc=取消（不依赖窗口焦点）=====
+
+use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetMessageW, SetWindowsHookExW, UnhookWindowsHookEx, CallNextHookEx, KBDLLHOOKSTRUCT,
+    LLKHF_INJECTED, MSG, WH_KEYBOARD_LL, WM_QUIT,
+};
+use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
+use tauri::Emitter;
+
+static HOOK_APP: std::sync::OnceLock<AppHandle> = std::sync::OnceLock::new();
+static HOOK_THREAD_ID: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
+unsafe extern "system" fn scroll_kbd_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if code >= 0 {
+        let kb = &*(lparam.0 as *const KBDLLHOOKSTRUCT);
+        #[cfg(debug_assertions)]
+        if kb.vkCode == 13 || kb.vkCode == 27 {
+            eprintln!("[scroll-hook] vk={} active={}", kb.vkCode, ACTIVE_SESSION.load(std::sync::atomic::Ordering::SeqCst));
+        }
+        // 本产品从不注入键盘事件，无需过滤 injected；会话活跃时才拦截
+        if !scrolls().is_empty() {
+            let enter = windows::Win32::UI::Input::KeyboardAndMouse::VK_RETURN.0 as u32;
+            let esc = windows::Win32::UI::Input::KeyboardAndMouse::VK_ESCAPE.0 as u32;
+            if kb.vkCode == enter || kb.vkCode == esc {
+                let s = ACTIVE_SESSION.load(std::sync::atomic::Ordering::SeqCst);
+                if s != 0 {
+                    let is_enter = kb.vkCode == enter;
+                    if let Some(app) = HOOK_APP.get() {
+                        let app = app.clone();
+                        std::thread::spawn(move || {
+                            // 直接在 Rust 侧完成，不依赖覆盖层 JS/焦点
+                            if is_enter {
+                                let _ = scroll_finish_sync(app, s);
+                            } else {
+                                let _ = scroll_cancel_sync(app, s);
+                            }
+                        });
+                    }
+                }
+                return LRESULT(1); // 吞掉，下层应用不收到
+            }
+        }
+    }
+    CallNextHookEx(None, code, wparam, lparam)
+}
+
+/// 安装采集期键盘钩子（一次即可；会话活跃期间生效）。
+pub fn install_scroll_keyboard_hook(app: &AppHandle) {
+    let _ = HOOK_APP.set(app.clone());
+    if HOOK_THREAD_ID.load(std::sync::atomic::Ordering::SeqCst) != 0 {
+        return; // 已安装
+    }
+    std::thread::spawn(|| unsafe {
+        let hmod = GetModuleHandleW(None).unwrap_or_default();
+        let hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(scroll_kbd_proc), Some(windows::Win32::Foundation::HINSTANCE(hmod.0)), 0);
+        match hook {
+            Ok(_) => eprintln!("[scroll-hook] installed"),
+            Err(e) => {
+                eprintln!("[scroll-hook] install FAILED: {e}");
+                return;
+            }
+        }
+        // 线程 id 仅用于语义标记；卸载依赖进程退出
+        HOOK_THREAD_ID.store(1, std::sync::atomic::Ordering::SeqCst);
+        let mut msg = MSG::default();
+        while GetMessageW(&mut msg, None, 0, 0).as_bool() {
+            if msg.message == WM_QUIT {
+                break;
+            }
+        }
+        let _ = UnhookWindowsHookEx(hook.unwrap());
+    });
+}
+
+#[allow(dead_code)]
+pub fn uninstall_scroll_keyboard_hook() {
+    // 钩子在会话结束后仍拦截 Enter/Esc 会影响系统——
+    // 通过向钩子线程投递退出消息使其自行卸载（当前实现改为常驻直到进程退出，
+    // 依赖 proc 内的"会话活跃"检查保证非采集期不吞键）。
+}
+
+// ===== 人类兜底标注（说明书 §4.7：截完直接画，保存走同一渲染引擎）=====
+
+/// 覆盖层"标注"入口：截选区存为原图（region 资产），返回给前端进入编辑模式。
+#[tauri::command]
+pub async fn annotate_begin(
+    app: AppHandle,
+    screen: usize,
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+) -> Result<serde_json::Value, String> {
+    let monitor = capture::monitors()
+        .into_iter()
+        .find(|m| m.index == screen)
+        .ok_or("显示器不存在".to_string())?;
+    let abs_x = monitor.rect.0 + x;
+    let abs_y = monitor.rect.1 + y;
+    std::thread::sleep(std::time::Duration::from_millis(120)); // 等覆盖层隐藏选区
+    let bmp = capture::capture_region_px(abs_x, abs_y, w, h).map_err(|e| e.to_string())?;
+    let png = capture::encode_png(&bmp).map_err(|e| e.to_string())?;
+    let s = once_core::settings::load();
+    let root = s.save_root();
+    let mut manifest = storage::Manifest {
+        id: String::new(),
+        file: String::new(),
+        kind: "region".into(),
+        created_at: storage::now_iso(),
+        width: bmp.width,
+        height: bmp.height,
+        screen: Some(monitor.index),
+        dpi_scale: capture::monitors().first().map(|m| m.dpi_scale).unwrap_or(1.0),
+        screen_layout: Some(capture::screen_layout()),
+        source_window: None,
+        parent_id: None,
+        script_sha256: None,
+        ops_count: None,
+        segments: None,
+        manual_fixes: None,
+    };
+    let (id, paths) = storage::save_capture(&root, "region", &png, &mut manifest).map_err(|e| e.to_string())?;
+    history::upsert_capture(&history::HistoryRow {
+        id: id.clone(),
+        path: paths.png.to_string_lossy().into_owned(),
+        kind: "region".into(),
+        created_at: storage::now_iso(),
+        width: bmp.width,
+        height: bmp.height,
+        ocr_status: "none".into(),
+        ocr_text: String::new(),
+        ocr_preview: String::new(),
+        annotated: false,
+        parent_id: None,
+    })
+    .map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "id": id,
+        "path": paths.png.to_string_lossy(),
+        "width": bmp.width,
+        "height": bmp.height,
+    }))
+}
+
+/// 保存标注：script（px 坐标，相对原图）→ 渲染 → 衍生图 + manifest + 剪贴板 + toast。
+#[tauri::command]
+pub async fn annotate_save(
+    app: AppHandle,
+    base_path: String,
+    script: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    use once_core::annotate;
+    let path = std::path::PathBuf::from(&base_path);
+    let png = std::fs::read(&path)
+        .map_err(|e| format!("读取原图失败：{e}"))?;
+    let script_parsed: annotate::AnnotationScript = serde_json::from_value(script)
+        .map_err(|e| format!("标注脚本解析失败：{e}"))?;
+    let script_bytes = serde_json::to_vec(&script_parsed).unwrap_or_default();
+
+    // 衍生图命名 -ann/-ann2…，永不覆盖原图
+    let out = storage::derivative_png_path(&path);
+
+    let settings = once_core::settings::load();
+    let anchors = annotate::load_anchor_blocks(&path);
+    let rendered = annotate::render(&annotate::RenderInput {
+        png: &png,
+        script: &script_parsed,
+        anchor_blocks: anchors.as_deref(),
+        defaults: &settings.annotation,
+    })
+    .map_err(|e| e.to_string())?;
+    storage::write_atomic(&out, &rendered.png).map_err(|e| e.to_string())?;
+
+    // 记录衍生表 + manifest（与 CLI annotate_impl 相同语义）
+    let parent_id = history::get_by_id_or_path(&path.to_string_lossy())
+        .map(|r| r.id)
+        .unwrap_or_default();
+    let script_hash = {
+        use sha2::{Digest, Sha256};
+        let mut h = Sha256::new();
+        h.update(&script_bytes);
+        h.finalize().iter().map(|b| format!("{b:02x}")).collect::<String>()
+    };
+    let stem = out.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let did = format!(
+        "{}#{}",
+        out.parent().and_then(|p| p.file_name()).map(|s| s.to_string_lossy().into_owned()).unwrap_or_default(),
+        stem
+    );
+    history::upsert_derivative(&history::DerivativeRow {
+        id: did.clone(),
+        parent_id: parent_id.clone(),
+        path: out.to_string_lossy().into_owned(),
+        ops_count: script_parsed.operations.len() as u32,
+        script_sha256: script_hash.clone(),
+        created_at: storage::now_iso(),
+    })
+    .map_err(|e| e.to_string())?;
+
+    let parent_manifest: serde_json::Value = std::fs::read(path.with_extension("json"))
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or(serde_json::Value::Null);
+    let manifest = serde_json::json!({
+        "id": did,
+        "file": out.file_name().map(|s| s.to_string_lossy()).unwrap_or_default(),
+        "kind": "annotated",
+        "created_at": storage::now_iso(),
+        "width": rendered.width,
+        "height": rendered.height,
+        "parent_id": parent_id,
+        "parent_file": path.file_name().map(|s| s.to_string_lossy()).unwrap_or_default(),
+        "script_sha256": script_hash,
+        "ops_count": script_parsed.operations.len(),
+        "inherits": parent_manifest,
+    });
+    let json_path = out.with_extension("json");
+    let _ = storage::write_atomic(&json_path, &serde_json::to_vec_pretty(&manifest).unwrap_or_default());
+
+    // 剪贴板 + toast（复制图片 + 文件路径）
+    let clip = clipboard::ClipboardPayload {
+        png: Some(&rendered.png),
+        rgba: None,
+        files: vec![out.clone()],
+        text: None,
+    };
+    if clipboard::write(&clip).is_ok() {
+        crate::deliver::toast(&app, "success", &format!("已保存标注 · {} 个操作", script_parsed.operations.len()));
+    } else {
+        crate::deliver::toast(&app, "warn", "标注已保存，剪贴板写入失败（退出码 4）");
+    }
+    Ok(serde_json::json!({
+        "id": did,
+        "path": out.to_string_lossy(),
+        "ops_count": script_parsed.operations.len(),
+    }))
+}
+
+/// 从历史「编辑」进入：待打开的底图路径（一次消费）。
+static ANN_FILE: StdMutex<Option<String>> = StdMutex::new(None);
+
+/// 主面板「编辑」：以既有图片为底图打开覆盖层标注编辑器（衍生图会显示 lineage 横幅）。
+#[tauri::command]
+pub async fn annotate_open_file(app: AppHandle, path: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    if !p.exists() {
+        return Err(format!("文件不存在：{path}"));
+    }
+    *ANN_FILE.lock().unwrap() = Some(path);
+    crate::launch_overlay(app, "annotate".to_string()).await
+}
+
+/// 覆盖层编辑器启动时取底图信息（含 lineage：衍生图回传 parent_file）。
+#[tauri::command]
+pub fn annotate_file_payload() -> Result<Option<serde_json::Value>, String> {
+    let Some(path) = ANN_FILE.lock().unwrap().take() else {
+        return Ok(None);
+    };
+    let bytes = std::fs::read(&path).map_err(|e| format!("读取失败：{e}"))?;
+    let (w, h, _) = once_core::capture::decode_png(&bytes).map_err(|e| e.to_string())?;
+    let p = std::path::Path::new(&path);
+    let stem = p.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    // lineage：衍生图（-annN / -ann 后缀）读取同目录 manifest 的 parent_file
+    let parent_file = if stem.contains("-ann") {
+        let manifest_path = p.with_extension("json");
+        std::fs::read(&manifest_path)
+            .ok()
+            .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+            .and_then(|m| m.get("parent_file").and_then(|v| v.as_str()).map(|s| s.to_string()))
+    } else {
+        None
+    };
+    Ok(Some(serde_json::json!({
+        "path": path,
+        "width": w,
+        "height": h,
+        "parent": parent_file,
+    })))
+}
+
+/// 冻结画面（同类产品 手感核心）：进入截图时抓全屏一次；BGRA 留内存供裁剪/取色，
+/// PNG 写临时文件供覆盖层显示。选区所见即冻结所得，不受实时桌面变化影响。
+struct FreezeFrame {
+    rgba: Vec<u8>,
+    width: u32,
+    height: u32,
+    origin: (i32, i32),
+    path: std::path::PathBuf,
+}
+static FREEZE: StdMutex<Option<FreezeFrame>> = StdMutex::new(None);
+
+#[tauri::command]
+pub async fn freeze_begin() -> Result<serde_json::Value, String> {
+    // 编码全屏 JPEG 较重，移出主线程避免界面卡顿
+    tauri::async_runtime::spawn_blocking(freeze_begin_inner)
+        .await
+        .map_err(|e| format!("join error: {e}"))?
+}
+
+fn freeze_begin_inner() -> Result<serde_json::Value, String> {
+    let m = capture::monitors()
+        .into_iter()
+        .next()
+        .ok_or_else(|| "无显示器".to_string())?;
+    let (sx, sy, sw, sh) = m.rect;
+    let bmp = capture::capture_region_px(sx, sy, sw as u32, sh as u32).map_err(oe)?;
+    // 预览用 JPEG data URL（asset 协议作用域不含 TEMP，data URL 100% 可加载）；
+    // 精确裁剪/取色走内存 BGRA，不受预览压缩影响。
+    let preview = {
+        let img = image::load_from_memory(&capture::encode_png(&bmp).map_err(oe)?)
+            .map_err(|e| e.to_string())?;
+        let mut jout = std::io::Cursor::new(Vec::new());
+        img.write_to(&mut jout, image::ImageFormat::Jpeg).map_err(|e| e.to_string())?;
+        format!("data:image/jpeg;base64,{}", crate::base64_encode(&jout.into_inner()))
+    };
+    *FREEZE.lock().unwrap() = Some(FreezeFrame {
+        rgba: bmp.pixels,
+        width: bmp.width,
+        height: bmp.height,
+        origin: (sx, sy),
+        path: std::env::temp_dir().join("onceglance-freeze.png"),
+    });
+    Ok(serde_json::json!({
+        "dataUrl": preview,
+        "width": bmp.width,
+        "height": bmp.height,
+    }))
+}
+
+
+/// 冻结取色：返回光标处物理像素颜色 (r,g,b,hex)
+#[tauri::command]
+pub fn freeze_pixel(x: i32, y: i32) -> Result<serde_json::Value, String> {
+    let g = FREEZE.lock().unwrap();
+    let Some(f) = g.as_ref() else { return Err("冻结画面不存在".into()) };
+    let lx = x - f.origin.0;
+    let ly = y - f.origin.1;
+    if lx < 0 || ly < 0 || lx >= f.width as i32 || ly >= f.height as i32 {
+        return Err("坐标越界".into());
+    }
+    let idx = (ly as usize * f.width as usize + lx as usize) * 4;
+    let (r, gg, b) = (f.rgba[idx], f.rgba[idx + 1], f.rgba[idx + 2]);
+    Ok(serde_json::json!({ "r": r, "g": gg, "b": b, "hex": format!("#{:02X}{:02X}{:02X}", r, gg, b) }))
+}
+
+/// 冻结裁剪：把选区从冻结帧裁出，按 region 原图落盘并写历史（截图=标注一个动作的底图）。
+#[tauri::command]
+pub fn freeze_take_region(
+    app: AppHandle,
+    screen: usize,
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+) -> Result<serde_json::Value, String> {
+    let monitor = capture::monitors()
+        .into_iter()
+        .find(|m| m.index == screen)
+        .ok_or("显示器不存在".to_string())?;
+    let g = FREEZE.lock().unwrap();
+    let Some(f) = g.as_ref() else { return Err("冻结画面不存在".into()) };
+    let lx = (x - f.origin.0).clamp(0, f.width as i32 - 1);
+    let ly = (y - f.origin.1).clamp(0, f.height as i32 - 1);
+    let w = w.min(f.width - lx as u32);
+    let h = h.min(f.height - ly as u32);
+    let stride = f.width as usize * 4;
+    let mut cropped = Vec::with_capacity(w as usize * h as usize * 4);
+    for row in 0..h as usize {
+        let start = (ly as usize + row) * stride + lx as usize * 4;
+        cropped.extend_from_slice(&f.rgba[start..start + w as usize * 4]);
+    }
+    let bmp = capture::CapturedBitmap { pixels: cropped, width: w, height: h, origin: f.origin };
+    let png = capture::encode_png(&bmp).map_err(oe)?;
+
+    let s = once_core::settings::load();
+    let root = s.save_root();
+    let mut manifest = storage::Manifest {
+        id: String::new(),
+        file: String::new(),
+        kind: "region".into(),
+        created_at: storage::now_iso(),
+        width: w,
+        height: h,
+        screen: Some(monitor.index),
+        dpi_scale: capture::monitors().first().map(|m| m.dpi_scale).unwrap_or(1.0),
+        screen_layout: Some(capture::screen_layout()),
+        source_window: None,
+        parent_id: None,
+        script_sha256: None,
+        ops_count: None,
+        segments: None,
+        manual_fixes: None,
+    };
+    let (id, paths) = storage::save_capture(&root, "region", &png, &mut manifest).map_err(|e| e.to_string())?;
+    let _ = history::upsert_capture(&history::HistoryRow {
+        id: id.clone(),
+        path: paths.png.to_string_lossy().into_owned(),
+        kind: "region".into(),
+        created_at: storage::now_iso(),
+        width: w,
+        height: h,
+        ocr_status: "none".into(),
+        ocr_text: String::new(),
+        ocr_preview: String::new(),
+        annotated: false,
+        parent_id: None,
+    });
+    Ok(serde_json::json!({
+        "id": id,
+        "path": paths.png.to_string_lossy(),
+        "width": w,
+        "height": h,
+    }))
+}
+
+/// 冻结交付：从冻结帧裁剪选区 → 走标准 deliver（落盘+剪贴板+取字/OCR+审计）。
+/// action: copy | ocr。保证"所见即所得"——不受实时桌面已变化影响。
+/// 必须为 async：deliver 内部 toast 会创建窗口，同步命令阻塞主线程会造成死锁。
+#[tauri::command]
+pub async fn freeze_deliver(
+    app: AppHandle,
+    screen: usize,
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+    action: String,
+) -> Result<serde_json::Value, String> {
+    let g = FREEZE.lock().unwrap();
+    let Some(f) = g.as_ref() else { return Err("冻结画面不存在".into()) };
+    let lx = (x - f.origin.0).clamp(0, f.width as i32 - 1);
+    let ly = (y - f.origin.1).clamp(0, f.height as i32 - 1);
+    let w = w.min(f.width - lx as u32);
+    let h = h.min(f.height - ly as u32);
+    let stride = f.width as usize * 4;
+    let mut cropped = Vec::with_capacity(w as usize * h as usize * 4);
+    for row in 0..h as usize {
+        let start = (ly as usize + row) * stride + lx as usize * 4;
+        cropped.extend_from_slice(&f.rgba[start..start + w as usize * 4]);
+    }
+    drop(g);
+    let bmp = capture::CapturedBitmap { pixels: cropped, width: w, height: h, origin: (x, y) };
+    let outcome = crate::deliver::deliver_capture(&app, "region", &action, &bmp, Some(screen), None)
+        .map_err(|e| e.message)?;
+    Ok(serde_json::to_value(outcome).unwrap_or_default())
+}

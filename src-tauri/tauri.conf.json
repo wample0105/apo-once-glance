@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Onceglance",
+  "version": "0.1.0",
+  "identifier": "com.wample.onceglance",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "定影 Onceglance",
+        "url": "index.html",
+        "width": 780,
+        "height": 560,
+        "minWidth": 680,
+        "minHeight": 520,
+        "decorations": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**/assets/logo/**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/icon.ico"],
+    "resources": ["../assets/logo/*", "../assets/logo/png/*"]
+  }
+}

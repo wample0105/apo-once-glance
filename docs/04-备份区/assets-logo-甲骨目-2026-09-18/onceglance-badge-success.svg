@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="一目 已保存">
+<title>一目 已保存</title>
+  <circle cx="12" cy="12" r="11" fill="#FF3B30"/>
+  <path d="M4.6 12C6.2 9.4 8.9 8.1 12 8.1C15.1 8.1 17.8 9.4 19.4 12C17.8 14.6 15.1 15.9 12 15.9C8.9 15.9 6.2 14.6 4.6 12Z" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M12 9.8V14.2" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+</svg>

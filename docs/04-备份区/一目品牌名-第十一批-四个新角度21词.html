@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一目 · 中文名第十一批：四个新角度，21 词实测</title>
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F7F7F8; --bg3:#EFEFF1;
+  --tx:#1D1D21; --tx2:#5C5C66; --tx3:#8E8E99;
+  --bd:#E4E4E8; --bd2:#D2D2D8;
+  --accent:#FF3B30;
+  --ok:#0F6E56; --okbg:#E1F5EE;
+  --warn:#854F0B; --warnbg:#FAEEDA;
+  --risk:#A32D2D; --riskbg:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg3); color:var(--tx);
+  font-family:-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+  font-size:14px; line-height:1.7;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:40px 24px 80px}
+header.top{
+  background:var(--bg); border-radius:16px; padding:36px 40px;
+  border:1px solid var(--bd); margin-bottom:28px;
+}
+h1{font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:.5px}
+.sub{color:var(--tx2); font-size:15px; margin:0 0 20px}
+.note{
+  background:var(--bg2); border-radius:var(--r); padding:16px 18px;
+  font-size:13px; color:var(--tx2); margin-top:18px;
+}
+.note b{color:var(--tx); font-weight:600}
+section{
+  background:var(--bg); border-radius:16px; padding:32px 40px;
+  border:1px solid var(--bd); margin-bottom:24px;
+}
+h2{
+  font-size:19px; font-weight:600; margin:0 0 6px;
+  padding-bottom:14px; border-bottom:1px solid var(--bd);
+}
+h2 .num{color:var(--accent); font-weight:600; margin-right:8px}
+h3{font-size:15px; font-weight:600; margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{color:var(--tx2); font-size:13.5px; margin:14px 0 22px}
+
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{
+  text-align:left; font-weight:600; color:var(--tx2); font-size:12px;
+  letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--bd2);
+  background:var(--bg2);
+}
+td{padding:10px; border-bottom:1px solid var(--bd); vertical-align:top}
+td.kill{color:var(--risk); font-weight:600; white-space:nowrap}
+td.keep{color:var(--ok); font-weight:600; white-space:nowrap}
+td.rev{color:var(--warn); font-weight:600; white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--tx2)}
+.lin{background:var(--bg2);font-size:12px;color:var(--tx2);letter-spacing:.4px}
+
+.card{
+  border:1px solid var(--bd); border-radius:14px; padding:28px 30px;
+  margin-bottom:20px; background:var(--bg);
+}
+.card.pick{border:2px solid var(--accent)}
+.chead{display:flex; align-items:center; gap:16px; margin-bottom:6px; flex-wrap:wrap}
+.nm{font-size:30px; font-weight:600; letter-spacing:4px; line-height:1.2}
+.py{font-size:13px; color:var(--tx3); letter-spacing:.6px; margin-left:2px}
+.tag{
+  font-size:11.5px; padding:3px 9px; border-radius:20px;
+  background:var(--bg3); color:var(--tx2); letter-spacing:.3px;
+}
+.tag.pick{background:var(--accent); color:#fff; font-weight:600}
+.tag.ok{background:var(--okbg); color:var(--ok)}
+.tag.warn{background:var(--warnbg); color:var(--warn)}
+.tag.risk{background:var(--riskbg); color:var(--risk)}
+.quote{
+  border-left:3px solid var(--accent); padding:10px 0 10px 16px;
+  margin:16px 0; color:var(--tx); font-size:13.5px; line-height:1.8;
+}
+.quote cite{display:block; color:var(--tx3); font-size:12px; font-style:normal; margin-top:6px; letter-spacing:.3px}
+.map{width:100%; border-collapse:collapse; margin:16px 0; font-size:13px}
+.map td{border:1px solid var(--bd); padding:9px 12px}
+.map td:first-child{background:var(--bg2); color:var(--tx2); width:38%; font-size:12.5px}
+.map td:last-child{color:var(--tx)}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.box{background:var(--bg2); border-radius:var(--r); padding:14px 16px; font-size:13px}
+.box h3{font-size:12.5px; color:var(--tx2); letter-spacing:.4px; margin-bottom:8px}
+.box ul{margin:0; padding-left:17px; color:var(--tx)}
+.box li{margin-bottom:5px}
+.box li:last-child{margin-bottom:0}
+.foot{
+  margin-top:18px; padding-top:14px; border-top:1px solid var(--bd);
+  font-size:12.5px; color:var(--tx2);
+}
+.foot b{color:var(--tx); font-weight:600}
+
+/* 四次验证 */
+.verify{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:18px 0 6px}
+.vf{border:1px solid var(--bd); border-radius:12px; padding:14px 15px; background:var(--bg2)}
+.vf .bd2{font-size:11px; color:var(--tx3); letter-spacing:.4px; margin-bottom:6px}
+.vf h3{font-size:13.5px; margin-bottom:8px; line-height:1.4}
+.vf .row{font-size:11.5px; color:var(--tx2); line-height:1.6; padding:4px 0; border-top:1px dashed var(--bd2)}
+.vf .row:first-of-type{border-top:none}
+.vf .z{color:var(--risk); font-weight:600}
+.vf .o{color:var(--ok); font-weight:600}
+
+/* 条形图 */
+.bars{margin:8px 0 4px}
+.bar{display:flex; align-items:center; gap:12px; margin-bottom:12px}
+.bl{flex:0 0 200px; font-size:12.5px; color:var(--tx2); text-align:right}
+.bt{flex:1; height:26px; background:var(--bg2); border-radius:6px; overflow:hidden; position:relative}
+.bf{height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:9px; color:#fff; font-size:12px; font-weight:600; letter-spacing:.3px}
+.bf.a{background:var(--accent)}
+.bf.c{background:var(--ok)}
+.bf.d{background:var(--warn)}
+.bv{flex:0 0 92px; font-size:12px; color:var(--tx2)}
+
+/* 序列 */
+.route{
+  border:1px solid var(--bd); border-radius:14px; padding:20px 24px;
+  margin-bottom:14px;
+}
+.route.pick{border:2px solid var(--accent); background:#FFF9F9}
+.rh{display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap}
+.rk{
+  flex:0 0 34px; height:34px; border-radius:10px; background:var(--bg3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:600; color:var(--tx2);
+}
+.route.pick .rk{background:var(--accent); color:#fff}
+.rh h3{margin:0; font-size:15.5px}
+.chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
+.chip{
+  font-size:13.5px; padding:4px 12px; border-radius:20px;
+  background:var(--bg2); color:var(--tx); border:1px solid var(--bd);
+  letter-spacing:1px;
+}
+.chip.new{background:#FFF1F0; color:var(--accent); border-color:#FFD5D2; font-weight:600}
+.chip.off{background:var(--bg2); color:var(--tx3); border-style:dashed}
+.route p{margin:0; font-size:13px; color:var(--tx2)}
+
+.rank{display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid var(--bd); font-size:13.5px}
+.rank:last-child{border-bottom:none}
+.rnum{flex:0 0 26px; height:26px; border-radius:8px; background:var(--bg3); color:var(--tx2); font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center}
+.rank.top .rnum{background:var(--accent); color:#fff}
+.rank .rn{font-weight:600; letter-spacing:2px; min-width:72px}
+.rank .rs{color:var(--tx2); font-size:12.5px; flex:1}
+.rank.new{background:#FFF9F9}
+
+.figcap{font-size:12.5px; color:var(--tx2); margin-top:6px; line-height:1.75}
+.figcap b{color:var(--tx)}
+ol.steps{padding-left:20px; margin:12px 0 0}
+ol.steps li{margin-bottom:9px; font-size:13.5px}
+ol.steps li b{font-weight:600}
+code{
+  background:var(--bg2); border:1px solid var(--bd); border-radius:5px;
+  padding:1px 6px; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;
+}
+@media (max-width:820px){
+  .verify{grid-template-columns:1fr 1fr}
+  .cols{grid-template-columns:1fr}
+  .wrap{padding:24px 14px 60px}
+  header.top,section{padding:24px 20px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>四个还没碰过的角度</h1>
+  <p class="sub">中文名第十一批 · 实测 21 个 · 7 个红灯、2 个黄灯、12 个在公开渠道上还是空的</p>
+  <p style="margin:0;color:var(--tx2);font-size:13.5px">
+    前十批找的是"谁在看、谁在报、谁在动手"。这一批换到更外层，问四个不一样的问题：<br>
+    <b>截图本质是把这一瞬间留住</b>——那"把影子固定住"怎么说？<br>
+    <b>标注本质是画一条准线</b>——那木工的墨斗算不算？<br>
+    <b>产出是教程</b>——那"范本图册"的古典名呢？<br>
+    <b>产品在做校字和整理</b>——那管书校字的官职呢？<br>
+    结果：<b>越描述"影像"的词，撞得越狠；越是"职位名"，越干净。这已经是第四次验证同一条规律了。</b>
+  </p>
+  <div class="note">
+    <b>筛到什么程度，我先说清楚：</b>每个名字都跑了公开渠道（阿里云商标、标库网、路标网、企查查、启信宝、爱企查、知客网、支付子、猪八戒知识产权）的第 9 类检索，查到障碍的写清撞到谁、注册号多少、商品项原文有没有软件。没查到的写"未见占用"。<b>但这不等于能注册</b>——公开渠道有盲查期、有更新延迟，最终必须去商标局官网自己查一遍。<b>本批有一个词不是商标问题、是词义问题（校书），还有一个词我明确没查透（尺幅），下面都单独说了。</b>
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span>四条线，21 个词，一次看完</h2>
+  <p class="lead">
+    四条线各回答一个问题，全部围绕"截图这件事到底是怎么发生的"。
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:10%">名字</th><th style="width:14%">它说的那件事</th><th>第 9 类实测</th><th style="width:9%">判定</th></tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="4" class="lin">线 A · 把这一瞬间的影子固定住（摄影术的古典说法）</td></tr>
+      <tr>
+        <td><b>定影</b><br><span class="mono">dìng yǐng</span></td>
+        <td>显影之后把影像固定住，使它不再变化</td>
+        <td><b>第 9 类未见占用。</b>其他类别：「定影」第 35 类 <span class="mono">26500220</span>（云南定影文化传播，2018-09-07 至 2028-09-06，广告片制作 / 在线广告 / 广告代理 / 广告设计等一整套 35 类服务）；第 1 类有"定影液（摄影用）"，属化学原料。<b>没有软件类商品。</b></td>
+        <td class="keep">绿灯</td>
+      </tr>
+      <tr>
+        <td><b>留影</b><br><span class="mono">liú yǐng</span></td>
+        <td>"到此一游留个影"，把影像留下来</td>
+        <td><b>第 9 类 <span class="mono">19324584</span></b>（<b>广州新米网络科技有限公司</b>，2017-04-21 至 2027-04-20）。商品项原文未在公开渠道展开，但<b>该司正是"留影音乐相册"App 的运营方</b>（电子相册制作 / 音乐相册 / 幻灯片 / 图文编辑排版 / 照片配字 / 照片冲印），同申请人另有 28 / 35 / 38 / 41 / 16 / 36 / 42 类"留影"注册。<b>这不只是撞商标，是功能部分重叠——它也做"图文编辑排版"。</b></td>
+        <td class="kill">红灯</td>
+      </tr>
+      <tr>
+        <td><b>显影</b><br><span class="mono">xiǎn yǐng</span></td>
+        <td>让底片上的潜影显现出来</td>
+        <td><b>第 9 类两件，均待审中、均含软件项：</b><br>① <span class="mono">86398206</span>（深圳智林科技，申请日 2025-07-09），商品项原文含 <b>可下载的手机应用软件、可下载的计算机应用软件</b>、个人数字助理(PDA)、平板电脑用套、数据处理设备等；<br>② 「青藤显影」<span class="mono">89098275</span>（北京升鑫网络科技，申请日 2025-12-11），商品项原文含 <b>可下载的手机应用软件、可下载的计算机应用软件、可下载的计算机游戏软件、已录制的计算机操作程序、已录制的计算机程序、计算机程序(可下载软件)</b>。</td>
+        <td class="kill">红灯</td>
+      </tr>
+      <tr>
+        <td><b>即景</b><br><span class="mono">jí jǐng</span></td>
+        <td>"即景诗""即景摄影"，就着眼前的景物来</td>
+        <td><b>第 9 类未见占用。</b>其他类别：第 30 类 <span class="mono">47851091</span>（云南君如悦投资，2021-02-21 至 2031-02-20，咖啡茶）、第 25 类「当下即景」<span class="mono">24610718</span>、第 12 类「所见即景」<span class="mono">39426421</span>、第 24 类 <span class="mono">43120610</span>。均不含软件项。（市面有"即景"社交 App，但未查到对应第 9 类注册）</td>
+        <td class="keep">绿灯</td>
+      </tr>
+      <tr>
+        <td><b>感光</b><br><span class="mono">gǎn guāng</span></td>
+        <td>受光起变化——胶片成像的第一步</td>
+        <td><b>第 9 类两件，全是硬件，不含软件项：</b>① 「高业感光」<span class="mono">64456597</span>（北京北方高业科技，2023-02-21 至 2033-02-20）：热成像相机、探测器、红外探测器、望远镜、半导体、半导体器件、电子芯片、集成电路用晶片；② 「中科感光 ZHKEGU」<span class="mono">27590490</span>：光学数据介质、光通讯设备、感应器(电)、荧光屏、光导纤维、半导体等——<b>该件已于 2022-04-13 第 1787 期注销公告注销</b>。</td>
+        <td class="rev">黄灯</td>
+      </tr>
+      <tr>
+        <td><b>映真</b><br><span class="mono">yìng zhēn</span></td>
+        <td>映出真实的样子</td>
+        <td><b>第 9 类「山海映真」<span class="mono">83261232</span></b>（湖南芒果数智艺术科技，2025-07-28 至 2035-07-27），商品项原文含 <b>处理数字图像用计算机软件、编辑图像声音和视频用计算机程序、创建和编辑音乐和声音用计算机软件、已录制的计算机程序、计算机软件(已录制)</b>——<b>全是软件项，而且正是图像处理方向</b>。另一件「映真映美」<span class="mono">70227360</span> 为投影仪/扫描仪等硬件，不挡。</td>
+        <td class="kill">红灯</td>
+      </tr>
+      <tr>
+        <td><b>寸阴</b><br><span class="mono">cùn yīn</span></td>
+        <td>"一寸光阴"——极短的那段时间</td>
+        <td><b>第 9 类未见"寸阴"占用。</b>近似标：第 41 类「寸光阴」<span class="mono">73031642</span>、第 39 类 <span class="mono">28679176</span>、第 44 类 <span class="mono">25249874</span>、第 10 类 <span class="mono">25247631</span>、第 40 类 <span class="mono">76277454</span>，第 41 类「寸阴攻略」，第 24 类「寸阴日记」——<b>全是加字的近似标，精确"寸阴"两个字未在第 9 类见到。</b></td>
+        <td class="keep">绿灯</td>
+      </tr>
+
+      <tr><td colspan="4" class="lin">线 B · 用手一弹，一条准线就出来了（木工墨线）</td></tr>
+      <tr>
+        <td><b>绳墨</b><br><span class="mono">shéng mò</span></td>
+        <td>木工拉的墨线；引申为规矩、法度、准绳</td>
+        <td><b>第 9 类 <span class="mono">70852172</span></b>，申请人是<b>中国农业银行股份有限公司山西省分行</b>（2023-10-07 至 2033-10-06）。商品项原文含 <b>已录制的或可下载的数据集、用于授权访问数据库的计算机软件、数据库管理用计算机软件、深度学习领域用于数据收集分析和整理的可下载计算机软件、计算机软件(已录制)、可下载的手机应用软件</b>、电子出版物(可下载)等——<b>整套软件项，而且是银行在持有。</b>另一件 <span class="mono">42511818</span>（王锦，2020-07-28 至 2030-07-27）为体重秤 / 裁缝用尺 / 量具 / 刻度尺 / 游标卡尺，<b>硬件不挡</b>。</td>
+        <td class="kill">红灯</td>
+      </tr>
+      <tr>
+        <td><b>墨斗</b><br><span class="mono">mò dǒu</span></td>
+        <td>弹线的工具：斗里装墨，线一弹就留下一道直墨线</td>
+        <td><b>第 9 类 <span class="mono">91998954</span></b>（申请日 <b>2026-05-25</b>，待审中）。商品项原文含 <b>可下载的手机应用软件、用于使用人工智能从文本生成图像的可下载计算机软件、计算机软件(已录制)</b>、读出器(数据处理设备)、人脸识别设备、销售终端机(POS机)、科学研究用具有人工智能的人形机器人等——<b>这是正在做 AI 的人，2026 年 5 月刚递交。</b>另一件 <span class="mono">20119516</span>（深圳市墨斗智汇科技，2017-07-14 至 2027-07-13）为计算机 / 考勤机 / 电子芯片 / 报警器 / 电锁，<b>硬件不挡</b>。</td>
+        <td class="kill">红灯</td>
+      </tr>
+      <tr>
+        <td><b>准绳</b><br><span class="mono">zhǔn shéng</span></td>
+        <td>测定平直的器具；引申为标准、准则</td>
+        <td><b>第 9 类 <span class="mono">38740688</span></b>（山东易之林文化科技，申请日 2019-06-08），<b>当前状态：商标无效｜初审驳回</b>。商品项原文含 <b>计算机程序(可下载软件)、可下载的计算机应用软件、已录制的计算机程序、可下载的手机应用软件</b>、可下载的计算机游戏软件、智能眼镜(数据处理)等——<b>含全套软件项，但该件已被驳回、未获准注册。</b>另第 45 类 <span class="mono">35924092</span> 已注册（2019-09-07 至 2029-09-06），含 4506-计算机软件许可(法律服务)——<b>属法律服务，不是软件产品。</b></td>
+        <td class="rev">黄灯</td>
+      </tr>
+      <tr>
+        <td><b>引绳</b><br><span class="mono">yǐn shéng</span></td>
+        <td>拉直墨绳</td>
+        <td><b>第 9 类未见占用。</b>其他类别：第 45 类 <span class="mono">58171831</span>（黄俭，2022-02-07 至 2032-02-06）、第 41 类 <span class="mono">58178653</span>、第 26 类「女娲引绳」<span class="mono">65600492</span>（蒋洪卫）。均不含软件项。</td>
+        <td class="keep">绿灯</td>
+      </tr>
+      <tr>
+        <td><b>方寸</b><br><span class="mono">fāng cùn</span></td>
+        <td>一寸见方——"方寸之地"，也指心</td>
+        <td><b>第 9 类多件，全部含软件项：</b>① <span class="mono">9061656</span>（深圳联合至善科技，2022-01-28 至 2032-01-27）含 <b>电脑软件(录制好的)</b>、扫描仪、电子字典、电子出版物(可下载)；② <span class="mono">55179900</span>（同公司）含 <b>计算机软件(已录制)</b>、笔记本电脑、扫描仪；③ <span class="mono">57059514</span>（广州市方寸创意科技）含 <b>可下载的手机应用软件、可下载的计算机应用软件</b>；④ <span class="mono">76772020</span>（王思博）含 <b>计算机程序(可下载软件)、可下载的计算机程序、计算机软件应用程序(可下载)</b>。<b>四件围死。注意第一家是做扫描仪的。</b></td>
+        <td class="kill">红灯</td>
+      </tr>
+      <tr>
+        <td><b>尺幅</b><br><span class="mono">chǐ fú</span></td>
+        <td>一尺大小的画面；"尺幅千里"，小幅装下千里江山</td>
+        <td><b>第 9 类未召回任何记录。</b>但要说清：多轮检索（"尺幅 商标 第9类 计算机软件"、"尺幅 商标 企查查"、"尺幅 商标"）<b>全部只返回商标分类科普页，没有召回到任何"尺幅"的详情页</b>——连其他类别都没召回。这属于<b>"没查到"而不是"查干净了"</b>，必须官网复核。</td>
+        <td class="rev">待查</td>
+      </tr>
+      <tr>
+        <td><b>片玉</b><br><span class="mono">piàn yù</span></td>
+        <td>"昆山片玉"——一小片美玉，难得的精品</td>
+        <td><b>第 9 类未见占用。</b>其他类别：第 31 类 <span class="mono">50143950</span>（俞瑛，2021-06-07 至 2031-06-06）、第 6 类 <span class="mono">53315322</span>（广东超迈五金）、第 8 类 <span class="mono">53607486</span>（俞瑛）、第 42 类 <span class="mono">53604652</span>（俞瑛）。均不含软件项。</td>
+        <td class="keep">绿灯</td>
+      </tr>
+
+      <tr><td colspan="4" class="lin">线 C · 管书、校字、修书的官职（第九批同族，但换了方向）</td></tr>
+      <tr>
+        <td><b>校书</b><br><span class="mono">jiào shū</span></td>
+        <td>校勘书籍；"校书郎"，掌校理典籍的官</td>
+        <td><b>第 9 类 <span class="mono">16433896</span></b>（中国高等教育国际集团有限公司，申请日 2015-03-03），<b>商品项原文照抄：电子字典、电子图书阅读器、计算机软件(已录制)、电子出版物(可下载)、智能卡(集成电路卡)、已录制的计算机操作程序、可下载的音乐文件、可下载的影像文件、可下载的计算机应用软件、幻灯片(照相)、计算机游戏软件、已录制的计算机程序(程序)、计算机程序(可下载软件)</b>——<b>整套软件项一个不落。</b>专用权截止 2026-08-13，已逾名义到期约一个月，处续展宽展窗内，页面状态仍显"注册"。<b>但就算它腾出来，这个词也不该用——原因见下方专节。</b></td>
+        <td class="kill">红灯</td>
+      </tr>
+      <tr>
+        <td><b>编修</b><br><span class="mono">biān xiū</span></td>
+        <td>翰林院官职，掌修国史、编纂书籍</td>
+        <td><b>第 9 类未见占用；全部类别都未查到"编修"作商标的公开记录。</b>（注：检索可见范围内只见到修史 / 出版语境的使用，未召回任何商标详情页）</td>
+        <td class="keep">绿灯</td>
+      </tr>
+      <tr>
+        <td><b>典签</b><br><span class="mono">diǎn qiān</span></td>
+        <td>南朝官名，掌文书签押、传递</td>
+        <td><b>第 9 类未见占用；全部类别都未查到。</b>检索只返回词典 / 百科释义，没有任何商标记录。<b>"签"字现代语感偏"标签、签名"，跟标注动作有意外呼应。</b></td>
+        <td class="keep">绿灯</td>
+      </tr>
+      <tr>
+        <td><b>掌籍</b><br><span class="mono">zhǎng jí</span></td>
+        <td>掌典籍图册的官</td>
+        <td><b>第 9 类未见占用。</b>查到企业名「苏州掌籍传媒科技有限公司」，<b>但该公司名下未查到第 9 类商标</b>。</td>
+        <td class="keep">绿灯</td>
+      </tr>
+      <tr>
+        <td><b>校理</b><br><span class="mono">jiào lǐ</span></td>
+        <td>"秘阁校理"，掌校勘宫廷藏书</td>
+        <td><b>第 9 类未见占用；全部类别都未查到商标记录。</b>检索只返回官职释义。<b>结构上跟"掌籍""典签"同类，但"校"字多音（jiào / xiào），口播有歧义。</b></td>
+        <td class="keep">绿灯</td>
+      </tr>
+
+      <tr><td colspan="4" class="lin">线 D · 范本图册（产出是教程，那"教程的古典名"是什么）</td></tr>
+      <tr>
+        <td><b>画谱</b><br><span class="mono">huà pǔ</span></td>
+        <td>教人画画的范本图册，如《芥子园画谱》</td>
+        <td><b>第 9 类未见本词占用。</b>其他类别：第 16 类 <span class="mono">28670529</span>（义乌市合谱电子商务，商品为影集 1605）、第 32 类 <span class="mono">79930140</span>（南京啤册文化传播，啤酒等）、第 42 类有一件挂牌（服务项含技术研究、工业品外观设计、计算机编程、<b>计算机软件维护</b>、艺术品鉴定）——<b>42 类是服务，挡不住第 9 类。</b></td>
+        <td class="keep">绿灯</td>
+      </tr>
+      <tr>
+        <td><b>图录</b><br><span class="mono">tú lù</span></td>
+        <td>图书目录；也指附有图像的目录（书影图录）</td>
+        <td><b>第 9 类未见本词占用。</b>其他类别：第 33 类「图录记」<span class="mono">70123419</span>（贵州今朝醉酒业）——<b>是加字的近似标，且是酒类。</b></td>
+        <td class="keep">绿灯</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="figcap">
+    <b>这张表最刺眼的不是红灯数量，是红灯撞到了谁。</b>
+    "绳墨"握在<b>中国农业银行山西省分行</b>手里，商品项里还写着"深度学习领域用于数据收集、分析和整理的可下载计算机软件"；
+    "墨斗"握在一件 <b>2026 年 5 月刚递交</b>的申请里，商品项写着"用于使用人工智能从文本生成图像的可下载计算机软件"；
+    "方寸"握在<b>做扫描仪的那家公司</b>手里，四件围死；
+    "留影"握在一家<b>做图文编辑排版 App 的公司</b>手里，功能跟你有一块重叠。
+    <br><b>这四个都是同一个原因：它们描述的是"影像"本身。</b>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>本轮头号：定影</h2>
+  <p class="lead">
+    线 A 里唯一活得下来的、而且语义最狠的一个。它是摄影的专有工序名——<b>显影之后的一道，把影像永久固定住，使它不再变化。</b>
+  </p>
+
+  <div class="card pick">
+    <div class="chead">
+      <div class="nm">定影</div>
+      <div class="py">dìng yǐng</div>
+      <span class="tag pick">本批首选</span>
+      <span class="tag ok">第 9 类未见占用</span>
+      <span class="tag">零生僻字</span>
+      <span class="tag warn">摄影术语味</span>
+    </div>
+
+    <p style="color:var(--tx2);font-size:13.5px;margin-top:14px">
+      <b>先说它的意思。</b>胶片成像有两道关键工序：<b>显影</b>——让底片上看不见的潜影显现出来；<b>定影</b>——把已经显出的影像<b>固定住</b>，让光再也不能改变它。少一道都不行：只显影不定影，影像见光就没了。
+    </p>
+
+    <p style="color:var(--tx2);font-size:13.5px">
+      <b>再说它为什么贴。</b>你这个产品干的活，恰恰就是这两道里的第二道。屏幕上那一瞬的画面——它本来是一闪就过去的、见光就跑的（你滚一下页面它就变了）。<b>"截图"这个词只说了"取"，没说到"定"。</b>而"定影"两个字说的是：<b>把这一瞬固定下来，让它以后都还是这个样子。</b>
+    </p>
+
+    <table class="map">
+      <tr><td>显影：让潜影显现出来</td><td>OCR 把画面里的文字认出来——让看不见的（字符）显出来</td></tr>
+      <tr><td>定影：把影像固定住，不再变化</td><td>把这一屏存成一张图，从此它就是证据、就是原样</td></tr>
+      <tr><td>不定影，影像见光就跑</td><td>不截图，那一屏滚过去就没了</td></tr>
+      <tr><td>定影之后，影像不再受光影响</td><td>落盘之后，原图永不被衍生图覆盖（这条已经写进产品契约了）</td></tr>
+      <tr><td>定影是暗房里的一道工序，安静、不见光</td><td>零上传、零云端、只在本地做——不进云端就是"不见光"</td></tr>
+      <tr><td>它不美化、不修饰，只是把已有的影像固定下来</td><td>工具只做感知与记录，不作判断、不改数据</td></tr>
+    </table>
+
+    <div class="cols">
+      <div class="box">
+        <h3>它为什么好</h3>
+        <ul>
+          <li><b>语义跟"截图"是同一件事的两个字。</b>而且比"截图"更准——截图只说取下来了，"定影"说了取下来之后"它被固定住了"，这正是工具给的承诺</li>
+          <li><b>第 9 类未见占用。</b>"定影"在摄影语境里太常见，做软件的人反而不往这儿取名</li>
+          <li><b>两个字都零门槛。</b>"定"和"影"小学生都会念会写，比藜、柝、牖、膂、胥好太多</li>
+          <li><b>气质对。</b>暗房、安静、不见光、只做一件事——跟"常驻后台、不弹窗、不打扰"的产品性格是一条线</li>
+          <li><b>跟"雁奴"能配成一对。</b>雁奴是"看着"，定影是"固定下来"；一个管感知，一个管落盘。<b>产品故事里可以两个都用，名字上只取一个</b></li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>它的问题（必须说清）</h3>
+        <ul>
+          <li><b>摄影 / 化学的味道很重。</b>第一眼可能被听成相机配件、冲印店、胶卷药水。这是最真实的短板</li>
+          <li><b>"影"字族的红海刚刚验证过。</b>同批测的留影、显影、映真全是红灯——"定影"能活是因为它是工序名而不是影像名，但整族热，长得像的词将来可能被引为近似</li>
+          <li><b>四声＋三声，"定影"念快一点像"电影"。</b>口播有轻度歧义（这一点九批里"代瞩"也有同类问题）</li>
+          <li><b>偏"工业/技术"气质，少了点人味。</b>不像"书巢""雪案"那样自带书卷气，配印章·甲骨目的图形时，气质是"技术"配"古文字"，需要调和</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot">
+      <b>一句话：</b>如果这一批只推一个，我推"定影"。它赢在<b>跟产品的主要动作字面对齐</b>——把影像固定住，就是它干的活。
+      代价是它听起来像个摄影术语。要不要为了这个准确度接受那层技术气，还是你拍板。
+    </div>
+  </div>
+
+  <h3 style="margin:26px 0 12px">紧跟在后面的两个</h3>
+
+  <div class="card">
+    <div class="chead">
+      <div class="nm">编修</div>
+      <div class="py">biān xiū</div>
+      <span class="tag ok">全类别未见</span>
+      <span class="tag">官职名</span>
+      <span class="tag">"编"+"修"都在讲这产品</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px">
+      翰林院的职位，掌修国史、编纂书籍。它好在这里：<b>"编"和"修"两个字，正好是这产品最后一步在做的事</b>——把截下来的图<b>编</b>在一起、顺成一条线、<b>修</b>成一份能给别人看的文档。
+      而这件事在过去是由一个专门的职位负责的。
+    </p>
+    <table class="map">
+      <tr><td>编修是个职位，不是个功能</td><td>延续第九批的规律：岗位名没人抢（牌子不做那份工作）</td></tr>
+      <tr><td>编修的工作是"把散的材料整理成书"</td><td>把散落的截图整理成一份教程——这就是最终交付物</td></tr>
+      <tr><td>史官修史，讲究"一字不改"</td><td>OCR 要的就是一字不差，不美化、不替用户改</td></tr>
+      <tr><td>翰林院的编修不进民间，专门伺候文书</td><td>Agent 侧的定位：在幕后把材料备好，人是最后过目的那个</td></tr>
+    </table>
+    <div class="foot">
+      <b>问题：</b>① <b>"编修"在当代中文里有"修理工 / 编制"的杂音</b>——"编"容易被听成"编程"，"修"容易被听成"维修"，第一眼可能被当技术岗或维修公司；② 两个字偏书面，语气平，不惊艳；③ <b>检索只召回词典页、没召回任何商标详情页</b>，属"没查到"级证据，要用必须官网复核。
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <div class="nm">画谱</div>
+      <div class="py">huà pǔ</div>
+      <span class="tag ok">9类未见</span>
+      <span class="tag">直接对应"产出教程"</span>
+    </div>
+    <p style="color:var(--tx2);font-size:13px">
+      《芥子园画谱》那种东西——<b>照着它就能学会画画的范本图册</b>。这个词的价值在于：它承认了"图"和"教"是同一件事的两面。
+      你这产品的最终产出不是一张截图，是<b>一份 Agent 写出来、给别人照着做的图文教程</b>——那就是当代的"谱"。
+      <br><br>"谱"这个字还自带一层意思：<b>谱是"有规矩、可照着来的东西"</b>（谱系、乐谱、棋谱、菜谱），跟"把操作变成可复述的步骤"直接对上。
+    </p>
+    <div class="foot">
+      <b>问题：</b>① "画"字会把品牌带向绘画 / 美术方向，而截图未必是画；② <b>第 16 类、32 类、42 类都有人用</b>（影集、啤酒、服务类），虽然都不挡第 9 类，但"画谱"这个名字在文创和电商圈已经有人在用，日后容易撞见；③ 语感稍显旧、稍显轻。
+    </div>
+  </div>
+
+  <h3 style="margin:26px 0 12px">线 C 全绿一族（4 个，值得放在一起看）</h3>
+  <div class="card">
+    <div class="chead">
+      <div class="nm">编修 · 典签 · 掌籍 · 校理</div>
+      <span class="tag ok">4 / 4 全绿</span>
+      <span class="tag">同一族：管书、校字、管文书</span>
+    </div>
+    <table class="map">
+      <tr><td><b>编修</b>（biān xiū）</td><td>翰林院掌修国史、编纂书籍。语义最贴——"编"＋"修"就是产品最后一步</td></tr>
+      <tr><td><b>典签</b>（diǎn qiān）</td><td>南朝掌文书签押、传递。"签"字跟"标注、标记"有意外呼应，而且这个官本来就是"管签押"的</td></tr>
+      <tr><td><b>掌籍</b>（zhǎng jí）</td><td>掌典籍图册。字面直白（"掌"＋"籍"＝管着档案），零理解成本</td></tr>
+      <tr><td><b>校理</b>（jiào lǐ）</td><td>"秘阁校理"，掌校勘宫廷藏书。语义准，但"校"字多音（jiào / xiào），口播打折</td></tr>
+    </table>
+    <div class="foot">
+      <b>这四个全是"岗位名"，四个全绿——跟第九批（鸡人、晨门、击柝、司更）、第十批（佣书、抄胥、书佣）的结果完全一致。</b>
+      这就是那条规律的第四次验证。而且这一族的官职<b>比第九批更贴</b>：第九批是"报时守门"（管时间、管进出），这一批是"管书、校字、整理文书"——<b>正好是这产品在做的三件事：认字（校）、整理（编）、归档（掌籍）。</b>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">03</span>有一个词必须被"词义"否决：校书</h2>
+  <p class="lead">
+    这一节跟商标没关系。就算"校书"明天在第 9 类腾出来，我也不建议你用。<b>理由是它有一个你可能没想到的意思。</b>
+  </p>
+
+  <div class="card" style="border:2px solid var(--risk)">
+    <div class="chead">
+      <div class="nm">校书</div>
+      <div class="py">jiào shū</div>
+      <span class="tag risk">词义否决</span>
+      <span class="tag risk">9类已占</span>
+    </div>
+
+    <p style="color:var(--tx2);font-size:13.5px">
+      <b>第一层意思是对的、而且很贴：</b>校勘书籍；也是官名——汉有校书郎中，三国魏始置秘书校书郎，隋唐都设此官，属秘书省。<b>校正文字，正是 OCR 在做的事。</b>
+    </p>
+
+    <div class="quote" style="border-left-color:var(--risk)">
+      万里桥边女校书，枇杷花下闭门居。
+      <cite>唐 · 胡曾《赠薛涛》（另见王建《寄蜀中薛涛校书》"万里桥边女校书，枇杷花里闭门居"）</cite>
+    </div>
+
+    <p style="color:var(--tx2);font-size:13.5px">
+      薛涛是蜀中能诗文的名人，时称"女校书"。<b>后世因以"女校书"为妓女的雅称，也简称"校书"。</b>
+      巴金《家》里就是这样用的："在祖父自己的诗集里也曾有不少赠校书的诗句。"
+    </p>
+
+    <div class="box" style="margin-top:16px;background:#FCEBEB">
+      <h3 style="color:var(--risk)">为什么这条直接否决它</h3>
+      <p style="margin:8px 0 0;font-size:13px">
+        这不是"有点不吉利"那个级别的问题，是<b>这个词在古典语境里有一个指向明确、而且很不好听的第二个意思</b>。
+        一个桌面工具的名字被读成那个意思，是没法靠文案解释掉的——因为你越解释，越显得你在意它。
+        <br><br><b>同类情况提醒：</b>第九批的"夜不收"是另一个版本的问题——它不是词义不好，是<b>极可能是别家动画公司的作品角色名</b>（原注册人北京若森数字科技就是《画江湖》那家）。
+        <b>这两件事合起来是一条新规矩：商标干净 ≠ 名字可用。</b>查完商标，还要查三样：这个词在古典里有没有不好听的第二义、是不是别人的作品名，以及在现代语境里会不会被读歪。
+      </p>
+    </div>
+
+    <div class="foot" style="border-top-color:var(--bd)">
+      <b>顺便交代"校书"的商标状态：</b>第 9 类 <span class="mono">16433896</span>（中国高等教育国际集团有限公司），商品项原文含计算机软件(已录制)、可下载的计算机应用软件、已录制的计算机操作程序、计算机程序(可下载软件)等全套软件项；专用权截止 <b>2026-08-13</b>，已逾名义到期约一个月，处续展宽展窗内，页面状态仍显"注册"。<b>也就是说：它有可能空出来，但空出来也别用。</b>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span>这条规律，四次验证全中</h2>
+  <p class="lead">
+    十一批测下来，有一条规律每次都准。我把它四次的数据摆在一起看，你就明白为什么"想名字"这件事不能靠灵感了。
+  </p>
+
+  <div class="verify">
+    <div class="vf">
+      <div class="bd2">第七批 · 测"看得清"</div>
+      <h3>形容词 / 功能描述</h3>
+      <div class="row">明眸 · 烛照 · 瞻明 · 天目 · 目窍 · 继明</div>
+      <div class="row">洁净率 <span class="z">0 / 6 ＝ 0%</span></div>
+      <div class="row">撞的都是：海康、视科、安防</div>
+    </div>
+    <div class="vf">
+      <div class="bd2">第八批 · 测"替你看"</div>
+      <h3>功能描述（换个说法）</h3>
+      <div class="row">斥候 · 探马 · 守望 · 耳目</div>
+      <div class="row">洁净率 <span class="z">0 / 4 ＝ 0%</span></div>
+      <div class="row">"替你看家"就是安防的广告语</div>
+    </div>
+    <div class="vf">
+      <div class="bd2">第九批 · 测"报时守门"</div>
+      <h3>岗位名 / 角色名</h3>
+      <div class="row">鸡人 · 晨门 · 击柝 · 司更 · 挈壶 · 抱关</div>
+      <div class="row">洁净率 <span class="o">14 / 18 ＝ 78%</span></div>
+      <div class="row">牌子不做那份工作，所以不抢</div>
+    </div>
+    <div class="vf">
+      <div class="bd2">本批 · 测"影 / 墨 / 官职"</div>
+      <h3>影像名 vs 官职名</h3>
+      <div class="row">影像名：留影 · 显影 · 映真 · 方寸</div>
+      <div class="row">洁净率 <span class="z">0 / 5 ＝ 0%</span></div>
+      <div class="row">官职名：编修 · 典签 · 掌籍 · 校理</div>
+      <div class="row">洁净率 <span class="o">4 / 4 ＝ 100%</span></div>
+    </div>
+  </div>
+
+  <div class="figcap">
+    <b>第四格里那两行是这一批的核心。</b>同一个批次、同一套检索方法，只是词的性质不同——
+    <b>描述"影像"的词全灭，指认"职位"的词全空。</b>
+    这不是巧合，是结构：<b>凡是直接说"这东西处理的是什么"的词，做同一件事的企业都在抢；凡是说"做这活的人叫什么"的词，没人抢，因为牌子不做那份工作。</b>
+  </div>
+
+  <div class="bars" style="margin-top:22px">
+    <div class="bar"><div class="bl">影像 / 功能描述类</div><div class="bt"><div class="bf a" style="width:6%">0 / 15</div></div><div class="bv">全线撞死</div></div>
+    <div class="bar"><div class="bl">岗位 / 职位名类</div><div class="bt"><div class="bf c" style="width:82%">23 / 28</div></div><div class="bv">基本全空</div></div>
+    <div class="bar"><div class="bl">器物 / 手艺名类</div><div class="bt"><div class="bf c" style="width:76%">~60%</div></div><div class="bv">看具体词</div></div>
+  </div>
+  <div class="figcap">
+    （影像/功能描述类为第七、八批与本次线 A 影像词合并；岗位/职位名为第八至十一批四个批次的岗位族合并计数。）
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span>十一批合并收口</h2>
+  <p class="lead">前面各批序列保留不动，本批新增第十一序列。</p>
+
+  <div class="route pick">
+    <div class="rh"><div class="rk">十一</div><h3>影 · 墨 · 官职（本批新增）</h3><span class="tag pick">新增</span></div>
+    <p>四条线各出代表：定影（把像固定）、编修/典签/掌籍/校理（管书校字）、画谱（范本图册）、引绳/片玉/即景/寸阴。</p>
+    <div class="chips">
+      <span class="chip new">定影 ★★★</span>
+      <span class="chip new">编修 ★★★</span>
+      <span class="chip new">画谱 ★★☆</span>
+      <span class="chip new">掌籍 ★★☆</span>
+      <span class="chip new">典签 ★★☆</span>
+      <span class="chip new">即景 ★★☆</span>
+      <span class="chip new">片玉 ★★☆</span>
+      <span class="chip off">校书（词义否决）</span>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">十</div><h3>替你动手序列</h3></div>
+    <div class="chips">
+      <span class="chip">佣书</span><span class="chip">抄胥</span><span class="chip">书佣</span>
+      <span class="chip off">替手（状态待查）</span><span class="chip">代手</span><span class="chip">垂拱</span><span class="chip">股肱</span>
+    </div>
+  </div>
+
+  <div class="route">
+    <div class="rh"><div class="rk">九</div><h3>报与守序列</h3></div>
+    <div class="chips">
+      <span class="chip">雪案</span><span class="chip">青藜</span><span class="chip">击柝</span>
+      <span class="chip">晨门</span><span class="chip">曝书</span>
+    </div>
+  </div>
+
+  <h3 style="margin:22px 0 10px">跨十一批总排序（前十二）</h3>
+  <div>
+    <div class="rank top"><div class="rnum">1</div><div class="rn">书巢</div><div class="rs">干净、好念、温润；陆游《书巢记》南宋真人真事；靠"存放与整理"打</div></div>
+    <div class="rank top"><div class="rnum">2</div><div class="rn">佣书</div><div class="rs">班超典（投笔从戎的出处）；名字字面就是"雇人抄写"；短板是"佣"字体面度</div></div>
+    <div class="rank top"><div class="rnum">3</div><div class="rn">雁奴</div><div class="rs">"替你看着"语义第一；元好问/陆游典；短板同样是"奴"字</div></div>
+    <div class="rank new"><div class="rnum">4</div><div class="rn">定影</div><div class="rs"><b>本批新进前五。</b>跟产品的核心动作字面对齐（把影像固定住），零生僻字；短板是摄影术语味、念快像"电影"</div></div>
+    <div class="rank"><div class="rnum">5</div><div class="rn">雪案</div><div class="rs">十批里唯一"全类别都没人占"；零生僻字；短板是"案"字歧义</div></div>
+    <div class="rank new"><div class="rnum">6</div><div class="rn">编修</div><div class="rs"><b>本批新进。</b>岗位名、全类别未见；"编"＋"修"就是产品的最后一步；短板是"编"易听成编程、"修"易听成维修</div></div>
+    <div class="rank"><div class="rnum">7</div><div class="rn">替手</div><div class="rs">语义直白度第一，谁听都懂；<b>第 9 类专用权刚届满、状态页面矛盾，必须先查清</b></div></div>
+    <div class="rank"><div class="rnum">8</div><div class="rn">青藜</div><div class="rs">典故最妙（替黑暗中的校书人吹亮杖头）；9 类未查透</div></div>
+    <div class="rank"><div class="rnum">9</div><div class="rn">代瞩</div><div class="rs">语义准、零生僻；自造词，无典故支撑</div></div>
+    <div class="rank"><div class="rnum">10</div><div class="rn">抄胥</div><div class="rs">全类别未见、最干净；"胥"字陌生是唯一门槛</div></div>
+    <div class="rank"><div class="rnum">11</div><div class="rn">画谱</div><div class="rs"><b>本批新进。</b>直接对应"产出教程"，承认图与教是一体；短板是"画"字带偏美术方向</div></div>
+    <div class="rank"><div class="rnum">12</div><div class="rn">剪烛</div><div class="rs">李商隐典，画面感强；与截图动作隔一层</div></div>
+  </div>
+
+  <div class="figcap" style="margin-top:14px">
+    <b>十一批测完，前四名可以归成三类性格：</b>
+    <b>书巢、雪案</b>是"案头派的雅"——好听好看，靠气质；
+    <b>雁奴、佣书</b>是"说清楚它干什么"——语义对位，各自带一个不体面的字；
+    <b>定影</b>是第三条路，它既不雅也不靠人味，它靠<b>跟动作字面对齐</b>——把影像固定住。
+    <br><b>你要定的其实是这一层：这产品对外第一句话，说的是"一个很好看的桌面小工具"，还是"让 Agent 看见你的屏幕、把这一瞬固定下来"。</b>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">06</span>交付前，你要自己做的事</h2>
+  <ol class="steps">
+    <li>
+      <b>先查你最想定的那一个，只看三个商品项。</b>中国商标网 <code>sbj.cnipa.gov.cn</code> → 商标网上查询 → 商标近似查询，输入名字，国际分类选第 9 类。
+      判据只有三条——看到商品项里出现 <code>计算机程序（可下载软件）</code>、<code>可下载的计算机应用软件</code>、<code>计算机软件（已录制）</code> 里任何一个，就是硬障碍。
+      <b>照相机、镜头、眼镜、量具、测量仪器、探测器、芯片这些硬件项一律不挡。</b>本批就有好几件是"看着像障碍、其实是硬件"的（感光、映真映美、墨斗的第二件、绳墨的第二件）。
+    </li>
+    <li>
+      <b>本批两个要单独交代的：</b>
+      ① <b>尺幅</b>——多轮检索只返回商标分类科普页，<b>一个详情页都没召回</b>，属"没查到"而非"查干净"，用之前必须官网查；<br>
+      ② <b>准绳</b>——第 9 类那件（38740688）含全套软件项，但状态是<b>初审驳回 / 无效</b>。这意味着它现在不构成障碍，但<b>别人随时可以重新申请</b>，你如果要用，动作要快；另外第 45 类那件（35924092）已经注册、含"计算机软件许可(法律服务)"，那是法律服务类，不挡第 9 类。
+    </li>
+    <li>
+      <b>把"校书"从名单里划掉。</b>不是商标问题，是词义——唐胡曾《赠薛涛》"万里桥边女校书"之后，"校书"成了妓女的雅称，巴金《家》里也是这么用的。这条解释不清，别用。
+    </li>
+    <li>
+      <b>顺手把"词义体检"加进流程。</b>第九批的"夜不收"（可能是若森的动画角色名）和本批的"校书"，都说明<b>商标干净不等于名字可用</b>。
+      过完商标后还要查三样：① 这个词在古典里有没有不好听的第二义；② 是不是别人的作品名 / 角色名；③ 现代口语里会不会被读歪（谐音、歧义、误听）。
+    </li>
+  </ol>
+
+  <div class="note" style="margin-top:20px">
+    <b>一句话总结这一批：</b>你说"再看看其他角度"——这批换了四个角度、21 个词，<b>7 红 2 黄 12 绿</b>。
+    但比结果更值钱的是第四次验证的那条规律：<b>描述"影像"的词全灭（留影、显影、映真、方寸），指认"职位"的词全空（编修、典签、掌籍、校理）。</b>
+    十一条批下来，这件事已经不用再怀疑了。
+  </div>
+</section>
+
+</div>
+</body>
+</html>
