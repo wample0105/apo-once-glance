@@ -65,6 +65,10 @@ pub struct AnnotationDefaults {
     pub text_family: String,
     pub text_line_height: f32,
     pub text_background: bool,
+    pub text_bg_color: String,
+    pub text_bg_opacity: f32,
+    pub text_bg_radius: f32,
+    pub text_stroke: bool,
     pub arrow_dash: bool,
     pub arrow_double_head: bool,
     pub arrow_heads: String,
@@ -72,8 +76,14 @@ pub struct AnnotationDefaults {
     pub shape_dash: bool,
     pub shape_radius: bool,
     pub shape_opacity: f32,
+    pub shape_fill: String,
     pub mosaic_mode: String,
     pub num_start: i32,
+    // 输出选项偏好（GUI 记忆值，原样透传；渲染契约见 annotate::OutputFx）
+    pub output_shadow: Option<serde_json::Value>,
+    pub output_border: Option<serde_json::Value>,
+    /// 每工具独立色（GUI 记忆值透传：{arrow,pen,marker,rect,ellipse,text,num}）
+    pub tool_colors: Option<serde_json::Value>,
 }
 
 impl Default for AnnotationDefaults {
@@ -95,6 +105,10 @@ impl Default for AnnotationDefaults {
             text_family: "default".into(),
             text_line_height: 1.0,
             text_background: false,
+            text_bg_color: "#FFF7D6".into(),
+            text_bg_opacity: 1.0,
+            text_bg_radius: 4.0,
+            text_stroke: false,
             arrow_dash: false,
             arrow_double_head: false,
             arrow_heads: "end".into(),
@@ -102,8 +116,12 @@ impl Default for AnnotationDefaults {
             shape_dash: false,
             shape_radius: false,
             shape_opacity: 1.0,
+            shape_fill: "outline".into(),
             mosaic_mode: "mosaic".into(),
             num_start: 1,
+            output_shadow: None,
+            output_border: None,
+            tool_colors: None,
         }
     }
 }
@@ -132,6 +150,22 @@ pub struct Settings {
     pub onboarding_done: bool,
     /// D-2 Windows 关闭主窗口：最小化到托盘（默认）或退出。
     pub close_to_tray: bool,
+    /// Esc 退出确认记忆：enabled=弹窗询问；action=记住的选择（discard|save），勾选后不再询问。
+    pub esc_exit_confirm: EscExitConfirm,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct EscExitConfirm {
+    pub enabled: bool,
+    /// 记住的按钮行为：""（未记住，弹窗）| "discard"（不保存）| "save"（保存）
+    pub action: String,
+}
+
+impl Default for EscExitConfirm {
+    fn default() -> Self {
+        Self { enabled: true, action: String::new() }
+    }
 }
 
 impl Default for Settings {
@@ -149,6 +183,7 @@ impl Default for Settings {
             show_text_boxes: true,
             onboarding_done: false,
             close_to_tray: true,
+            esc_exit_confirm: EscExitConfirm::default(),
         }
     }
 }
@@ -257,5 +292,32 @@ mod tests {
         assert!(s.agent_enabled);
         assert!(s.auto_capture_enabled);
         assert!(!s.blacklist.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod saveprops_tests {
+    use super::*;
+    #[test]
+    fn saveprops_payload_roundtrip() {
+        // 与 ui/js/overlay.js saveProps 逐字段对齐的真实 payload
+        let v: serde_json::Value = serde_json::json!({
+            "color": "#29B6F6", "arrow_width": 8, "shape_width": 8,
+            "text_size": 45, "text_bold": false, "text_italic": false, "text_underline": false,
+            "text_shadow": false, "text_align": "left", "text_family": "default", "text_line_height": 1,
+            "text_background": true, "text_bg_color": "#FF0000", "text_bg_opacity": 1, "text_bg_radius": 4, "text_stroke": false,
+            "step_diameter": 56, "step_style": "solid",
+            "mosaic_strength": 14, "highlight_opacity": 0.4,
+            "arrow_dash": false, "arrow_double_head": false,
+            "arrow_heads": "end", "arrow_line_style": "solid",
+            "shape_dash": false, "shape_radius": false, "shape_opacity": 1, "shape_fill": "outline",
+            "mosaic_mode": "mosaic", "num_start": 1,
+            "output_shadow": {"on": false, "blur": 24, "color": "#000000"},
+            "output_border": {"on": false, "width": 6, "color": "#FFFFFF"},
+        });
+        match serde_json::from_value::<AnnotationDefaults>(v) {
+            Ok(a) => assert_eq!(a.shape_fill, "outline"),
+            Err(e) => panic!("saveProps payload 反序列化失败: {e}"),
+        }
     }
 }

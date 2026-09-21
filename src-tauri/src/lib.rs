@@ -3,6 +3,7 @@
 
 use once_core::capture::{self, CapturedBitmap};
 use windows::Win32::Graphics::Dwm::DwmFlush;
+use windows::Win32::Graphics::Gdi::InvalidateRect;
 use once_core::settings::{self, Settings};
 use once_core::{clipboard, history, ocr};
 use serde::Serialize;
@@ -99,21 +100,17 @@ pub(crate) async fn launch_overlay(app: AppHandle, kind: String) -> Result<(), S
 async fn start_overlay(app: AppHandle, kind: String) -> Result<(), String> {
     eprintln!("start_overlay called kind={kind}");
     // 截图态再按一次热键 = 退出（同类产品 手感；保证遮罩永远有办法退出）
-    if let Some(w) = app.get_webview_window("overlay") {
-        let visible = w.is_visible().unwrap_or(false);
-        let _ = w.hide();
-        unsafe {
-            let _ = DwmFlush(); // 阻塞到 DWM 完成合成：旧画面确定从屏幕消失
+    if OVERLAY_ACTIVE.swap(false, Ordering::SeqCst) {
+        if let Some(w) = app.get_webview_window("overlay") {
+            park_overlay_offscreen(&w);
+            unsafe { let _ = DwmFlush(); }
         }
-        w.destroy();
-        if visible {
-            eprintln!("start_overlay: overlay visible → toggle close");
-            return Ok(());
-        }
+        eprintln!("start_overlay: overlay active → toggle close");
+        return Ok(());
     }
     let app2 = app.clone();
     let kind2 = kind.clone();
-    // 窗口创建放到独立线程，避免主线程事件循环重入死锁
+    // 窗口操作放到独立线程，避免主线程事件循环重入死锁
     let r = std::thread::spawn(move || show_overlay(&app2, &kind2)).join();
     match &r {
         Err(e) => eprintln!("start_overlay({kind}) panic: {e:?}"),
@@ -123,16 +120,37 @@ async fn start_overlay(app: AppHandle, kind: String) -> Result<(), String> {
     r.map_err(|e| format!("{e:?}"))?.map_err(|e| e.to_string())
 }
 
+static OVERLAY_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static OVERLAY_READY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+// 冷启动竞态兜底：emit 时页面监听可能未挂——存最近一次 payload，JS ready 后主动取走补激活
+static OVERLAY_PENDING: std::sync::Mutex<Option<serde_json::Value>> = std::sync::Mutex::new(None);
+
+/// 页面就绪握手：JS init 挂好监听后调用（热键 emit 前等它，杜绝监听未挂事件丢失）
+#[tauri::command]
+fn overlay_ready() {
+    OVERLAY_READY.store(true, Ordering::SeqCst);
+}
+
+/// JS 就绪后取走错过的激活 payload（冷启动 emit 早于监听注册的兜底）
+#[tauri::command]
+fn overlay_take_pending() -> Option<serde_json::Value> {
+    OVERLAY_PENDING.lock().unwrap().take()
+}
+
+fn park_overlay_offscreen(win: &tauri::WebviewWindow) {
+    // 屏外驻留：不 hide（WebView2 隐藏窗口渲染挂起，再 show 黑屏/透明），移出屏幕保持可渲染
+    // 驻留前让页面清屏：下次移回的瞬间只显示空白，不闪上一轮画面（也避免 freeze 拍到旧内容）
+    let _ = win.emit("overlay-cleared", ());
+    let _ = win.set_position(PhysicalPosition::new(-20000, -20000));
+}
+
 fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
-    // 上一次覆盖层销毁是异步的（DWM 移出屏幕有延迟）；
-    // 固定等待确保冻结帧绝不会拍到旧遮罩/旧工具栏（双层遮罩根治）
-    std::thread::sleep(std::time::Duration::from_millis(300));
+    let t0 = std::time::Instant::now();
     *OVERLAY_KIND.lock().unwrap() = Some(kind.to_string());
     OVERLAY_KIND_SEQ.fetch_add(1, Ordering::SeqCst);
     // 光标所在显示器：一块覆盖层一个窗口（跨屏框选 M2 打通）
     let (cx, cy) = cursor_pos();
     let mons = capture::monitors();
-    eprintln!("show_overlay: cursor=({cx},{cy}) monitors={}", mons.len());
     let monitor = mons
         .iter()
         .find(|m| cx >= m.rect.0 && cx < m.rect.0 + m.rect.2 && cy >= m.rect.1 && cy < m.rect.1 + m.rect.3)
@@ -142,24 +160,15 @@ fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
         return Ok(());
     };
     let m = m.clone();
-    // 复用已存在的覆盖层则先关闭。destroy() 异步生效，必须轮询等 label 释放，
-    // 否则下一步 build 同名窗口会报 "a webview with label `overlay` already exists"。
-    if let Some(old) = app.get_webview_window("overlay") {
-        // 先 hide（同帧从屏幕移除）再销毁：destroy 是异步的，旧遮罩/提示条会被烤进新冻结帧
-        let _ = old.hide();
-        let _ = old.destroy();
-        for _ in 0..60 {
-            if app.get_webview_window("overlay").is_none() {
-                break;
-            }
-            std::thread::sleep(std::time::Duration::from_millis(50));
-        }
-        // DWM 收尾兜底
-        std::thread::sleep(std::time::Duration::from_millis(150));
-    }
-    let win = (|| {
-        // label 竞态兜底：偶发释放延迟时重试
-        for attempt in 0..5 {
+    // 预驻留复用：窗口常驻隐藏（setup 预建），热键只定位+显示，无创建/销毁等待
+    let win = if let Some(w) = app.get_webview_window("overlay") {
+        w
+    } else {
+        OVERLAY_READY.store(false, Ordering::SeqCst);
+        // 兜底：预建缺失（异常退出后）现场重建
+        let mut last_err = None;
+        let mut built = None;
+        for _ in 0..5 {
             match WebviewWindowBuilder::new(app, "overlay", WebviewUrl::App("overlay.html".into()))
                 .title("定影取景")
                 .decorations(false)
@@ -174,20 +183,20 @@ fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
                 .visible(false)
                 .build()
             {
-                Ok(w) => return Ok(w),
-                Err(e) if attempt < 4 => {
-                    eprintln!("show_overlay build retry {attempt}: {e}");
-                    std::thread::sleep(std::time::Duration::from_millis(150));
-                }
-                Err(e) => return Err(e),
+                Ok(w) => { park_overlay_offscreen(&w); built = Some(w); break; }
+                Err(e) => { last_err = Some(e); std::thread::sleep(std::time::Duration::from_millis(120)); }
             }
         }
-        unreachable!()
-    })()?;
-    win.set_position(PhysicalPosition::new(m.rect.0, m.rect.1))?;
+        match built {
+            Some(w) => w,
+            None => return Err(last_err.unwrap_or_else(|| tauri::Error::WindowNotFound)),
+        }
+    };
+    // 先冻结再移回：窗口恒可见（屏外驻留），若先移回，屏上立刻显示上一轮旧画面，
+    // freeze 会把它拍进新背景，造成逐轮叠加残留。必须趁窗口仍在屏外时截屏。
+    let frozen = scrollcmd::freeze_begin_inner_ok();
     win.set_size(PhysicalSize::new(m.rect.2 as u32, m.rect.3 as u32))?;
-    win.show()?;
-    win.set_focus()?;
+    win.set_position(PhysicalPosition::new(m.rect.0, m.rect.1))?;
     // 无边框窗口在 Windows 仍有不可见命中测试边框：外框对齐显示器 ≠ 客户区对齐。
     // 用客户区实际原点做一次补偿，保证冻结位图 1:1 贴合真实屏幕（消除重影/偏移）。
     if let Ok(ipos) = win.inner_position() {
@@ -197,7 +206,27 @@ fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
             win.set_position(PhysicalPosition::new(m.rect.0 - dx, m.rect.1 - dy))?;
         }
     }
-    eprintln!("overlay created on monitor {} rect {:?}", m.index, m.rect);
+    // 热键路径：冻结图已在移回前截好（纯净画面），随后推送激活事件（JS 已驻留，收事件即渲染蒙版）
+    let mut payload = serde_json::json!({ "kind": kind });
+    if let Some(f) = frozen {
+        payload["dataUrl"] = serde_json::Value::String(f.0);
+        payload["width"] = serde_json::Value::from(f.1);
+        payload["height"] = serde_json::Value::from(f.2);
+    }
+    // 窗口恒可见（屏外驻留），移回即显示；emit 前等页面就绪（监听已挂），杜绝冷启动事件丢失
+    for _ in 0..40 {
+        if OVERLAY_READY.load(Ordering::SeqCst) { break; }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    OVERLAY_ACTIVE.store(true, Ordering::SeqCst);
+    win.set_focus()?;
+    // 屏外驻留窗口被 Chromium 判 occluded 停止合成；移回后强制重绘 kick 一帧
+    if let Ok(hwnd) = win.hwnd() {
+        unsafe { let _ = InvalidateRect(Some(hwnd), None, true); } // 异步失效即触发重绘 kick
+    }
+    *OVERLAY_PENDING.lock().unwrap() = Some(payload.clone());
+    let _ = win.emit("overlay-activate", &payload);
+    eprintln!("overlay shown on monitor {} rect {:?} in {:?}", m.index, m.rect, t0.elapsed());
     Ok(())
 }
 
@@ -218,13 +247,11 @@ fn overlay_focus(app: AppHandle) {
 }
 
 fn close_overlay(app: &AppHandle) {
+    OVERLAY_ACTIVE.store(false, Ordering::SeqCst);
     if let Some(win) = app.get_webview_window("overlay") {
-        // hide 同帧从屏幕移除；destroy 异步——不先 hide 会被下一次冻结帧拍到（双层遮罩）
-        let _ = win.hide();
-        unsafe {
-            let _ = DwmFlush(); // 阻塞到 DWM 完成合成：画面确定已从屏幕消失
-        }
-        let _ = win.destroy();
+        // 屏外驻留（不 hide：WebView2 隐藏渲染挂起）；DwmFlush 确保画面从屏幕消失再截下一次
+        park_overlay_offscreen(&win);
+        unsafe { let _ = DwmFlush(); }
     }
 }
 
@@ -440,6 +467,11 @@ fn set_setting(key: String, value: serde_json::Value) -> Result<Settings, String
                 }
             }
             "onboarding_done" => s.onboarding_done = value.as_bool().unwrap_or(s.onboarding_done),
+            "esc_exit_confirm" => {
+                if let Ok(v) = serde_json::from_value(value.clone()) {
+                    s.esc_exit_confirm = v;
+                }
+            }
             _ => {}
         };
     })
@@ -465,16 +497,35 @@ fn delete_to_recycle_bin(paths: Vec<String>) -> Result<(), String> {
     clipboard::delete_to_recycle_bin(&p).map_err(|e| e.to_string())
 }
 
+fn logo_candidates(app: &AppHandle, name: &str) -> Vec<std::path::PathBuf> {
+    vec![
+        app.path().resource_dir().ok().map(|d| d.join("assets/logo").join(name)),
+        Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets/logo").join(name)),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
+}
+
 #[tauri::command]
 fn get_logo_path(app: AppHandle, name: String) -> Result<String, String> {
     // 一处定稿、处处同图：解析 assets/logo 下的唯一正本
-    let candidates = vec![
-        app.path().resource_dir().ok().map(|d| d.join("assets/logo").join(&name)),
-        Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets/logo").join(&name)),
-    ];
-    for c in candidates.into_iter().flatten() {
+    for c in logo_candidates(&app, &name) {
         if c.exists() {
             return Ok(c.to_string_lossy().into_owned());
+        }
+    }
+    Err(format!("品牌资产不存在：{name}"))
+}
+
+/// 品牌图片内联：返回 svg 文本，JS 拼 data URL 显示——绕开 asset.localhost 的 scope 校验
+/// （2026-09-22 用户报主窗口左上角 logo 消失：裸 exe 的 resource_dir 缺 assets 时，
+/// 源码目录回退路径拿到的绝对路径过不了 assetProtocol scope，图片 403 空白）
+#[tauri::command]
+fn get_logo_svg(app: AppHandle, name: String) -> Result<String, String> {
+    for c in logo_candidates(&app, &name) {
+        if c.exists() {
+            return std::fs::read_to_string(&c).map_err(|e| format!("品牌资产读取失败：{e}"));
         }
     }
     Err(format!("品牌资产不存在：{name}"))
@@ -703,6 +754,7 @@ pub fn run() {
             scrollcmd::annotate_open_file,
             scrollcmd::annotate_file_payload,
             scrollcmd::annotate_save,
+            scrollcmd::save_as_dialog,
             detail_data,
             copy_image_bytes,
             set_hotkey,
@@ -712,6 +764,8 @@ pub fn run() {
             autostart_set,
             open_onboarding,
             overlay_close,
+            overlay_ready,
+            overlay_take_pending,
             overlay_hide,
             overlay_focus,
             bridge_ping,
@@ -729,6 +783,7 @@ pub fn run() {
             open_in_explorer,
             delete_to_recycle_bin,
             get_logo_path,
+            get_logo_svg,
             doctor_run,
             read_audit,
             clear_audit
@@ -737,11 +792,56 @@ pub fn run() {
             let handle = app.handle().clone();
             bridge::start(handle.clone());
             setup_tray(&handle)?;
+            // 预驻留覆盖层：启动即建隐藏窗口+预载页面，热键只做定位+冻结+显示（秒开）
+            {
+                let h = handle.clone();
+                std::thread::spawn(move || {
+                    OVERLAY_READY.store(false, Ordering::SeqCst);
+                    for _ in 0..20 {
+                        if h.get_webview_window("overlay").is_some() {
+                            return;
+                        }
+                        match WebviewWindowBuilder::new(&h, "overlay", WebviewUrl::App("overlay.html".into()))
+                            .title("定影取景")
+                            .decorations(false)
+                            .shadow(false)
+                            .transparent(true)
+                            .always_on_top(true)
+                            .skip_taskbar(true)
+                            .resizable(false)
+                            .maximizable(false)
+                            .minimizable(false)
+                            .focused(false)
+                            .visible(true)
+                            .build()
+                        {
+                            Ok(w) => {
+                                park_overlay_offscreen(&w);
+                                eprintln!("overlay prewarmed (offscreen)");
+                                return;
+                            }
+                            Err(_) => std::thread::sleep(std::time::Duration::from_millis(250)),
+                        }
+                    }
+                });
+            }
             let failures = register_hotkeys(&handle);
             if !failures.is_empty() {
                 // 热键注册失败：降级为托盘触发（§9）；记录到设置供设置页展示
                 let names = failures.iter().map(|(n, k)| format!("{n}={k}")).collect::<Vec<_>>().join(",");
                 eprintln!("热键冲突：{names}");
+                // 旧进程刚退出时系统热键句柄释放有延迟（双进程竞态），失败后延迟重试，
+                // 否则本进程永远没有截图热键——用户按热键毫无反应且无从自愈
+                let h2 = handle.clone();
+                std::thread::spawn(move || {
+                    for wait in [3000u64, 8000, 15000] {
+                        std::thread::sleep(std::time::Duration::from_millis(wait));
+                        if register_hotkeys(&h2).is_empty() {
+                            eprintln!("热键延迟重试成功");
+                            break;
+                        }
+                    }
+                });
             }
             // 首次启动引导（§4.1；onboarding_done=false 时出现一次）
             {

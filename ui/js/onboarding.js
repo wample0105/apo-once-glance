@@ -99,9 +99,9 @@ document.getElementById("s3-install").addEventListener("click", async () => {
   setTimeout(() => goto(4), 2200);
 });
 
-// 品牌章（一处定稿、处处同图）
-invoke("get_logo_path", { name: "onceglance-mark-small.svg" })
-  .then((p) => { document.getElementById("brand").src = convertFileSrc(p); })
+// 品牌章（一处定稿、处处同图：svg 内联 data URL，不依赖 asset 协议 scope）
+invoke("get_logo_svg", { name: "onceglance-mark-small.svg" })
+  .then((svg) => { document.getElementById("brand").src = "data:image/svg+xml;utf8," + encodeURIComponent(svg); })
   .catch(() => {});
 
 runChecks();

@@ -54,6 +54,8 @@
   }
   .handle::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; }
   body.selected .handle { display: block; }
+  /* 对象编辑态：隐藏选区自己的手柄（只显示一层对象锚点，业界同款） */
+  body.obj-selected .handle { display: none !important; }
   .handle.nw { left: -6px; top: -6px; cursor: nwse-resize; }
   .handle.ne { right: -6px; top: -6px; cursor: nesw-resize; }
   .handle.sw { left: -6px; bottom: -6px; cursor: nesw-resize; }
@@ -93,7 +95,9 @@
   #magnifier .cross-h { left: 0; right: 0; height: 1px; }
   #magnifier .cross-v { top: 0; bottom: 0; width: 1px; }
 
-  /* Esc 提示 */
+  /* Esc 提示：冻结完成（body.frozen）后才显示——
+     BitBlt(CAPTUREBLT) 会拍进覆盖层自己的分层窗口，UI 先行显示会造成"双层" */
+  body:not(.frozen) #cancelhint { display: none; }
   #cancelhint {
     position: absolute; top: 16px; left: 50%;
     transform: translateX(-50%);
@@ -123,10 +127,53 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 4px;
   }
   #toolbar .tb:hover { background: rgba(255, 255, 255, 0.09); }
-  #toolbar .tb.on { background: var(--accent); color: #fff; }
+  #toolbar .tb { position: relative; }
+  /* 同款语义：激活工具红色高亮 */
+  #toolbar .tb.on { background: #e5484d; color: #fff; }
   #toolbar .tb.pri { background: var(--accent); color: #fff; font-weight: 500; }
   #toolbar .tb.pri:hover { background: var(--accent-hover); }
   #toolbar .tb .kbd { font-family: var(--mono); font-size: 9.5px; opacity: 0.75; }
+  /* 形状槽位：矩形/椭圆合并按钮，右下角小三角弹出切换菜单 */
+  #toolbar .tb.slot .tri {
+    position: absolute; right: 3px; bottom: 3px;
+    width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-bottom: 5px solid currentColor; opacity: 0.75;
+  }
+  #toolbar .tb.slot .slot-menu {
+    display: none; position: absolute; top: 32px; left: 0; z-index: 30;
+    background: var(--ov-surface); border: 1px solid var(--ov-border); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45); padding: 3px; white-space: nowrap;
+  }
+  #toolbar .tb.slot .slot-menu.open { display: block; }
+  #toolbar .tb.slot .slot-menu button {
+    display: flex; align-items: center; gap: 7px; width: 100%;
+    border: none; background: transparent; color: var(--ov-fg);
+    font-size: 12px; padding: 6px 12px 6px 8px; border-radius: 6px; cursor: pointer; text-align: left;
+  }
+  #toolbar .tb.slot .slot-menu button:hover { background: rgba(255,255,255,0.09); }
+  #toolbar .tb.slot .slot-menu button.on { background: #e5484d; color: #fff; }
+  /* 当前颜色 chip（业界同款：色块 + 右下角标） */
+  #pr-chip {
+    position: relative; width: 22px; height: 22px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.35); cursor: pointer; padding: 0; flex: none;
+  }
+  #pr-chip::after {
+    content: ""; position: absolute; right: -1px; bottom: -1px;
+    width: 0; height: 0; border-left: 7px solid transparent; border-bottom: 7px solid rgba(255,255,255,0.9);
+    border-radius: 0 0 5px 0;
+  }
+  /* 文字背景色直达块：与字色 chip 对称，无背景态显示斜纹 */
+  #pr-tbgchip {
+    width: 22px; height: 22px; border-radius: 5px;
+    border: 1px solid rgba(255,255,255,.4); cursor: pointer; padding: 0; flex: none;
+  }
+  #pr-tbgchip.none { background: repeating-linear-gradient(45deg, #666 0 4px, #333 4px 8px) !important; }
+  /* 色板：两行 10 列（画图经典 20 色 = 同类产品 默认板） */
+  #pr-color { max-width: 236px; flex-wrap: wrap; }
+  #pr-color .sw { width: 15px; height: 15px; border-radius: 3px; }
+  /* 线宽滑杆 2–24 */
+  #pr-width input[type="range"] { width: 86px; accent-color: #e5484d; }
+  #pr-width .wv { font: 10.5px/1.4 var(--mono); color: var(--ov-fg-dim); min-width: 16px; text-align: center; }
   #toolbar .sep { width: 1px; height: 18px; background: var(--ov-border); margin: 0 3px; }
   #toolbar .sw {
     width: 16px; height: 16px; border-radius: 50%; cursor: pointer;
@@ -171,14 +218,91 @@
 
   /* 画图层（选区内标注对象） */
   #layer { position: absolute; display: none; z-index: 5; pointer-events: none; }
-  #layer .obj { position: absolute; pointer-events: none; }
+  #layer .obj { position: absolute; pointer-events: none; white-space: pre; } /* 文字只认 \n 换行，与引擎渲染一致 */
+  /* 无工具悬浮标注：虚线轮廓预览（可点选/双击文字再编辑） */
+  #layer .obj-hover { outline: 2px dashed rgba(77, 163, 255, 0.9); outline-offset: 3px; }
   #layer.tool-eraser .obj { pointer-events: auto; cursor: pointer; }
   #layer.tool-eraser .obj:hover { filter: brightness(1.25) drop-shadow(0 0 3px rgba(255,255,255,0.8)); }
+  /* 选择工具：对象选中框（虚线 + 8 手柄），可整框拖动 */
+  #objsel {
+    position: absolute; display: none; z-index: 6;
+    border: 1.5px dashed #4da3ff; pointer-events: none;
+  }
+  #objsel .h {
+    position: absolute; width: 9px; height: 9px;
+    background: #fff; border: 1.5px solid #4da3ff; border-radius: 50%;
+    pointer-events: auto; display: none;
+  }
+  #objsel .h::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; }
+  #objsel.resizable .h { display: block; }
+  #objsel .h.nw { left: -6px; top: -6px; cursor: nwse-resize; }
+  #objsel .h.ne { right: -6px; top: -6px; cursor: nesw-resize; }
+  #objsel .h.sw { left: -6px; bottom: -6px; cursor: nesw-resize; }
+  #objsel .h.se { right: -6px; bottom: -6px; cursor: nwse-resize; }
+  #objsel .h.n { left: 50%; top: -6px; margin-left: -5px; cursor: ns-resize; }
+  #objsel .h.s { left: 50%; bottom: -6px; margin-left: -5px; cursor: ns-resize; }
+  #objsel .h.w { left: -6px; top: 50%; margin-top: -5px; cursor: ew-resize; }
+  #objsel .h.e { right: -6px; top: 50%; margin-top: -5px; cursor: ew-resize; }
+  /* 箭头端点锚点：挂 body、直接钉在端点视口坐标（拖动改方向和长度） */
+  .e-dot {
+    position: absolute; width: 12px; height: 12px;
+    background: #fff; border: 2px solid #e5484d; border-radius: 3px;
+    pointer-events: auto; display: none; cursor: move; z-index: 7;
+  }
+  .e-dot::after { content: ""; position: absolute; inset: -6px; }
+  /* 旋转锚 ◎：形状类标注选中时显示在对象上方，拖动绕中心旋转 */
+  .rot-anc {
+    position: absolute; width: 14px; height: 14px; border-radius: 50%;
+    background: #fff; border: 2px solid #4da3ff;
+    display: none; cursor: grab; z-index: 7; pointer-events: auto;
+  }
+  .rot-anc::after { content: ""; position: absolute; inset: -7px; }
+  /* 旋转标注预览 */
+  #layer .obj { transform-origin: center; }
+  /* 选中箭头本体辉光：归属一目了然 */
+  .obj-sel-glow svg { filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.85)); }
+  /* 同类产品 图5：箭头选中只有两端锚点，无包围框 */
+  #objsel.arrow-mode { border-color: transparent; }
+  /* 业界同款方形小手柄 → 圆形蓝点锚点（4 角 + 4 边中点） */
   .txtedit {
     position: absolute; z-index: 40; min-width: 40px;
     outline: 2px solid var(--accent); background: rgba(0,0,0,0.24);
-    color: #fff; padding: 2px 6px; border-radius: 4px;
-    font-weight: 500; white-space: pre-wrap; cursor: text;
+    color: #fff; padding: 0.25em; border-radius: 4px;
+    font-weight: 500; white-space: pre; cursor: text;
+    transform-origin: center;
+  }
+  /* 确认后的文字对象：背景呼吸内边距与引擎 pad（字号 25%）一致 */
+  #layer .obj[data-k="text"] { padding: 0.25em; }
+  /* 文字编辑态四角拉伸手柄（点击开始输入即刻显示，同类产品 同款） */
+  .t-anc {
+    position: absolute; width: 12px; height: 12px;
+    background: #fff; border: 1.5px solid #4da3ff; border-radius: 3px;
+    pointer-events: auto; display: none; z-index: 41;
+  }
+  .t-anc::after { content: ""; position: absolute; inset: -5px; }
+  .t-anc-nw, .t-anc-se { cursor: nwse-resize; }
+  .t-anc-ne, .t-anc-sw { cursor: nesw-resize; }
+  /* 通用弹层面板（A 文字设置 / 色板）：图标化收纳，低频设置不占行宽 */
+  .flymenu {
+    position: fixed; display: none; width: 236px;
+    padding: 10px; background: var(--ov-surface); border: 1px solid var(--ov-border);
+    border-radius: 10px; z-index: 90; box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    color: var(--ov-fg); font-size: 11px;
+  }
+  .flymenu .row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .flymenu .row:last-child { margin-bottom: 0; }
+  .flymenu .lbl { width: 34px; color: var(--ov-fg-dim); flex: none; }
+  .flymenu .sws { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+  .flymenu .sw { width: 26px; height: 26px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); cursor: pointer; padding: 0; flex: none; position: relative; }
+  .flymenu .sw::after { content: ""; position: absolute; inset: -4px; } /* 扩热区：22px 色块易点空 */
+  .flymenu .sw.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .flymenu .sw.none { background: repeating-linear-gradient(45deg, #666 0 4px, #333 4px 8px); }
+  .flymenu input[type="range"] { flex: 1; accent-color: var(--accent); height: 18px; }
+  .flymenu .val { width: 30px; text-align: right; color: var(--ov-fg-dim); flex: none; }
+  .flymenu input[type="color"] { width: 40px; height: 22px; border: 1px solid var(--ov-border); border-radius: 4px; background: none; padding: 0; cursor: pointer; }
+  .flymenu select { background: var(--ov-surface-2); color: var(--ov-fg); border: 1px solid var(--ov-border); border-radius: 4px; font-size: 11px; padding: 2px 4px; }
+  .flymenu .sect { border-top: 1px solid var(--ov-border); margin: 8px -10px 8px; padding-top: 8px; }
+  .flymenu .sect:first-child { display: none; }
   }
   .ann-toast {
     position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
@@ -198,6 +322,17 @@
     <div class="handle sw"></div><div class="handle s"></div><div class="handle se"></div>
   </div>
   <div id="layer"></div>
+  <!-- 选择工具的对象选中框（8 手柄；箭头=端点锚点，锚点挂 body 直接钉在端点视口坐标） -->
+  <div id="objsel">
+    <div class="h nw"></div><div class="h n"></div><div class="h ne"></div>
+    <div class="h w"></div><div class="h e"></div>
+    <div class="h sw"></div><div class="h s"></div><div class="h se"></div>
+  </div>
+  <span class="e-dot start" id="eanc-s" title="拖动调整起点"></span>
+  <span class="e-dot end" id="eanc-e" title="拖动调整终点（方向和长度）"></span>
+  <span class="rot-anc" id="rotanc" title="拖动旋转（接近 15° 倍数自动吸附）"></span>
+  <div id="pr-text-menu"></div>
+  <div id="pr-color-menu"></div>
   <div id="sizechip"></div>
   <div id="magnifier">
     <canvas id="magcv" width="148" height="148"></canvas>
@@ -207,17 +342,25 @@
 
   <div id="toolbar">
     <div class="row" id="tb-main">
-      <button class="tb pri" id="tb-copy" title="复制图片（Enter / Ctrl+C）"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="kbd">Enter</span></button>
-      <span class="sep"></span>
+      <button class="tb" data-tool="select" title="选择 V：点选标注 · 拖动 · 方向键微调 · Delete 删除"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M5 3l14 8-6.5 1.5L15 19l-3 1.5-2.5-6.5L5 17z"/></svg></button>
       <button class="tb" data-tool="arrow" title="箭头 A"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5M9 5h10v10"/></svg></button>
+      <!-- 外层用 div：HTML 禁止 button 嵌套 button（解析器会把内层按钮拆出按钮外导致菜单平铺显示） -->
+      <div class="tb slot" data-tool="shape" id="tb-shape" title="矩形 R · 椭圆 O（Tab 切换）" role="button" tabindex="0">
+        <svg id="shape-ic-rect" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
+        <svg id="shape-ic-ellipse" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="display:none"><circle cx="12" cy="12" r="8"/></svg>
+        <span class="tri" id="shape-tri"></span>
+        <span class="slot-menu" id="shape-menu" style="display:none; position:absolute; top:32px; left:0; z-index:30; background:var(--ov-surface); border:1px solid var(--ov-border); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.45); padding:3px; white-space:nowrap; flex-direction:column;">
+          <button data-shape="rect" class="on" style="display:flex; align-items:center; gap:7px; width:100%; border:none; background:transparent; color:var(--ov-fg); font-size:12px; padding:6px 12px 6px 8px; border-radius:6px; cursor:pointer; text-align:left;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>矩形 <span class="kbd">R</span></button>
+          <button data-shape="ellipse" style="display:flex; align-items:center; gap:7px; width:100%; border:none; background:transparent; color:var(--ov-fg); font-size:12px; padding:6px 12px 6px 8px; border-radius:6px; cursor:pointer; text-align:left;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>椭圆 <span class="kbd">O</span></button>
+        </span>
+      </div>
       <button class="tb" data-tool="pen" title="画笔 P"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></button>
       <button class="tb" data-tool="marker" title="荧光笔 H"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l6 6"/><path d="M4 20h16"/><path d="M14 4l6 6-9 9H5v-6z"/></svg></button>
-      <button class="tb" data-tool="rect" title="矩形 R"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="6" width="16" height="12" rx="1"/></svg></button>
-      <button class="tb" data-tool="ellipse" title="椭圆 O"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/></svg></button>
-      <button class="tb" data-tool="text" title="文字 T"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5 5h14M12 5v14"/></svg></button>
-      <button class="tb" data-tool="num" title="序号 N"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M10 8.5a1.8 1.8 0 1 1 3.4.9c-.4 1-3.4 2.4-3.4 4.6h4" stroke-linecap="round"/></svg></button>
       <button class="tb" data-tool="mosaic" title="马赛克 M"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="7" height="7" opacity=".9"/><rect x="13" y="4" width="7" height="7" opacity=".45"/><rect x="4" y="13" width="7" height="7" opacity=".45"/><rect x="13" y="13" width="7" height="7" opacity=".9"/></svg></button>
-      <button class="tb" data-tool="eraser" title="橡皮擦 E"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H8.5l-5-5a2 2 0 0 1 0-2.8L13 3a2 2 0 0 1 2.8 0l5.2 5.2a2 2 0 0 1 0 2.8L13 19"/><path d="M7 9l8 8"/></svg></button>
+      <button class="tb" data-tool="text" title="文字 T"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5 5h14M12 5v14"/></svg></button>
+      <button class="tb" data-tool="num" title="序号 N：连点自增 · Alt 复用上一号"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M10 8.5a1.8 1.8 0 1 1 3.4.9c-.4 1-3.4 2.4-3.4 4.6h4" stroke-linecap="round"/></svg></button>
+      <button class="tb" data-tool="eraser" title="橡皮擦 E：点一下删掉标注（可撤销）"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H8.5l-5-5a2 2 0 0 1 0-2.8L13 3a2 2 0 0 1 2.8 0l5.2 5.2a2 2 0 0 1 0 2.8L13 19"/><path d="M7 9l8 8"/></svg></button>
+      <button class="tb" id="tb-crop" title="裁剪 C：重新框选（标注跟随平移）"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg></button>
       <span class="sep"></span>
       <button class="tb" id="tb-undo" title="撤销 Ctrl+Z"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg></button>
       <button class="tb" id="tb-redo" title="重做 Ctrl+Shift+Z"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/></svg></button>
@@ -225,25 +368,23 @@
       <button class="tb" id="tb-ocr" title="取字：本地 OCR，文字进剪贴板"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 9h8M12 9v7M9.5 16h5"/></svg></button>
       <button class="tb" id="tb-scroll" title="长截图：滚动采集拼接"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="1.5"/><path d="M10 7h4M10 11h4"/></svg></button>
       <button class="tb" id="tb-pin" title="贴图：钉在桌面置顶显示"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l4.5 4.5-2.3 2.3.6 4-3.3-1.5-4.9 4.9L8 17.3l4.6-4.6-1.4-3.2 3.8-4z"/></svg></button>
+      <span class="sep"></span>
+      <button class="tb" id="tb-saveas" title="另存为…：自选路径保存"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
       <button class="tb" id="tb-save" title="保存到 Pictures\Onceglance（Ctrl+S）"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v13M7 3v5h8"/></svg></button>
+      <button class="tb" id="tb-copy" title="复制图片（Enter / Ctrl+C）"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="kbd">Enter</span></button>
       <button class="tb" id="tb-exit" title="取消（Esc）"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
     </div>
     <div class="row" id="tb-props">
       <span class="props on" id="pr-color"></span>
       <span class="props" id="pr-width">
-        <select id="pr-width-sel">
-          <option value="2">2</option>
-          <option value="4">4</option>
-          <option value="6" selected>6</option>
-          <option value="9">9</option>
-          <option value="14">14</option>
-        </select>
+        <input id="pr-width-range" type="range" min="2" max="24" step="1" value="6" />
+        <span class="wv" id="pr-width-val">6</span>
       </span>
       <span class="props" id="pr-arrow">
         <select id="pr-arrow-style">
           <option value="end" selected>箭头 →</option>
           <option value="both">双箭头 ↔</option>
-          <option value="start">反向 ←</option>
+          <option value="start">起点 ←</option>
           <option value="none">无箭头 —</option>
         </select>
         <select id="pr-arrow-line">
@@ -265,29 +406,9 @@
         </select>
       </span>
       <span class="props" id="pr-text">
-        <select id="pr-font">
-          <option value="default">微软雅黑</option>
-          <option value="simsun">宋体</option>
-          <option value="simhei">黑体</option>
-          <option value="kaiti">楷体</option>
-          <option value="segoe">Segoe UI</option>
-        </select>
-        <select id="pr-tsize">
-          <option value="14">14</option>
-          <option value="18">18</option>
-          <option value="22" selected>22</option>
-          <option value="28">28</option>
-          <option value="36">36</option>
-          <option value="48">48</option>
-        </select>
-        <span class="seg" id="pr-tstyle"><button data-t="bold"><b>B</b></button><button data-t="italic"><i>I</i></button><button data-t="underline"><u>U</u></button></span>
-        <span class="seg" id="pr-talign"><button data-a="left" class="on">左</button><button data-a="center">中</button><button data-a="right">右</button></span>
-        <select id="pr-tlh">
-          <option value="1" selected>行距 1.0</option>
-          <option value="1.4">行距 1.4</option>
-          <option value="1.8">行距 1.8</option>
-        </select>
-        <span class="seg" id="pr-tbg"><button data-bg="0" class="on">背景</button></span>
+        <button id="pr-tbgchip" title="文字背景色（点击选色 / 无背景）"></button>
+        <span class="seg" id="pr-tstyle"><button data-t="bold"><b>B</b></button><button data-t="italic"><i>I</i></button><button data-t="underline"><u>U</u></button><button data-t="shadow" title="阴影">S</button><button id="pr-aset" title="文字设置：背景/字体/字号/描边">A</button></span>
+        <span class="seg" id="pr-talign"><button data-a="left" class="on" title="左对齐"><svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="2" rx="0.5"/><rect x="1" y="6" width="8" height="2" rx="0.5"/><rect x="1" y="10" width="10" height="2" rx="0.5"/></svg></button><button data-a="center" title="居中"><svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="2" rx="0.5"/><rect x="3" y="6" width="8" height="2" rx="0.5"/><rect x="2" y="10" width="10" height="2" rx="0.5"/></svg></button><button data-a="right" title="右对齐"><svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="2" rx="0.5"/><rect x="5" y="6" width="8" height="2" rx="0.5"/><rect x="3" y="10" width="10" height="2" rx="0.5"/></svg></button></span>
       </span>
       <span class="props" id="pr-num">
         <span class="seg" id="pr-num-style"><button data-ns="solid" class="on">实心</button><button data-ns="outline">描边</button><button data-ns="plain">数字</button></span>
@@ -307,6 +428,91 @@
   </div>
 
   <div id="cancelhint">拖动框选，或单击自动识别的窗口 · Tab 切换候选<button id="cancel-x" title="退出截图（Esc）">✕ 退出</button></div>
+
+  <!-- 底部状态栏：尺寸 · 当前工具+提示 · 光标坐标（基图像素） · 撤销步数 · 输出文件名 -->
+  <div id="statusbar">
+    <span id="sb-size">—</span><span class="sb-sep"></span>
+    <span id="sb-tool">未选择</span><span class="sb-sep"></span>
+    <span id="sb-xy">0, 0</span><span class="sb-sep"></span>
+    <span id="sb-undo">撤销 0/0</span><span class="sb-sep"></span>
+    <span id="sb-out">将生成 …-ann.png</span>
+  </div>
+  <style>
+    #statusbar {
+      position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
+      display: none; align-items: center; gap: 10px; z-index: 18;
+      background: var(--ov-surface); color: var(--ov-fg-dim);
+      font: 11px/1.6 var(--ui); padding: 4px 14px;
+      border: 1px solid var(--ov-border); border-radius: 8px;
+      opacity: 0.94; white-space: nowrap;
+    }
+    #statusbar .sb-sep { width: 1px; height: 12px; background: var(--ov-border); }
+    #statusbar span { font-family: inherit; }
+    #sb-size, #sb-xy, #sb-undo { font-family: var(--mono); font-size: 10.5px; }
+  </style>
+
+  <!-- Esc 三键保护弹窗：有未输出内容时 -->
+  <div id="escdlg">
+    <div class="dlg-card">
+      <div class="dlg-title">有未保存的标注内容</div>
+      <div class="dlg-btns">
+        <button id="dlg-cancel">取消</button>
+        <button id="dlg-discard">不保存</button>
+        <button id="dlg-save" class="pri">保存</button>
+      </div>
+      <label class="dlg-remember"><input type="checkbox" id="dlg-remember"/>记住本次选择，以后 Esc 不再询问（可在 主面板 → 通用 里改回）</label>
+    </div>
+  </div>
+  <style>
+    #escdlg { position: fixed; inset: 0; display: none; z-index: 200; background: rgba(0,0,0,0.35); }
+    #escdlg.open { display: flex; align-items: center; justify-content: center; }
+    #escdlg .dlg-card {
+      background: var(--ov-surface); color: var(--ov-fg);
+      border: 1px solid var(--ov-border); border-radius: 12px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.55); padding: 18px 20px; min-width: 300px;
+    }
+    #escdlg .dlg-title { font-size: 13.5px; margin-bottom: 14px; }
+    #escdlg .dlg-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    #escdlg .dlg-btns button {
+      font-family: inherit; font-size: 12px; padding: 6px 16px; cursor: pointer;
+      border: 1px solid var(--ov-border); border-radius: 7px;
+      background: var(--ov-surface-2); color: var(--ov-fg);
+    }
+    #escdlg .dlg-btns button:hover { border-color: var(--accent); }
+    #escdlg .dlg-btns button.pri { background: var(--accent); border-color: var(--accent); color: #fff; }
+    #escdlg .dlg-remember {
+      display: flex; align-items: center; gap: 7px; margin-top: 12px;
+      color: var(--ov-fg-dim); font-size: 11.5px; cursor: pointer;
+    }
+  </style>
+
+  <!-- 右键菜单：输出选项（阴影/边框 = 同类产品 标志性出图效果） -->
+  <div id="ctxmenu">
+    <div class="ctx-title">输出选项</div>
+    <label class="ctx-row"><input type="checkbox" id="opt-shadow"/>阴影</label>
+    <div class="ctx-sub">模糊 <input type="range" id="opt-shadow-blur" min="4" max="60" step="2" value="24"/> <span id="opt-shadow-blur-v">24</span></div>
+    <div class="ctx-sub">颜色 <button class="ctx-sw" id="opt-shadow-color" data-c="#000000"></button></div>
+    <label class="ctx-row"><input type="checkbox" id="opt-border"/>边框</label>
+    <div class="ctx-sub">宽度 <input type="range" id="opt-border-w" min="1" max="20" step="1" value="6"/> <span id="opt-border-w-v">6</span></div>
+    <div class="ctx-sub">颜色 <button class="ctx-sw" id="opt-border-color" data-c="#FFFFFF"></button></div>
+  </div>
+  <style>
+    #ctxmenu {
+      position: absolute; display: none; z-index: 150; width: 200px;
+      background: var(--ov-surface); color: var(--ov-fg);
+      border: 1px solid var(--ov-border); border-radius: 10px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.5); padding: 8px 12px;
+      font-size: 12px;
+    }
+    #ctxmenu .ctx-title { color: var(--ov-fg-dim); font-size: 11px; margin-bottom: 6px; }
+    #ctxmenu .ctx-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; }
+    #ctxmenu .ctx-sub { display: flex; align-items: center; gap: 6px; padding: 1px 0 3px 24px; color: var(--ov-fg-dim); }
+    #ctxmenu .ctx-sub input[type="range"] { width: 90px; accent-color: var(--accent); }
+    #ctxmenu .ctx-sw {
+      width: 16px; height: 16px; border-radius: 4px; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.4); padding: 0;
+    }
+  </style>
   <style>
     #cancel-x {
       font-family: inherit; font-size: 11px; line-height: 1.5;

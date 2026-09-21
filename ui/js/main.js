@@ -26,11 +26,11 @@ $("#btn-close").onclick = async () => {
   }
 };
 
-// ===== 品牌章（一处定稿、处处同图：引用 assets/logo 正本）=====
+// ===== 品牌章（一处定稿、处处同图：svg 内联 data URL，不依赖 asset 协议 scope）=====
 (async () => {
   try {
-    const p = await invoke("get_logo_path", { name: "onceglance-mark-small.svg" });
-    $("#brand-img").src = convertFileSrc(p);
+    const svg = await invoke("get_logo_svg", { name: "onceglance-mark-small.svg" });
+    $("#brand-img").src = "data:image/svg+xml;utf8," + encodeURIComponent(svg);
   } catch (e) {
     console.error("品牌资产加载失败", e);
   }
@@ -193,6 +193,14 @@ async function loadSettingsUI() {
   $("#sw-autocap").disabled = !s.agent_enabled;
   $("#sw-remember").classList.toggle("on", s.remember_annotation);
   $("#sw-closetray").classList.toggle("on", s.close_to_tray);
+  const esc = s.esc_exit_confirm || { enabled: true, action: "" };
+  $("#sw-escconfirm").classList.toggle("on", esc.enabled !== false);
+  $("#sw-escconfirm").setAttribute("aria-checked", esc.enabled !== false);
+  if (esc.enabled === false && esc.action) {
+    $("#sw-escconfirm").title = `已记住「${esc.action === "save" ? "保存" : "不保存"}」——关闭本开关恢复每次询问`;
+  } else {
+    $("#sw-escconfirm").title = "";
+  }
   $("#sw-autostart").classList.toggle("on", await invoke("autostart_status"));
   $("#sel-action").value = s.default_action;
   $("#save-dir-chip").textContent = s.save_root;
@@ -310,6 +318,13 @@ $("#sw-remember").onclick = async () => {
 $("#sw-closetray").onclick = async () => {
   const s = await invoke("get_settings");
   await invoke("set_setting", { key: "close_to_tray", value: !s.close_to_tray });
+  loadSettingsUI();
+};
+$("#sw-escconfirm").onclick = async () => {
+  const s = await invoke("get_settings");
+  const esc = s.esc_exit_confirm || { enabled: true, action: "" };
+  // 关掉=恢复每次询问（清空记住的动作）；打开=仅启用弹窗，不改变已记住的选择
+  await invoke("set_setting", { key: "esc_exit_confirm", value: { enabled: esc.enabled === false, action: esc.enabled === false ? "" : (esc.action || "") } });
   loadSettingsUI();
 };
 $("#sw-autostart").onclick = async () => {
