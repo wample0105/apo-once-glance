@@ -894,11 +894,21 @@ fn freeze_begin_inner() -> Result<serde_json::Value, String> {
     let bmp = capture::capture_region_px(sx, sy, sw as u32, sh as u32).map_err(oe)?;
     // 预览用 JPEG data URL（asset 协议作用域不含 TEMP，data URL 100% 可加载）；
     // 精确裁剪/取色走内存 BGRA，不受预览压缩影响。
+    // 热路径提速：RGBA→RGB 直编 JPEG q70（旧 PNG 编码→解码→JPEG 三连是数百 ms 大头）
     let preview = {
-        let img = image::load_from_memory(&capture::encode_png(&bmp).map_err(oe)?)
-            .map_err(|e| e.to_string())?;
+        let rgb = image::RgbImage::from_raw(bmp.width, bmp.height, {
+            let mut v = Vec::with_capacity((bmp.width * bmp.height * 3) as usize);
+            for px in bmp.pixels.chunks_exact(4) {
+                v.extend_from_slice(&[px[0], px[1], px[2]]);
+            }
+            v
+        })
+        .ok_or("预览帧构造失败")?;
         let mut jout = std::io::Cursor::new(Vec::new());
-        img.write_to(&mut jout, image::ImageFormat::Jpeg).map_err(|e| e.to_string())?;
+        let enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jout, 70);
+        image::DynamicImage::ImageRgb8(rgb)
+            .write_with_encoder(enc)
+            .map_err(|e| e.to_string())?;
         format!("data:image/jpeg;base64,{}", crate::base64_encode(&jout.into_inner()))
     };
     *FREEZE.lock().unwrap() = Some(FreezeFrame {
@@ -913,6 +923,22 @@ fn freeze_begin_inner() -> Result<serde_json::Value, String> {
         "width": bmp.width,
         "height": bmp.height,
     }))
+}
+
+/// 热键路径直调（不经 IPC）：返回 (dataUrl, w, h)；失败时 JS 兜底走 freeze_begin 命令
+pub fn freeze_begin_inner_ok() -> Option<(String, u32, u32)> {
+    match freeze_begin_inner() {
+        Ok(v) => {
+            let url = v.get("dataUrl").and_then(|x| x.as_str()).unwrap_or("").to_string();
+            let w = v.get("width").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+            let h = v.get("height").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+            if url.is_empty() { None } else { Some((url, w, h)) }
+        }
+        Err(e) => {
+            eprintln!("freeze_begin_inner_ok: {e}");
+            None
+        }
+    }
 }
 
 
@@ -1031,4 +1057,30 @@ pub async fn freeze_deliver(
     let outcome = crate::deliver::deliver_capture(&app, "region", &action, &bmp, Some(screen), None)
         .map_err(|e| e.message)?;
     Ok(serde_json::to_value(outcome).unwrap_or_default())
+}
+
+/// 另存为：系统保存对话框选择目标路径，把源文件（原图或标注衍生图）复制过去。
+/// rfd 对话框必须离开主线程：spawn_blocking，避免重蹈同步命令阻塞的死锁。
+#[tauri::command]
+pub async fn save_as_dialog(path: String) -> Result<serde_json::Value, String> {
+    let src = std::path::PathBuf::from(&path);
+    tauri::async_runtime::spawn_blocking(move || {
+        let default_name = src
+            .file_name()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "onceglance.png".into());
+        let Some(dest) = rfd::FileDialog::new()
+            .set_title("另存为")
+            .set_file_name(&default_name)
+            .add_filter("PNG 图片", &["png"])
+            .save_file()
+        else {
+            // 用户取消：不算错误，覆盖层保持关闭即可
+            return Ok(serde_json::json!({ "saved": false }));
+        };
+        std::fs::copy(&src, &dest).map_err(|e| format!("保存失败：{e}"))?;
+        Ok(serde_json::json!({ "saved": true, "path": dest.to_string_lossy() }))
+    })
+    .await
+    .map_err(|e| format!("对话框任务失败：{e}"))?
 }

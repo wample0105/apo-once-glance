@@ -139,9 +139,21 @@ fn push_candidate(out: &mut Vec<Candidate>, h: HWND, x: i32, y: i32, level: u8) 
     if w <= 2 || hh <= 2 || !contains(&r, x, y) {
         return;
     }
+    // Tauri 无边框窗口的标题是 tao 占位符（TAURI_DRAG_RESIZE_WINDOW），改显进程名
+    let mut title = title_of(h);
+    let mut pid: u32 = 0;
+    unsafe {
+        GetWindowThreadProcessId(h, Some(&mut pid));
+    }
+    if title.is_empty() || title.starts_with("TAURI_DRAG_RESIZE") {
+        if let Some(img) = once_core::capture::process_image_name(pid) {
+            let name = img.rsplit("/").next().unwrap_or(&img);
+            title = name.trim_end_matches(".exe").to_string();
+        }
+    }
     out.push(Candidate {
         rect: [r.left, r.top, w, hh],
-        title: title_of(h),
+        title,
         class: class_of(h),
         level,
     });

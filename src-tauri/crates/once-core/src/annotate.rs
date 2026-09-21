@@ -26,6 +26,38 @@ pub struct AnnotationScript {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub theme: Option<String>,
     pub operations: Vec<Operation>,
+    /// 整图输出特效（业界同款阴影/边框）；三端契约：GUI/CLI/MCP 同语义
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<OutputFx>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct OutputFx {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shadow: Option<OutputShadow>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<OutputBorder>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct OutputShadow {
+    /// 模糊半径（px，默认 24）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blur: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct OutputBorder {
+    /// 边框宽度（px，默认 6）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub width: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
 }
 
 /// 点规格：`[x, y]` 数组（PRD §4.3 schema）。
@@ -53,6 +85,9 @@ pub enum Operation {
         /// 线型：solid(默认) | dashed | dotted
         #[serde(default)]
         line_style: Option<String>,
+        /// 旋转角度（度，顺时针，围绕几何中心）
+        #[serde(default)]
+        rotation: Option<f32>,
     },
     /// 自由画笔：折线点序（画笔/荧光笔轨迹）
     Pen {
@@ -64,6 +99,9 @@ pub enum Operation {
         /// marker（正片叠底半透明）| pen（默认实线）
         #[serde(default)]
         mode: Option<String>,
+        /// 旋转角度（度，顺时针，围绕折线包围盒中心）
+        #[serde(default)]
+        rotation: Option<f32>,
     },
     Rect {
         at: PointSpec,
@@ -84,6 +122,9 @@ pub enum Operation {
         /// 整体不透明度 0.05–1.0
         #[serde(default)]
         opacity: Option<f32>,
+        /// 旋转角度（度，顺时针，围绕几何中心）
+        #[serde(default)]
+        rotation: Option<f32>,
     },
     Ellipse {
         at: PointSpec,
@@ -98,6 +139,9 @@ pub enum Operation {
         dash: Option<bool>,
         #[serde(default)]
         opacity: Option<f32>,
+        /// 旋转角度（度，顺时针，围绕几何中心）
+        #[serde(default)]
+        rotation: Option<f32>,
     },
     StepNumber {
         at: PointSpec,
@@ -111,6 +155,9 @@ pub enum Operation {
         /// solid（实心圆，默认）| outline（描边圆）| plain（纯数字）
         #[serde(default)]
         style: Option<String>,
+        /// 旋转角度（度，顺时针，围绕圆心）
+        #[serde(default)]
+        rotation: Option<f32>,
     },
     Text {
         at: PointSpec,
@@ -128,6 +175,9 @@ pub enum Operation {
         italic: Option<bool>,
         #[serde(default)]
         underline: Option<bool>,
+        /// 投影（右下偏移黑色半透明）
+        #[serde(default)]
+        shadow: Option<bool>,
         /// left | center | right（多行时逐行对齐）
         #[serde(default)]
         align: Option<String>,
@@ -137,6 +187,21 @@ pub enum Operation {
         /// 文字背景色（如 "#FFFFFF"）；缺省无背景
         #[serde(default)]
         background: Option<String>,
+        /// 背景不透明度 0.05~1（默认 1 全不透明）
+        #[serde(default)]
+        background_opacity: Option<f32>,
+        /// 背景圆角半径（物理像素，默认字号 12%）
+        #[serde(default)]
+        background_radius: Option<f32>,
+        /// 描边色（文字外轮廓，画在填充之下）；缺省不描边
+        #[serde(default)]
+        stroke_color: Option<String>,
+        /// 描边宽度（物理像素）
+        #[serde(default)]
+        stroke_width: Option<f32>,
+        /// 旋转角度（度，顺时针，围绕文字块中心）
+        #[serde(default)]
+        rotation: Option<f32>,
     },
     Highlight {
         at: PointSpec,
@@ -145,6 +210,9 @@ pub enum Operation {
         color: Option<String>,
         #[serde(default)]
         opacity: Option<f32>,
+        /// 旋转角度（度，顺时针，围绕矩形中心）
+        #[serde(default)]
+        rotation: Option<f32>,
     },
     Mosaic {
         at: PointSpec,
@@ -316,7 +384,7 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
     let mut step_counter: u32 = 0;
     for op in ops {
         match op {
-            Operation::Arrow { from, to, color, width, dash, double_head, heads, line_style } => {
+            Operation::Arrow { from, to, color, width, dash, double_head, heads, line_style, rotation } => {
                 let (fx, fy) = resolve(unit, w, h, from);
                 let (tx, ty) = resolve(unit, w, h, to);
                 let fx = fx - crop_off.0 as f32;
@@ -327,14 +395,29 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
                 let lw = width.unwrap_or(input.defaults.arrow_width);
                 let heads_v = heads.as_deref().unwrap_or(if double_head.unwrap_or(false) { "both" } else { "end" });
                 let ls = line_style.as_deref().unwrap_or(if dash.unwrap_or(false) { "dashed" } else { "solid" });
-                draw_arrow(&mut pixmap, fx, fy, tx, ty, lw, color, ls, heads_v);
+                let xf = center_xform(*rotation, (fx + tx) / 2.0, (fy + ty) / 2.0);
+                draw_arrow(&mut pixmap, fx, fy, tx, ty, lw, color, ls, heads_v, xf);
             }
-            Operation::Pen { points, color, width, mode } => {
+            Operation::Pen { points, color, width, mode, rotation } => {
                 let col = parse_color(color.as_deref()).unwrap_or(accent());
                 let mut pts: Vec<(f32, f32)> = Vec::with_capacity(points.len());
                 for p in points {
                     let (x, y) = resolve(unit, w, h, p);
                     pts.push((x - crop_off.0 as f32, y - crop_off.1 as f32));
+                }
+                // 旋转：绕折线包围盒中心（度，顺时针）
+                if let Some(deg) = *rotation {
+                    if deg != 0.0 {
+                        let (min_x, min_y) = (pts.iter().fold(f32::MAX, |m, p| m.min(p.0)), pts.iter().fold(f32::MAX, |m, p| m.min(p.1)));
+                        let (max_x, max_y) = (pts.iter().fold(f32::MIN, |m, p| m.max(p.0)), pts.iter().fold(f32::MIN, |m, p| m.max(p.1)));
+                        let (cx, cy) = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
+                        let (sn, cs) = deg.to_radians().sin_cos();
+                        for p in pts.iter_mut() {
+                            let (dx, dy) = (p.0 - cx, p.1 - cy);
+                            p.0 = cx + dx * cs - dy * sn;
+                            p.1 = cy + dx * sn + dy * cs;
+                        }
+                    }
                 }
                 draw_pen(
                     &mut pixmap,
@@ -344,48 +427,49 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
                     mode.as_deref(),
                 );
             }
-            Operation::Rect { at, size, style, color, width, radius, dash, opacity } => {
+            Operation::Rect { at, size, style, color, width, radius, dash, opacity, rotation } => {
                 let (x, y) = resolve(unit, w, h, at);
+                let x = x - crop_off.0 as f32;
+                let y = y - crop_off.1 as f32;
+                let xf = center_xform(*rotation, x + size[0] as f32 / 2.0, y + size[1] as f32 / 2.0);
                 draw_rect(
-                    &mut pixmap,
-                    x - crop_off.0 as f32,
-                    y - crop_off.1 as f32,
-                    size[0] as f32,
-                    size[1] as f32,
+                    &mut pixmap, x, y,
+                    size[0] as f32, size[1] as f32,
                     style.as_deref(),
                     parse_color(color.as_deref()).unwrap_or(accent()),
                     width.unwrap_or(input.defaults.shape_width),
                     radius.unwrap_or(0.0),
                     dash.unwrap_or(false),
                     *opacity,
+                    xf,
                 );
             }
-            Operation::Ellipse { at, size, style, color, width, dash, opacity } => {
+            Operation::Ellipse { at, size, style, color, width, dash, opacity, rotation } => {
                 let (x, y) = resolve(unit, w, h, at);
+                let x = x - crop_off.0 as f32;
+                let y = y - crop_off.1 as f32;
+                let xf = center_xform(*rotation, x + size[0] as f32 / 2.0, y + size[1] as f32 / 2.0);
                 draw_ellipse(
-                    &mut pixmap,
-                    x - crop_off.0 as f32,
-                    y - crop_off.1 as f32,
-                    size[0] as f32,
-                    size[1] as f32,
+                    &mut pixmap, x, y,
+                    size[0] as f32, size[1] as f32,
                     style.as_deref(),
                     parse_color(color.as_deref()).unwrap_or(accent()),
                     width.unwrap_or(input.defaults.shape_width),
                     dash.unwrap_or(false),
                     *opacity,
+                    xf,
                 );
             }
-            Operation::StepNumber { at, label, color, diameter, style } => {
+            Operation::StepNumber { at, label, color, diameter, style, rotation } => {
                 step_counter += 1;
                 let n = label.unwrap_or(step_counter);
                 let (x, y) = resolve(unit, w, h, at);
-                let d = diameter.unwrap_or(input.defaults.step_diameter);
+                let x = x - crop_off.0 as f32;
+                let y = y - crop_off.1 as f32;
                 let col = parse_color(color.as_deref()).unwrap_or(accent());
                 draw_step_number(
-                    &mut pixmap,
-                    x - crop_off.0 as f32,
-                    y - crop_off.1 as f32,
-                    d,
+                    &mut pixmap, x, y,
+                    diameter.unwrap_or(input.defaults.step_diameter),
                     n,
                     col,
                     style.as_deref().unwrap_or(&input.defaults.step_style),
@@ -400,9 +484,15 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
                 bold,
                 italic,
                 underline,
+                shadow,
                 align,
                 line_height,
                 background,
+                background_opacity,
+                background_radius,
+                stroke_color,
+                stroke_width,
+                rotation,
             } => {
                 let (x, y) = resolve(unit, w, h, at);
                 let style = TextStyle {
@@ -410,11 +500,17 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
                     bold: bold.unwrap_or(false),
                     italic: italic.unwrap_or(false),
                     underline: underline.unwrap_or(false),
+                    shadow: shadow.unwrap_or(false), // 默认关闭：CLI/MCP 旧脚本渲染不变，GUI 显式传值
                     align: align.as_deref().unwrap_or("left").to_string(),
                     line_height: line_height.unwrap_or(1.0),
                     background: background.as_deref().and_then(|s| parse_color(Some(s))),
+                    bg_opacity: background_opacity.map(|v| v.clamp(0.05, 1.0)),
+                    bg_radius: background_radius.map(|v| v.max(0.0)),
+                    stroke_color: stroke_color.as_deref().and_then(|s| parse_color(Some(s))),
+                    stroke_width: stroke_width.map(|v| v.max(1.0)),
                 };
-                draw_text(
+                let xf = center_xform(*rotation, 0.0, 0.0); // 中心在排版后才知道：draw_text 内部处理
+                draw_text_rot(
                     &mut pixmap,
                     x - crop_off.0 as f32,
                     y - crop_off.1 as f32,
@@ -423,27 +519,26 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
                     parse_color(color.as_deref())
                         .unwrap_or(parse_color(Some(&input.defaults.color)).unwrap_or(accent())),
                     &style,
+                    rotation.unwrap_or(0.0),
                 )?;
             }
-            Operation::Highlight { at, size, color, opacity } => {
+            Operation::Highlight { at, size, color, opacity, rotation } => {
                 let (x, y) = resolve(unit, w, h, at);
+                let x = x - crop_off.0 as f32;
+                let y = y - crop_off.1 as f32;
                 let col = parse_color(color.as_deref()).unwrap_or(Color::from_rgba8(255, 214, 0, 255));
                 let opa = opacity.unwrap_or(input.defaults.highlight_opacity).clamp(0.05, 1.0);
                 let mut p = Paint::default();
                 p.set_color(Color::from_rgba8((col.red() * 255.0) as u8, (col.green() * 255.0) as u8, (col.blue() * 255.0) as u8, (opa * 255.0) as u8));
                 p.anti_alias = true;
+                let xf = center_xform(*rotation, x + size[0] as f32 / 2.0, y + size[1] as f32 / 2.0);
                 let mut pb = PathBuilder::new();
                 pb.push_rect(
-                    tiny_skia::Rect::from_xywh(
-                        x - crop_off.0 as f32,
-                        y - crop_off.1 as f32,
-                        size[0] as f32,
-                        size[1] as f32,
-                    )
-                    .ok_or_else(|| OnceError::usage("高亮矩形无效"))?,
+                    tiny_skia::Rect::from_xywh(x, y, size[0] as f32, size[1] as f32)
+                        .ok_or_else(|| OnceError::usage("高亮矩形无效"))?,
                 );
                 let path = pb.finish().ok_or_else(|| OnceError::usage("高亮路径无效"))?;
-                pixmap.fill_path(&path, &p, FillRule::Winding, Transform::identity(), None);
+                pixmap.fill_path(&path, &p, FillRule::Winding, xf, None);
             }
             Operation::Mosaic { .. } => { /* 已处理 */ }
             Operation::Crop { .. } => { /* 已在最前应用 */ }
@@ -469,10 +564,102 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
         None => pixmap,
     };
 
+    // 整图输出特效（阴影/边框）：最后应用，画布向外扩展
+    let final_pixmap = apply_output_fx(final_pixmap, input.script.output.as_ref())?;
+
     let out_png = final_pixmap
         .encode_png()
         .map_err(|e| OnceError::io("标注结果 PNG 编码失败").with_source(e.to_string()))?;
     Ok(RenderOutput { png: out_png, width: final_pixmap.width(), height: final_pixmap.height() })
+}
+
+/// 文字投影色（半透明黑，alpha≈45%）
+fn text_shadow_col() -> Color {
+    Color::from_rgba8(0, 0, 0, 115)
+}
+
+/// 整图输出特效：外阴影（盒式模糊近似）+ 边框（业界同款出图效果）。
+/// 画布四向扩 pad = 边框宽 + 模糊半径；基图始终不被裁切。
+fn apply_output_fx(src: Pixmap, fx: Option<&OutputFx>) -> Result<Pixmap> {
+    let Some(fx) = fx else { return Ok(src) };
+    let shadow = fx.shadow.as_ref().map(|s| {
+        let blur = s.blur.unwrap_or(24.0).clamp(2.0, 120.0).ceil() as i32;
+        let color = parse_color(s.color.as_deref()).unwrap_or(Color::from_rgba8(0, 0, 0, 255));
+        (blur, color)
+    });
+    let border = fx.border.as_ref().map(|b| {
+        let w = b.width.unwrap_or(6.0).clamp(1.0, 40.0);
+        let color = parse_color(b.color.as_deref()).unwrap_or(Color::from_rgba8(255, 255, 255, 255));
+        (w, color)
+    });
+    if shadow.is_none() && border.is_none() {
+        return Ok(src);
+    }
+    let bw = border.map(|(w, _)| w as i32).unwrap_or(0);
+    let blur = shadow.map(|(b, _)| b).unwrap_or(0);
+    let pad = (bw + blur) as u32;
+    let w = src.width();
+    let h = src.height();
+    let ow = w + pad * 2;
+    let oh = h + pad * 2;
+    let mut out = Pixmap::new(ow, oh).ok_or_else(|| OnceError::usage("输出特效画布创建失败"))?;
+
+    // 1) 外阴影：覆盖图+边框范围的矩形，填充后整体盒式模糊（透明底上只影响 alpha/颜色渐变）
+    if let Some((b, col)) = shadow {
+        let rect = tiny_skia::Rect::from_xywh(
+            (pad as i32 - bw) as f32,
+            (pad as i32 - bw) as f32,
+            (w + 2 * bw as u32) as f32,
+            (h + 2 * bw as u32) as f32,
+        )
+        .ok_or_else(|| OnceError::usage("阴影矩形无效"))?;
+        let mut pb = PathBuilder::new();
+        pb.push_rect(rect);
+        if let Some(path) = pb.finish() {
+            let mut p = Paint::default();
+            p.set_color(Color::from_rgba8(
+                (col.red() * 255.0) as u8,
+                (col.green() * 255.0) as u8,
+                (col.blue() * 255.0) as u8,
+                110,
+            ));
+            p.anti_alias = true;
+            out.fill_path(&path, &p, FillRule::Winding, Transform::identity(), None);
+        }
+        box_blur_region(
+            &mut out,
+            Region { x0: 0, y0: 0, x1: ow, y1: oh },
+            b as f32,
+        );
+    }
+
+    // 2) 边框：不透明外框矩形（贴图外沿 bw 宽）
+    if let Some((_, col)) = border {
+        let rect = tiny_skia::Rect::from_xywh(
+            (pad as i32 - bw) as f32,
+            (pad as i32 - bw) as f32,
+            (w + 2 * bw as u32) as f32,
+            (h + 2 * bw as u32) as f32,
+        )
+        .ok_or_else(|| OnceError::usage("边框矩形无效"))?;
+        let mut pb = PathBuilder::new();
+        pb.push_rect(rect);
+        if let Some(path) = pb.finish() {
+            out.fill_path(&path, &paint(col), FillRule::Winding, Transform::identity(), None);
+        }
+    }
+
+    // 3) 基图粘贴 (pad, pad)（逐行拷贝）
+    {
+        let data = out.data_mut();
+        let src_data = src.data();
+        for row in 0..h as usize {
+            let dst = ((pad as usize + row) * ow as usize + pad as usize) * 4;
+            let srci = row * w as usize * 4;
+            data[dst..dst + w as usize * 4].copy_from_slice(&src_data[srci..srci + w as usize * 4]);
+        }
+    }
+    Ok(out)
 }
 
 #[derive(Clone, Copy)]
@@ -661,25 +848,27 @@ fn draw_arrow(
     color: Color,
     line_style: &str,
     heads: &str,
+    xf: Transform,
 ) {
     let dash = line_style == "dashed";
     let dotted = line_style == "dotted";
-    let double_head = heads == "both" || heads == "start";
-    let no_head = heads == "none";
+    let head_start = heads == "both" || heads == "start";
+    let head_end = heads == "end" || heads == "both";
     let lw = width.max(2.0);
-    let head = (lw * 3.0).min(36.0);
+    // 业界同款饱满箭头尖：长约 4.2 倍线宽（18–60px），与 GUI 预览一致
+    let head = (lw * 4.2).clamp(18.0, 60.0);
     let dx = x1 - x0;
     let dy = y1 - y0;
     let len = (dx * dx + dy * dy).sqrt().max(1.0);
     let ux = dx / len;
     let uy = dy / len;
-    // 箭头体：起点按需让位（双箭头时留出起点头）
-    let back = if double_head { head } else { 0.0 };
+    // 箭头体：有尖的一端让出尖的长度
+    let back = if head_start { head } else { 0.0 };
     let bx = x0 + ux * back;
     let by = y0 + uy * back;
-    // 线体缩短到箭头底
-    let bx2 = x1 - ux * head;
-    let by2 = y1 - uy * head;
+    let trim = if head_end { head } else { 0.0 };
+    let bx2 = x1 - ux * trim;
+    let by2 = y1 - uy * trim;
     let mut pb = PathBuilder::new();
     pb.move_to(bx, by);
     pb.line_to(bx2, by2);
@@ -688,32 +877,57 @@ fn draw_arrow(
         if dotted {
             stroke.dash = tiny_skia::StrokeDash::new(vec![lw * 0.4, lw * 1.8], 0.0);
         }
-        pixmap.stroke_path(&path, &paint(color), &stroke, Transform::identity(), None);
+        pixmap.stroke_path(&path, &paint(color), &stroke, xf, None);
     }
-    if no_head {
-        return;
-    }
-    // 实心三角头（终点）
+    // 线体法向（箭头尖宽度方向）
     let px = -uy;
     let py = ux;
-    let mut hb = PathBuilder::new();
-    hb.move_to(x1, y1);
-    hb.line_to(bx2 + px * head * 0.5, by2 + py * head * 0.5);
-    hb.line_to(bx2 - px * head * 0.5, by2 - py * head * 0.5);
-    hb.close();
-    if let Some(path) = hb.finish() {
-        pixmap.fill_path(&path, &paint(color), FillRule::Winding, Transform::identity(), None);
-    }
-    if double_head {
+    if head_end {
+        // 实心三角头（终点）
         let mut hb = PathBuilder::new();
-        hb.move_to(x0, y0);
-        hb.line_to(bx + px * head * 0.5, by + py * head * 0.5);
-        hb.line_to(bx - px * head * 0.5, by - py * head * 0.5);
+        hb.move_to(x1, y1);
+        hb.line_to(bx2 + px * head * 0.32, by2 + py * head * 0.32);
+        hb.line_to(bx2 - px * head * 0.32, by2 - py * head * 0.32);
         hb.close();
         if let Some(path) = hb.finish() {
-            pixmap.fill_path(&path, &paint(color), FillRule::Winding, Transform::identity(), None);
+            pixmap.fill_path(&path, &paint(color), FillRule::Winding, xf, None);
         }
     }
+    if head_start {
+        let mut hb = PathBuilder::new();
+        hb.move_to(x0, y0);
+        hb.line_to(bx + px * head * 0.32, by + py * head * 0.32);
+        hb.line_to(bx - px * head * 0.32, by - py * head * 0.32);
+        hb.close();
+        if let Some(path) = hb.finish() {
+            pixmap.fill_path(&path, &paint(color), FillRule::Winding, xf, None);
+        }
+    }
+}
+
+/// 仿射矩阵组合 C = A ∘ B（先应用 B 再应用 A；tiny_skia 0.12 无内建乘法）
+fn xform_mul(a: Transform, b: Transform) -> Transform {
+    Transform::from_row(
+        a.sx * b.sx + a.kx * b.ky,
+        a.ky * b.sx + a.sy * b.ky,
+        a.sx * b.kx + a.kx * b.sy,
+        a.ky * b.kx + a.sy * b.sy,
+        a.sx * b.tx + a.kx * b.ty + a.tx,
+        a.ky * b.tx + a.sy * b.ty + a.ty,
+    )
+}
+
+/// 绕对象中心旋转的变换（rotation 单位：度，屏幕坐标系顺时针为正；None/0 = 恒等）
+fn center_xform(rotation: Option<f32>, cx: f32, cy: f32) -> Transform {
+    let deg = match rotation {
+        Some(d) => d,
+        None => return Transform::identity(),
+    };
+    if deg == 0.0 {
+        return Transform::identity();
+    }
+    let (s, c) = deg.to_radians().sin_cos();
+    Transform::from_row(c, s, -s, c, cx - c * cx + s * cy, cy - s * cx - c * cy)
 }
 
 /// 通用描边样式：宽度下限 + 圆角连接 + 可选虚线。
@@ -788,6 +1002,7 @@ fn draw_rect(
     radius: f32,
     dash: bool,
     opacity: Option<f32>,
+    xf: Transform,
 ) {
     let lw = width.max(2.0);
     let color = with_opacity(color, opacity);
@@ -798,17 +1013,17 @@ fn draw_rect(
         None => return,
     };
     match style_of(style) {
-        "fill" => pixmap.fill_path(&path, &paint(color), FillRule::Winding, Transform::identity(), None),
+        "fill" => pixmap.fill_path(&path, &paint(color), FillRule::Winding, xf, None),
         "outline_fill" => {
             let mut p = paint(color);
             p.set_color(Color::from_rgba8((color.red() * 255.0) as u8, (color.green() * 255.0) as u8, (color.blue() * 255.0) as u8, 60));
-            pixmap.fill_path(&path, &p, FillRule::Winding, Transform::identity(), None);
+            pixmap.fill_path(&path, &p, FillRule::Winding, xf, None);
             let stroke = stroke_style(lw, dash);
-            pixmap.stroke_path(&path, &paint(color), &stroke, Transform::identity(), None);
+            pixmap.stroke_path(&path, &paint(color), &stroke, xf, None);
         }
         _ => {
             let stroke = stroke_style(lw, dash);
-            pixmap.stroke_path(&path, &paint(color), &stroke, Transform::identity(), None);
+            pixmap.stroke_path(&path, &paint(color), &stroke, xf, None);
         }
     }
 }
@@ -824,6 +1039,7 @@ fn draw_ellipse(
     width: f32,
     dash: bool,
     opacity: Option<f32>,
+    xf: Transform,
 ) {
     let lw = width.max(2.0);
     let color = with_opacity(color, opacity);
@@ -843,15 +1059,15 @@ fn draw_ellipse(
     let Some(path) = pb.finish() else { return };
     let stroke = stroke_style(lw, dash);
     match style_of(style) {
-        "fill" => pixmap.fill_path(&path, &paint(color), FillRule::Winding, Transform::identity(), None),
+        "fill" => pixmap.fill_path(&path, &paint(color), FillRule::Winding, xf, None),
         "outline_fill" => {
             let mut p = paint(color);
             p.set_color(Color::from_rgba8((color.red() * 255.0) as u8, (color.green() * 255.0) as u8, (color.blue() * 255.0) as u8, 60));
-            pixmap.fill_path(&path, &p, FillRule::Winding, Transform::identity(), None);
-            pixmap.stroke_path(&path, &paint(color), &stroke, Transform::identity(), None);
+            pixmap.fill_path(&path, &p, FillRule::Winding, xf, None);
+            pixmap.stroke_path(&path, &paint(color), &stroke, xf, None);
         }
         _ => {
-            pixmap.stroke_path(&path, &paint(color), &stroke, Transform::identity(), None);
+            pixmap.stroke_path(&path, &paint(color), &stroke, xf, None);
         }
     }
 }
@@ -944,9 +1160,15 @@ struct TextStyle {
     bold: bool,
     italic: bool,
     underline: bool,
+    shadow: bool,
     align: String,
     line_height: f32,
     background: Option<Color>,
+    bg_opacity: Option<f32>,
+    bg_radius: Option<f32>,
+    /// 描边颜色/宽度（物理像素）；先描边后填充，位于字形之下
+    stroke_color: Option<Color>,
+    stroke_width: Option<f32>,
 }
 
 impl Default for TextStyle {
@@ -956,9 +1178,14 @@ impl Default for TextStyle {
             bold: false,
             italic: false,
             underline: false,
+            shadow: false,
             align: "left".into(),
             line_height: 1.0,
             background: None,
+            bg_opacity: None,
+            bg_radius: None,
+            stroke_color: None,
+            stroke_width: None,
         }
     }
 }
@@ -1014,7 +1241,7 @@ fn white() -> Color {
 }
 
 fn draw_text(pixmap: &mut Pixmap, x: f32, y: f32, text: &str, size: f32, color: Color, style: &TextStyle) -> Result<()> {
-    draw_text_at(pixmap, x, y, text, size, color, false, style)
+    draw_text_at(pixmap, x, y, text, size, color, false, style, 0.0)
 }
 
 fn draw_text_centered(
@@ -1025,7 +1252,7 @@ fn draw_text_centered(
     size: f32,
     color: Color,
 ) -> Result<()> {
-    draw_text_at(pixmap, cx, cy, text, size, color, true, &TextStyle::default())
+    draw_text_at(pixmap, cx, cy, text, size, color, true, &TextStyle::default(), 0.0)
 }
 
 /// ttf-parser 轮廓 → tiny-skia 路径（字体坐标 y 向上，翻转交给变换矩阵）。
@@ -1052,6 +1279,19 @@ impl ttf_parser::OutlineBuilder for OutlineToPath<'_> {
 /// 文本布局：逐字符 advance；支持换行；centered 时按总宽高居中（序号用）。
 /// 支持 family/bold/italic/underline/align/line_height/background。
 /// 同字体同参数 → 同输出（确定性）。
+fn draw_text_rot(
+    pixmap: &mut Pixmap,
+    x: f32,
+    y: f32,
+    text: &str,
+    size: f32,
+    color: Color,
+    style: &TextStyle,
+    rotation: f32,
+) -> Result<()> {
+    draw_text_at(pixmap, x, y, text, size, color, false, style, rotation)
+}
+
 fn draw_text_at(
     pixmap: &mut Pixmap,
     x: f32,
@@ -1061,6 +1301,7 @@ fn draw_text_at(
     color: Color,
     centered: bool,
     style: &TextStyle,
+    rotation: f32,
 ) -> Result<()> {
     let (face, real_bold) = load_face_for(&style.family, style.bold)?;
     let synthetic_bold = style.bold && !real_bold;
@@ -1093,13 +1334,21 @@ fn draw_text_at(
     let block_y = if centered { y - total_h / 2.0 } else { y };
     let start_baseline = block_y + ascent;
 
-    // 文字背景（先行绘制，位于字形之下）
+    // 旋转变换：绕文字块中心（rotation 单位：度）
+    let rot = center_xform(Some(rotation), start_x + total_w / 2.0, block_y + total_h / 2.0);
+
+    // 文字背景（先行绘制，位于字形之下）：透明度+圆角可调（默认圆角=字号12%，与旧行为一致）
     if let Some(bg) = style.background {
         let pad = size * 0.25;
+        let radius = style.bg_radius.unwrap_or(size * 0.12);
+        let mut bg = bg;
+        if let Some(op) = style.bg_opacity {
+            bg = Color::from_rgba(bg.red(), bg.green(), bg.blue(), bg.alpha() * op).unwrap_or(bg);
+        }
         let mut pb = PathBuilder::new();
-        push_rounded_rect(&mut pb, start_x - pad, block_y - pad, total_w + pad * 2.0, total_h + pad * 2.0, size * 0.12);
+        push_rounded_rect(&mut pb, start_x - pad, block_y - pad, total_w + pad * 2.0, total_h + pad * 2.0, radius);
         if let Some(path) = pb.finish() {
-            pixmap.fill_path(&path, &paint(bg), FillRule::Winding, Transform::identity(), None);
+            pixmap.fill_path(&path, &paint(bg), FillRule::Winding, rot, None);
         }
     }
 
@@ -1119,7 +1368,7 @@ fn draw_text_at(
                 let mut pb = PathBuilder::new();
                 pb.push_rect(r);
                 if let Some(path) = pb.finish() {
-                    pixmap.fill_path(&path, &paint(color), FillRule::Winding, Transform::identity(), None);
+                    pixmap.fill_path(&path, &paint(color), FillRule::Winding, rot, None);
                 }
             }
         }
@@ -1130,7 +1379,18 @@ fn draw_text_at(
                 if let Some(path) = pb.finish() {
                     // y 翻转 + 基线平移；italic 为屏幕空间 12° 斜切
                     let shear = if style.italic { 0.21 * s } else { 0.0 };
-                    let t = Transform::from_row(s, 0.0, shear, -s, pen, baseline);
+                    let t = xform_mul(rot, Transform::from_row(s, 0.0, shear, -s, pen, baseline));
+                    if style.shadow {
+                        // 投影：右下偏移约 6% 字号的半透明黑，先画（位于字形之下）
+                        let off = (size * 0.06).max(1.5);
+                        let ts = xform_mul(rot, Transform::from_row(s, 0.0, shear, -s, pen + off, baseline + off));
+                        pixmap.fill_path(&path, &paint(text_shadow_col()), FillRule::Winding, ts, None);
+                    }
+                    if let (Some(sc), Some(sw)) = (style.stroke_color, style.stroke_width) {
+                        // 描边：画在填充之下（字形外轮廓扩边）
+                        let st = stroke_style(sw, false);
+                        pixmap.stroke_path(&path, &paint(sc), &st, t, None);
+                    }
                     pixmap.fill_path(&path, &paint(color), FillRule::Winding, t, None);
                     if synthetic_bold {
                         // 无真粗体文件时的描边加粗
@@ -1163,7 +1423,7 @@ mod tests {
     use super::*;
 
     fn script(ops: Vec<Operation>) -> AnnotationScript {
-        AnnotationScript { unit: Unit::Px, theme: None, operations: ops }
+        AnnotationScript { unit: Unit::Px, theme: None, operations: ops, output: None }
     }
 
     fn op_rect(at: [f64; 2], size: [f64; 2]) -> Operation {
@@ -1176,6 +1436,7 @@ mod tests {
             radius: None,
             dash: None,
             opacity: None,
+            rotation: None,
         }
     }
 
@@ -1206,11 +1467,11 @@ mod tests {
             cur.into_inner()
         };
         let ops = vec![
-            Operation::Arrow { from: [10.0, 10.0], to: [100.0, 80.0], color: None, width: None, dash: None, double_head: None, heads: None, line_style: None },
-            Operation::StepNumber { at: [30.0, 30.0], label: Some(1), color: None, diameter: None, style: None },
-            Operation::Text { at: [10.0, 10.0], text: "测试 Test 123".into(), size: None, color: None, family: None, bold: None, italic: None, underline: None, align: None, line_height: None, background: None },
+            Operation::Arrow { from: [10.0, 10.0], to: [100.0, 80.0], color: None, width: None, dash: None, double_head: None, heads: None, line_style: None, rotation: None },
+            Operation::StepNumber { at: [30.0, 30.0], label: Some(1), color: None, diameter: None, style: None, rotation: None },
+            Operation::Text { at: [10.0, 10.0], text: "测试 Test 123".into(), size: None, color: None, family: None, bold: None, italic: None, underline: None, shadow: None, rotation: None, align: None, line_height: None, background: None, background_opacity: None, background_radius: None, stroke_color: None, stroke_width: None },
             Operation::Mosaic { at: [120.0, 20.0], size: [60.0, 40.0], mode: None, strength: None },
-            Operation::Rect { at: [40.0, 40.0], size: [50.0, 30.0], style: None, color: None, width: None, radius: None, dash: None, opacity: None },
+            Operation::Rect { at: [40.0, 40.0], size: [50.0, 30.0], style: None, color: None, width: None, radius: None, dash: None, opacity: None, rotation: None },
         ];
         let s = script(ops);
         let defaults = crate::settings::AnnotationDefaults::default();
@@ -1219,4 +1480,75 @@ mod tests {
         let r2 = render(&input).unwrap();
         assert_eq!(r1.png, r2.png, "同脚本两次渲染必须逐字节一致");
     }
+
+    #[test]
+    fn rotation_render_smoke() {
+        // 旋转 90°：渲染确定、且与 0° 输出不同（真实生效）；不 panic、不越界
+        let (w, h) = (200u32, 120u32);
+        let png = {
+            let mut rgba = vec![255u8; (w * h * 4) as usize];
+            for px in rgba.chunks_exact_mut(4) { px[0] = 128; px[1] = 128; px[2] = 128; }
+            let img = image::RgbaImage::from_raw(w, h, rgba).unwrap();
+            let mut cur = std::io::Cursor::new(Vec::new());
+            image::DynamicImage::ImageRgba8(img).write_to(&mut cur, image::ImageFormat::Png).unwrap();
+            cur.into_inner()
+        };
+        let defaults = crate::settings::AnnotationDefaults::default();
+        let mk = |rot: Option<f32>| AnnotationScript {
+            unit: Unit::Px,
+            theme: None,
+            operations: vec![Operation::Rect {
+                at: [60.0, 30.0], size: [80.0, 40.0], style: Some("fill".into()),
+                color: Some("#ED1C24".into()), width: None, radius: None, dash: None,
+                opacity: None, rotation: rot,
+            }],
+            output: None,
+        };
+        let r0 = render(&RenderInput { png: &png, script: &mk(Some(0.0)), anchor_blocks: None, defaults: &defaults }).unwrap();
+        let r90a = render(&RenderInput { png: &png, script: &mk(Some(90.0)), anchor_blocks: None, defaults: &defaults }).unwrap();
+        let r90b = render(&RenderInput { png: &png, script: &mk(Some(90.0)), anchor_blocks: None, defaults: &defaults }).unwrap();
+        assert_eq!(r90a.png, r90b.png, "旋转渲染必须确定");
+        assert_ne!(r0.png, r90a.png, "90° 旋转输出必须与 0° 不同");
+        assert_eq!((r0.width, r0.height), (r90a.width, r90a.height), "旋转不改变画布尺寸");
+    }
+
+    #[test]
+    fn output_fx_expands_canvas() {
+        let (w, h) = (100u32, 80u32);
+        // 源图：不透明灰 (128,128,128,255)——alpha 必须 255，premultiplied 语义下 RGB 才等于原色
+        let mut rgba = vec![255u8; (w * h * 4) as usize];
+        for px in rgba.chunks_exact_mut(4) {
+            px[0] = 128; px[1] = 128; px[2] = 128;
+        }
+        let png = {
+            let img = image::RgbaImage::from_raw(w, h, rgba).unwrap();
+            let mut cur = std::io::Cursor::new(Vec::new());
+            image::DynamicImage::ImageRgba8(img).write_to(&mut cur, image::ImageFormat::Png).unwrap();
+            cur.into_inner()
+        };
+        let ops = vec![];
+        let defaults = crate::settings::AnnotationDefaults::default();
+        // 阴影 blur=10 + 边框 4 → pad = 14，画布 128×108
+        let s = AnnotationScript {
+            unit: Unit::Px,
+            theme: None,
+            operations: ops,
+            output: Some(OutputFx {
+                shadow: Some(OutputShadow { blur: Some(10.0), color: None }),
+                border: Some(OutputBorder { width: Some(4.0), color: Some("#FFFFFF".into()) }),
+            }),
+        };
+        let input = RenderInput { png: &png, script: &s, anchor_blocks: None, defaults: &defaults };
+        let r = render(&input).unwrap();
+        assert_eq!(r.width, w + 28, "阴影+边框必须向外扩 pad=blur+bw");
+        assert_eq!(r.height, h + 28);
+        // 边框角像素应为白色不透明
+        let img = image::load_from_memory(&r.png).unwrap().to_rgba8();
+        let corner = img.get_pixel(13, 13); // pad(14) 内、边框(4px)内
+        assert_eq!((corner[0], corner[1], corner[2], corner[3]), (255, 255, 255, 255));
+        // 基图中心像素应保持原色 128
+        let center = img.get_pixel((w / 2 + 14) as u32, (h / 2 + 14) as u32);
+        assert_eq!(center[0], 128);
+    }
 }
+

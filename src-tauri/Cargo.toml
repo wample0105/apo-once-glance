@@ -30,6 +30,7 @@ once-core = { path = "crates/once-core" }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 base64 = "0.22"
 sha2 = "0.10"
+rfd = "0.15"
 windows = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Dwm",
       "Win32_Graphics_Gdi", "Win32_System_Pipes", "Win32_Storage_FileSystem", "Win32_System_IO"] }
 
