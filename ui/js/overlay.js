@@ -201,11 +201,10 @@ function syncPropsUI() {
   if (chipEl) chipEl.style.background = toolColor;
   document.getElementById("pr-width-range").value = String(toolW);
   document.getElementById("pr-width-val").textContent = String(toolW);
-  document.getElementById("pr-arrow-style").value = arrowHeads;
-  document.getElementById("pr-arrow-line").value = arrowLineStyle;
-  seg("#pr-fill", "f", fillMode);
+  document.querySelectorAll("#pr-arrow-style button").forEach((b) => b.classList.toggle("on", b.dataset.a === arrowHeads));
+  document.querySelectorAll("#pr-arrow-line button").forEach((b) => b.classList.toggle("on", b.dataset.l === arrowLineStyle));
+  document.querySelectorAll(".ddl").forEach((d) => { if (d._ddlUpd) d._ddlUpd(); }); // 填充/线条下拉回填（替换旧 seg）
   seg("#pr-round", "r", shapeRadius ? 1 : 0);
-  seg("#pr-dash", "dash", shapeDash ? 1 : 0);
   const f0 = document.getElementById("pr-font"); if (f0) f0.value = textFont;
   const s0 = document.getElementById("pr-tsize");
   if (s0) {
@@ -216,7 +215,8 @@ function syncPropsUI() {
     }
     s0.value = String(textSize);
   }
-  document.getElementById("pr-opacity").value = String(shapeOpacity);
+  const op0 = document.getElementById("pr-opacity-range");
+  if (op0) { op0.value = String(Math.round(shapeOpacity * 100)); const ov = document.getElementById("pr-opacity-val"); if (ov) ov.textContent = op0.value; }
   const l0 = document.getElementById("pr-tlh"); if (l0) l0.value = String(textLineHeight);
   document.getElementById("pr-num-size").value = String(numDiameter);
   seg("#pr-tstyle", "t", textBold ? "bold" : textItalic ? "italic" : textUnderline ? "underline" : "");
@@ -225,12 +225,12 @@ function syncPropsUI() {
   document.querySelector('#pr-tstyle button[data-t="underline"]').classList.toggle("on", textUnderline);
   document.querySelector('#pr-tstyle button[data-t="shadow"]').classList.toggle("on", textShadow);
   seg("#pr-talign", "a", textAlign);
-  seg("#pr-tlh", "lh", textLineHeight);
-  document.querySelectorAll("#pr-tbg button").forEach((b) => b.classList.toggle("on", textBackground));
+  bgRefresh(); // 背景直达块随全部回填路径刷新（settings 恢复/选中回填/切工具——曾漏致"显示斜纹但实际有背景"）
   seg("#pr-num-style", "ns", numStyle);
   document.getElementById("num-start").value = numStart;
   seg("#pr-mos-mode", "mm", mosMode);
-  seg("#pr-mos-strong", "m", mosStrength);
+  const mr0 = document.getElementById("pr-mos-range");
+  if (mr0) { mr0.value = String(mosStrength); const mv0 = document.getElementById("pr-mos-val"); if (mv0) mv0.textContent = mosStrength; }
 }
 
 /* 输出前把当前工具属性写回主题记忆（SET-7 记住上次） */
@@ -524,6 +524,7 @@ function wireToolbar() {
   const pc = document.getElementById("pr-color");
   const colorMenu = document.getElementById("pr-color-menu");
   colorMenu.className = "flymenu";
+  colorMenu.style.width = "264px"; // 与背景面板同宽（曾缺：默认 236px 且行布局错位——HEX/描边行不齐）
   const swsWrapC = document.createElement("div"); swsWrapC.className = "sws";
   PALETTE.forEach((c) => {
     const b = document.createElement("button");
@@ -548,11 +549,8 @@ function wireToolbar() {
   const rowC = document.createElement("div"); rowC.className = "row";
   rowC.innerHTML = '<span class="lbl">颜色</span>';
   rowC.appendChild(swsWrapC);
-  const cTitle = document.createElement("div");
-  cTitle.textContent = "线条 / 文字颜色（背景在 A 面板）";
-  cTitle.style.cssText = "color:var(--ov-fg-dim);font-size:10px;margin-top:2px;";
   colorMenu.appendChild(rowC);
-  colorMenu.appendChild(cTitle);
+  // 解释性说明不上 UI（业界：控件自解释+悬停 tooltip）——曾放"线条/文字颜色（背景在 A 面板）"解释行，A 删后无意义已删
   // HEX 精确输入行
   const hexInput = document.createElement("input");
   hexInput.id = "pr-hex"; hexInput.placeholder = "#FF0000"; hexInput.maxLength = 7;
@@ -574,24 +572,30 @@ function wireToolbar() {
   rowH.innerHTML = '<span class="lbl">HEX</span>';
   rowH.appendChild(hexInput);
   colorMenu.appendChild(rowH);
+  // 描边行：描边=文字外轮廓（对比色自动反色，业界惯例）——归位到颜色面板（就近原则）
+  const rowSt = document.createElement("div"); rowSt.className = "row";
+  rowSt.innerHTML = '<span class="lbl">描边</span>';
+  const strokeBtn = document.createElement("button");
+  strokeBtn.id = "pr-stroke-btn"; strokeBtn.textContent = "描边";
+  strokeBtn.title = "外轮廓自动取反色（白字黑边/红字白边，任何底色都清晰）";
+  strokeBtn.style.cssText = "padding:2px 10px;cursor:pointer;border-radius:4px;border:1px solid var(--ov-border);background:var(--ov-surface-2);color:var(--ov-fg);";
+  strokeBtn.addEventListener("click", () => {
+    textStroke = !textStroke;
+    strokeBtn.classList.toggle("on", textStroke);
+    syncTextProps();
+  });
+  rowSt.appendChild(strokeBtn);
+  colorMenu.appendChild(rowSt);
   // 属性行的当前色 chip：点击弹色板浮层（同类产品 同款）
   const chip = document.createElement("button");
   chip.id = "pr-chip"; chip.title = "颜色（点击选色）";
   chip.style.cssText = "width:22px;height:22px;border-radius:5px;border:1px solid rgba(255,255,255,.4);cursor:pointer;padding:0;";
-  chip.addEventListener("click", (e) => {
-    e.stopPropagation();
-    bgMenu.style.display = "none"; // 浮层互斥（点击时 wireToolbar 已完成，无 TDZ 风险）
-    const r = chip.getBoundingClientRect();
-    colorMenu.style.left = Math.round(r.left) + "px";
-    colorMenu.style.top = Math.round(r.bottom + 6) + "px";
-    colorMenu.style.display = colorMenu.style.display === "block" ? "none" : "block";
-    clampPanelToScreen(colorMenu, r);
-  });
   pc.appendChild(chip);
   chip.style.background = toolColor;
   // 线宽滑杆 2–24
   const wr = document.getElementById("pr-width-range");
   wr.addEventListener("input", () => { toolW = Number(wr.value); document.getElementById("pr-width-val").textContent = wr.value; syncSelProps(); });
+  wr.addEventListener("change", () => wr.blur()); // 拖完归还焦点：滑杆持焦会吞 Esc（用户实测报障）
   // 形状槽位：点击主体=用当前形状；点击三角=弹出切换菜单
   const shapeBtn = document.getElementById("tb-shape");
   const shapeMenu = document.getElementById("shape-menu");
@@ -601,9 +605,10 @@ function wireToolbar() {
   });
   document.getElementById("shape-tri").addEventListener("click", (e) => {
     e.stopPropagation();
-    // 内联 display 控制：不依赖外部 CSS 规则
+    // 内联 display 控制：不依赖外部 CSS 规则；槽位 .open 联动三角 ▼→▲
     const show = shapeMenu.style.display === "none";
     shapeMenu.style.display = show ? "flex" : "none";
+    document.getElementById("tb-shape").classList.toggle("open", show);
   });
   shapeMenu.querySelectorAll("button").forEach((b) => {
     b.addEventListener("click", () => {
@@ -613,21 +618,63 @@ function wireToolbar() {
     });
   });
   document.addEventListener("mousedown", (e) => {
-    if (!e.target.closest("#tb-shape")) shapeMenu.style.display = "none";
+    if (!e.target.closest("#tb-shape")) { shapeMenu.style.display = "none"; document.getElementById("tb-shape").classList.remove("open"); }
   }, true);
   document.getElementById("tb-crop").addEventListener("click", startCrop);
   document.getElementById("tb-saveas").addEventListener("click", () => output("saveas"));
   // 箭头：样式（单/双/反/无）/ 线型（实/虚/点）
-  document.getElementById("pr-arrow-style").addEventListener("change", (e) => { arrowHeads = e.target.value; syncSelProps(); });
-  document.getElementById("pr-arrow-line").addEventListener("change", (e) => { arrowLineStyle = e.target.value; syncSelProps(); });
-  // 形状：填充/圆角/虚线/透明度
-  document.querySelectorAll("#pr-fill button").forEach((b) => {
-    b.addEventListener("click", () => {
-      fillMode = b.dataset.f;
-      document.querySelectorAll("#pr-fill button").forEach((x) => x.classList.toggle("on", x === b));
-      syncSelProps();
+  document.querySelectorAll("#pr-arrow-style button").forEach((b) => b.addEventListener("click", () => {
+    arrowHeads = b.dataset.a;
+    document.querySelectorAll("#pr-arrow-style button").forEach((x) => x.classList.toggle("on", x === b));
+    syncSelProps();
+  }));
+  document.querySelectorAll("#pr-arrow-line button").forEach((b) => b.addEventListener("click", () => {
+    arrowLineStyle = b.dataset.l;
+    document.querySelectorAll("#pr-arrow-line button").forEach((x) => x.classList.toggle("on", x === b));
+    syncSelProps();
+  }));
+  // 形状：填充/线条下拉（业界同款：按钮显当前态+▼，展开浮层选择）+ 圆角/透明度
+  const DDL_ICONS = {
+    "ddl-fill": {
+      outline: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>',
+      fill: '<svg width="14" height="14" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" rx="1" fill="currentColor"/></svg>',
+      outline_fill: '<svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 2h5v10H2z" fill="currentColor"/><rect x="2" y="2" width="10" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
+    },
+    "ddl-line": {
+      solid: '<svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="7" x2="16" y2="7"/></svg>',
+      dashed: '<svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="7" x2="16" y2="7" stroke-dasharray="3.5 2.5"/></svg>',
+    },
+  };
+  function ddlCloseAll() { document.querySelectorAll(".ddl.open").forEach((d) => d.classList.remove("open")); }
+  function ddlWire(id, getVal, setVal) {
+    const box = document.getElementById(id);
+    const cur = box.querySelector(".ddl-cur");
+    const menu = box.querySelector(".ddl-menu");
+    const icons = DDL_ICONS[id];
+    const upd = () => {
+      const v = getVal();
+      cur.innerHTML = icons[v] || "";
+      menu.querySelectorAll(".ddl-item").forEach((it) => it.classList.toggle("on", it.dataset.v === v));
+    };
+    box._ddlUpd = upd;
+    box.querySelector(".ddl-btn").addEventListener("mousedown", (e) => {
+      e.preventDefault(); e.stopPropagation(); // 真机弹层 click 不可靠，统一 mousedown（与把手/色板同模式）
+      const willOpen = !box.classList.contains("open");
+      ddlCloseAll();
+      box.classList.toggle("open", willOpen);
     });
-  });
+    menu.querySelectorAll(".ddl-item").forEach((it) => it.addEventListener("mousedown", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      setVal(it.dataset.v);
+      upd(); // 立即刷按钮当前态图标+菜单选中标记（syncSelProps 只应用图形，曾漏致"图形变了入口没变"）
+      ddlCloseAll();
+      syncSelProps();
+    }));
+    upd();
+  }
+  document.addEventListener("mousedown", (e) => { if (!e.target.closest(".ddl")) ddlCloseAll(); }, true);
+  ddlWire("ddl-fill", () => fillMode, (v) => { fillMode = v; });
+  ddlWire("ddl-line", () => (shapeDash ? "dashed" : "solid"), (v) => { shapeDash = v === "dashed"; });
   document.querySelectorAll("#pr-round button").forEach((b) => {
     b.addEventListener("click", () => {
       shapeRadius = b.dataset.r === "1";
@@ -635,14 +682,12 @@ function wireToolbar() {
       syncSelProps();
     });
   });
-  document.querySelectorAll("#pr-dash button").forEach((b) => {
-    b.addEventListener("click", () => {
-      shapeDash = b.dataset.dash === "1";
-      document.querySelectorAll("#pr-dash button").forEach((x) => x.classList.toggle("on", x === b));
-      syncSelProps();
-    });
+  document.getElementById("pr-opacity-range").addEventListener("input", (e) => {
+    shapeOpacity = Number(e.target.value) / 100;
+    const ov = document.getElementById("pr-opacity-val"); if (ov) ov.textContent = e.target.value;
+    syncSelProps();
   });
-  document.getElementById("pr-opacity").addEventListener("change", (e) => { shapeOpacity = Number(e.target.value); syncSelProps(); });
+  document.getElementById("pr-opacity-range").addEventListener("change", (e) => e.target.blur()); // 拖完归还焦点（防吞 Esc）
   // 文字：字体/字号/粗斜下阴影描边/对齐/行距/背景
   const tstyle = () => ({
     bold: document.querySelector('#pr-tstyle button[data-t="bold"]'),
@@ -686,22 +731,27 @@ function wireToolbar() {
   const BG_PALETTE = ["#FFFFFF", "#000000", "#FFF7D6", "#FFE0E0", "#E0F0FF", "#DFFFE0", "#F0E4FF", "#FFF0F5", "#FFD8A8", "#C8E8FF", "#C8F8D0", "#F8E8C8", "#E8E8E8"];
   const swsWrap = document.createElement("div");
   swsWrap.className = "sws";
+  const swApply = (fn) => (e) => {
+    // mousedown 即选（真机 WebView2 物理点击的 click 合成在面板上不稳定——曾致"点了没反应"；与把手/直达块同模式）
+    e.preventDefault(); e.stopPropagation();
+    fn();
+  };
   BG_PALETTE.forEach((c) => {
     const s = document.createElement("button");
     s.className = "sw"; s.style.background = c; s.title = c; s.dataset.c = c;
-    s.addEventListener("click", () => {
+    s.addEventListener("mousedown", swApply(() => {
       textBgColor = c; textBackground = true;
       syncTextProps();
       if (!editing && !selectedObj) showToast("背景已设置：接下来输入的文字将生效");
-    });
+    }));
     swsWrap.appendChild(s);
   });
   const noneSw = document.createElement("button");
   noneSw.className = "sw none"; noneSw.title = "无背景";
-  noneSw.addEventListener("click", () => {
+  noneSw.addEventListener("mousedown", swApply(() => {
     textBackground = false;
     syncTextProps();
-  });
+  }));
   swsWrap.appendChild(noneSw);
   const colorIn = document.createElement("input");
   colorIn.type = "color"; colorIn.title = "自由选色";
@@ -714,6 +764,11 @@ function wireToolbar() {
   row1.innerHTML = '<span class="lbl">背景</span>';
   row1.appendChild(swsWrap);
   bgMenu.appendChild(row1);
+  // 面板标题：用户曾找不到圆角/透明滑杆——入口可见性是面板的第一性问题
+  const bTitle = document.createElement("div");
+  bTitle.textContent = "文字背景设置";
+  bTitle.style.cssText = "font-size:11px;color:var(--ov-fg-dim);border-bottom:1px solid var(--ov-border);padding-bottom:6px;margin-bottom:8px;";
+  bgMenu.appendChild(bTitle);
   const row2 = document.createElement("div"); row2.className = "row";
   row2.innerHTML = '<span class="lbl">透明</span>';
   const opRange = document.createElement("input"); opRange.type = "range"; opRange.min = 10; opRange.max = 100; opRange.step = 5;
@@ -728,7 +783,7 @@ function wireToolbar() {
   bgMenu.appendChild(row2);
   const row3 = document.createElement("div"); row3.className = "row";
   row3.innerHTML = '<span class="lbl">圆角</span>';
-  const rdRange = document.createElement("input"); rdRange.type = "range"; rdRange.min = 0; rdRange.max = 40; rdRange.step = 1;
+  const rdRange = document.createElement("input"); rdRange.type = "range"; rdRange.min = 0; rdRange.max = 60; rdRange.step = 1;
   const rdVal = document.createElement("span"); rdVal.className = "val";
   rdRange.addEventListener("input", () => {
     textBgRadius = Number(rdRange.value);
@@ -738,37 +793,26 @@ function wireToolbar() {
   });
   row3.appendChild(rdRange); row3.appendChild(rdVal);
   bgMenu.appendChild(row3);
-  // —— 描边段（原 tstyle 的 A 描边按钮收进面板）——
-  const row4 = document.createElement("div"); row4.className = "row";
-  row4.innerHTML = '<span class="lbl">描边</span>';
-  const strokeBtn = document.createElement("button");
-  strokeBtn.id = "pr-stroke-btn"; strokeBtn.textContent = "A 描边"; strokeBtn.title = "文字外轮廓（对比色）";
-  strokeBtn.style.cssText = "padding:2px 10px;cursor:pointer;border-radius:4px;border:1px solid var(--ov-border);background:var(--ov-surface-2);color:var(--ov-fg);";
-  strokeBtn.addEventListener("click", () => {
-    textStroke = !textStroke;
-    strokeBtn.classList.toggle("on", textStroke);
-    syncTextProps();
-  });
-  row4.appendChild(strokeBtn);
-  bgMenu.appendChild(row4);
+  // 描边已归位到颜色面板（rowSt），背景面板只剩背景相关（用户方案：拆散 A 杂烩）
   function refreshBgMenu() {
     opRange.value = String(Math.round(textBgOpacity * 100)); opVal.textContent = opRange.value + "%";
     rdRange.value = String(textBgRadius); rdVal.textContent = rdRange.value + "px";
     colorIn.value = textBgColor.toLowerCase();
     swsWrap.querySelectorAll(".sw[data-c]").forEach((s) => s.classList.toggle("on", s.dataset.c.toUpperCase() === textBgColor.toUpperCase()));
-    strokeBtn.classList.toggle("on", textStroke);
-    // 字体/字号/行距的回填在属性行（syncPropsUI），面板不再持有
+    // 字体/字号/行距的回填在属性行（syncPropsUI），描边回填在颜色面板打开时（colorMenu 段）
   }
-  // 入口：属性行 A 按钮 toggle 面板
-  document.getElementById("pr-aset").addEventListener("click", (e) => {
-    e.stopPropagation();
-    colorMenu.style.display = "none"; // 与字色浮层互斥
-    refreshBgMenu();
-    const r = e.target.getBoundingClientRect();
-    bgMenu.style.left = Math.round(r.left) + "px";
-    bgMenu.style.top = Math.round(r.bottom + 6) + "px";
-    bgMenu.style.display = bgMenu.style.display === "block" ? "none" : "block";
-    clampPanelToScreen(bgMenu, r);
+  // 入口合一后：背景面板唯一入口=背景色块（tbgChip，见下方 mousedown）；A 按钮已删（描边归颜色面板）
+  // 字色浮层打开时刷新描边选中态（描边归位到颜色面板后的回填）
+  const strokeSync = () => { const sb = document.getElementById("pr-stroke-btn"); if (sb) sb.classList.toggle("on", textStroke); };
+  chip.addEventListener("mousedown", (e) => {
+    e.preventDefault(); e.stopPropagation(); // 真机弹层 click 不可靠，统一 mousedown
+    bgMenu.style.display = "none"; // 与背景面板互斥
+    strokeSync();
+    const r = chip.getBoundingClientRect();
+    colorMenu.style.left = Math.round(r.left) + "px";
+    colorMenu.style.top = Math.round(r.bottom + 6) + "px";
+    colorMenu.style.display = colorMenu.style.display === "block" ? "none" : "block";
+    clampPanelToScreen(colorMenu, r);
   });
   // ===== 背景色直达块（B/I/U/S/A 左侧）：与 A 按钮同开一个完整文字设置面板 =====
   // （入口合一：背景/字体/字号/行距/描边全在一面板——背景板与 A 面板分裂曾致用户两次迷路）
@@ -799,21 +843,23 @@ function wireToolbar() {
     numStart = Math.max(0, parseInt(e.target.value, 10) || 1);
     numNext = numStart;
   });
-  // 马赛克：模式/强度
+  // 马赛克：模式（icon）/强度（滑杆，连续可调——档位 icon 是离散粗调，业界用滑杆）
   document.querySelectorAll("#pr-mos-mode button").forEach((b) => {
-    b.addEventListener("click", () => {
+    b.addEventListener("mousedown", (e) => {
+      // mousedown 即选（真机 WebView2 弹层 click 合成不可靠，与色板/把手同模式）
+      e.preventDefault(); e.stopPropagation();
       mosMode = b.dataset.mm;
       document.querySelectorAll("#pr-mos-mode button").forEach((x) => x.classList.toggle("on", x === b));
       syncSelProps();
     });
   });
-  document.querySelectorAll("#pr-mos-strong button").forEach((b) => {
-    b.addEventListener("click", () => {
-      mosStrength = Number(b.dataset.m);
-      document.querySelectorAll("#pr-mos-strong button").forEach((x) => x.classList.toggle("on", x === b));
-      syncSelProps();
-    });
+  const mosRange = document.getElementById("pr-mos-range");
+  mosRange.addEventListener("input", (e) => {
+    mosStrength = Number(e.target.value);
+    const mv = document.getElementById("pr-mos-val"); if (mv) mv.textContent = e.target.value;
+    syncSelProps();
   });
+  mosRange.addEventListener("change", () => mosRange.blur()); // 拖完归还焦点（防吞 Esc）
   document.getElementById("tb-copy").addEventListener("click", () => output("copy"));
   document.getElementById("tb-ocr").addEventListener("click", () => output("ocr"));
   document.getElementById("tb-scroll").addEventListener("click", startLongshot);
@@ -842,8 +888,8 @@ function setTool(t) {
   layer.style.cursor = t ? "crosshair" : "default";
   selEl.classList.toggle("moveable", !t); // 无工具：选区内整体手型可平移
   const show = (id, on) => document.getElementById(id).classList.toggle("on", on);
-  show("pr-color", !!t && t !== "eraser");
-  show("pr-width", ["arrow", "pen", "marker", "rect", "ellipse", "mosaic"].includes(t));
+  show("pr-color", !!t && t !== "eraser" && t !== "mosaic"); // 马赛克/模糊无颜色语义，不显示色板入口（业界同款）
+  show("pr-width", ["arrow", "pen", "marker", "rect", "ellipse"].includes(t)); // 马赛克无线宽语义（块大小=强度），不显示
   show("pr-arrow", t === "arrow");
   show("pr-shape", t === "rect" || t === "ellipse");
   document.getElementById("pr-round").style.display = t === "rect" ? "" : "none";
@@ -906,9 +952,11 @@ function clampPt(p) {
 }
 // 是否位于选区边缘 8px 条带内（画图工具激活时该区域=平移热区，同类产品 手型）
 function nearSelEdge(r) {
+  // r 是 layer 本地坐标（0..sel.w × 0..sel.h）——曾误用视口系 sel.x/sel.y 比较，
+  // 导致选区左上角附近起笔被误判"贴边"→ 启动选区平移 → 马赛克/图形"拖了没反应"（用户报障根因）
   const m = 8;
-  if (r.x < sel.x - 4 || r.x > sel.x + sel.w + 4 || r.y < sel.y - 4 || r.y > sel.y + sel.h + 4) return false;
-  return (r.x - sel.x) <= m || (sel.x + sel.w - r.x) <= m || (r.y - sel.y) <= m || (sel.y + sel.h - r.y) <= m;
+  if (r.x < -4 || r.x > sel.w + 4 || r.y < -4 || r.y > sel.h + 4) return false;
+  return r.x <= m || (sel.w - r.x) <= m || r.y <= m || (sel.h - r.y) <= m;
 }
 function mkObj() {
   const el = document.createElement("span");
@@ -926,16 +974,20 @@ function arrowInto(el, x1, y1, x2, y2) {
 }
 function applyShapeStyle(el, k, p) {
   const dash = p.dash ? "dashed" : "solid";
+  // 填充三态与引擎对齐（同类产品 同款）：outline=只描边；fill=纯填充无边框；
+  // outline_fill=半透明底(24%×不透明度)+描边——蒙层随"不透明"滑杆全局变淡（与引擎同步）
   if (k === "rect") {
-    el.style.border = p.lw + "px " + dash + " " + p.color;
+    const op = p.opacity != null && p.opacity < 1 ? p.opacity : 1;
+    el.style.border = p.fill === "fill" ? "none" : `${p.lw}px ${dash} ${hexA(p.color, op)}`;
     el.style.borderRadius = p.radius ? "12px" : "4px"; el.style.boxSizing = "border-box";
-    el.style.opacity = p.opacity != null && p.opacity < 1 ? p.opacity : "";
-    el.style.background = p.fill === "fill" ? p.color : "";
+    el.style.opacity = "";
+    el.style.background = p.fill === "fill" ? hexA(p.color, op) : p.fill === "outline_fill" ? hexA(p.color, 0.24 * op) : "";
   } else if (k === "ellipse") {
-    el.style.border = p.lw + "px " + dash + " " + p.color;
+    const op = p.opacity != null && p.opacity < 1 ? p.opacity : 1;
+    el.style.border = p.fill === "fill" ? "none" : `${p.lw}px ${dash} ${hexA(p.color, op)}`;
     el.style.borderRadius = "50%"; el.style.boxSizing = "border-box";
-    el.style.opacity = p.opacity != null && p.opacity < 1 ? p.opacity : "";
-    el.style.background = p.fill === "fill" ? p.color : "";
+    el.style.opacity = "";
+    el.style.background = p.fill === "fill" ? hexA(p.color, op) : p.fill === "outline_fill" ? hexA(p.color, 0.24 * op) : "";
   } else if (k === "marker") {
     el.style.border = "none";
     el.style.background = hexA(p.color, 0.35); el.style.mixBlendMode = "multiply";
@@ -943,14 +995,69 @@ function applyShapeStyle(el, k, p) {
     el.style.border = "none"; el.style.borderRadius = "2px"; el.style.mixBlendMode = "";
     if (p.mode === "blur") {
       // 模糊预览：冻结帧该区域 + CSS blur（序列化 mode=blur，引擎真实模糊）
+      // filter 必须有——曾缺失时预览与底图逐像素一致，视觉"拖了没反应"（用户报障根因）
+      el.style.background = ""; // 先清条纹简写（mosaic→blur 切换残留），再设长写
       el.style.backgroundImage = `url("${magImg.src}")`;
-      el.style.backgroundSize = `${layer.clientWidth}px ${layer.clientHeight}px`;
+      // 冻结图按"逻辑整屏"铺（magImg 是物理整屏图），el(L,T) 对应冻结图 (sel.x+L, sel.y+T) 区域——
+      // 曾误铺成 layer 尺寸：框内显示的是整屏缩影片段（看似"写死的图"），并非框住内容
+      el.style.backgroundSize = `${innerWidth}px ${innerHeight}px`;
+      const bl = parseFloat(el.style.left) || 0, bt = parseFloat(el.style.top) || 0;
+      el.style.backgroundPosition = `-${sel.x + bl}px -${sel.y + bt}px`;
+      el.style.filter = `blur(${Math.max(3, Math.round((p.mos || 14) * 0.5))}px)`;
       el.dataset.blurBg = "1";
+      delete el.dataset.realPrev;
     } else {
-      el.style.backgroundImage = "none";
+      el.style.backgroundImage = "none"; el.style.filter = "";
       el.style.background = `repeating-linear-gradient(90deg,#8E8E93 0 ${p.mos}px,#C9C9CF ${p.mos}px ${2 * p.mos}px)`;
+      delete el.dataset.blurBg;
     }
   }
+}
+// 真实马赛克预览：把冻结图对应区域 canvas 块化（缩小再放大），mouseup/改属性后替换条纹示意
+function mosaicPreview(el) {
+  if (!el || el.dataset.k !== "mosaic") return;
+  const p = JSON.parse(el.dataset.params || "{}");
+  const L = parseFloat(el.style.left) || 0, T = parseFloat(el.style.top) || 0;
+  const W = parseFloat(el.style.width) || 0, H = parseFloat(el.style.height) || 0;
+  if (p.mode === "blur") {
+    // 模糊落定预览：canvas 采样+ctx.filter.blur → dataURL 背景（与块化同管线）。
+    // 不用 CSS filter+背景定位方案——真机 WebView2 上不渲染（无头 computed 正确但视觉无效果），
+    // 拖动中仍由 applyShapeStyle 的 CSS 版兜底。
+    if (!magImg.naturalWidth || W < 6 || H < 6) return;
+    try {
+      const scl = magImg.naturalWidth / innerWidth;
+      const r = Math.max(3, Math.round((p.mos || 14) * 0.5)); // 模糊半径
+      const cv = document.createElement("canvas");
+      cv.width = Math.round(W); cv.height = Math.round(H);
+      const cx = cv.getContext("2d");
+      cx.filter = `blur(${r}px)`;
+      cx.drawImage(magImg, (sel.x + L) * scl, (sel.y + T) * scl, W * scl, H * scl, 0, 0, cv.width, cv.height);
+      el.style.background = `url(${cv.toDataURL()}) no-repeat`;
+      el.style.backgroundSize = "100% 100%";
+      el.style.filter = "";
+      el.dataset.realPrev = "1";
+    } catch (e) { /* 退回 CSS 版 */ }
+    return;
+  }
+  if (!magImg.naturalWidth) return;
+  if (W < 6 || H < 6) return;
+  try {
+    const scl = magImg.naturalWidth / innerWidth; // 冻结图(物理整屏) → 视口逻辑坐标比例（=dpr）；曾误除 layer.clientWidth 致采样错位/超界
+    const block = Math.max(2, Math.round(p.mos || 14)); // 块尺寸（逻辑 px）
+    const small = document.createElement("canvas");
+    small.width = Math.max(1, Math.round(W / block));
+    small.height = Math.max(1, Math.round(H / block));
+    const sc = small.getContext("2d");
+    sc.drawImage(magImg, (sel.x + L) * scl, (sel.y + T) * scl, W * scl, H * scl, 0, 0, small.width, small.height);
+    const big = document.createElement("canvas");
+    big.width = Math.round(W); big.height = Math.round(H);
+    const bc = big.getContext("2d");
+    bc.imageSmoothingEnabled = false; // 放大不插值=块状像素
+    bc.drawImage(small, 0, 0, big.width, big.height);
+    el.style.background = `url(${big.toDataURL()}) no-repeat`;
+    el.style.backgroundSize = "100% 100%";
+    el.dataset.realPrev = "1";
+  } catch (e) { /* 预览生成失败退回条纹示意（序列化不受影响） */ }
 }
 function shapeStyle(el) {
   if (tool === "rect" || tool === "ellipse" || tool === "marker" || tool === "mosaic") {
@@ -966,7 +1073,7 @@ layer.addEventListener("mousemove", (e) => {
   const corners = [[0, 0, "nwse-resize"], [1, 0, "nesw-resize"], [0, 1, "nesw-resize"], [1, 1, "nwse-resize"]];
   let cur = "crosshair";
   for (const [fx, fy, cur2] of corners) {
-    const cx = sel.x + sel.w * fx, cy = sel.y + sel.h * fy;
+    const cx = sel.w * fx, cy = sel.h * fy; // 本地坐标系（与 layerPt 一致）
     if (Math.hypot(r.x - cx, r.y - cy) <= 8) { cur = cur2; break; }
   }
   if (cur === "crosshair" && nearSelEdge(r)) cur = "move";
@@ -1082,6 +1189,7 @@ window.addEventListener("mouseup", () => {
     } else if (w < 4 && h < 4) { d.el.remove(); return; }
   }
   pushUndo({ t: "add", el: d.el });
+  mosaicPreview(d.el); // 马赛克：落定后换真实块化预览（拖动中为条纹示意）
   setObjSel(d.el); // 同款语义：画完即选中（手柄/锚点立即显示，可拖可改）
 });
 
@@ -1099,6 +1207,9 @@ window.addEventListener("mousemove", (e) => {
     if (b0.l + dx + b0.w > sel.w) dx = sel.w - b0.w - b0.l;
     if (b0.t + dy + b0.h > sel.h) dy = sel.h - b0.h - b0.t;
     moveObj(objDrag.el, dx, dy);
+    // 注意：拖动中不做重采样——频繁替换背景 dataURL 在真机 WebView2 会露渲染中间态
+    // （解码跟不上→显示空白→透出清晰底图，用户曾见"拖动中变清晰"）。
+    // 业业折中（同类产品 观感）：拖动中模糊快照整体跟随，mouseup 落定刷新为新位置内容。
   } else if (objDrag.type === "objrot") {
     // 旋转：锚在上方时角度为 0；接近 15° 倍数 ±5° 磁吸
     let ang = Math.atan2(e.clientY - objDrag.cy, e.clientX - objDrag.cx) * 180 / Math.PI + 90;
@@ -1189,6 +1300,7 @@ window.addEventListener("mouseup", () => {
     const b1 = d.before, b2 = objBBox(d.el);
     const dx = b2.l - b1.l, dy = b2.t - b1.t;
     if (dx || dy) pushUndo({ t: "move", el: d.el, dx, dy });
+    mosaicPreview(d.el); // 马赛克/模糊=动态遮罩语义：移动后对新区域重新采样（曾漏：移动后仍是旧位置快照）
     setObjSel(d.el);
   } else if (d.type === "objend") {
     const after = JSON.parse(d.el.dataset.geom);
@@ -1256,11 +1368,13 @@ window.addEventListener("mouseup", () => {
       if (after.size) { d.before.size = d.origSize; }
       pushUndo({ t: "resize", el: d.el, before: d.before, after });
     }
+    mosaicPreview(d.el); // 马赛克缩放后按新尺寸重生成块化预览
     setObjSel(d.el);
   }
 });
 
 function startText(p) {
+  setObjSel(null); // 新建文字前断开旧选中：否则编辑中新点样式会经 syncSelProps 写回旧对象（用户报"另一个也变斜体"）
   const el = document.createElement("div");
   el.className = "txtedit"; el.contentEditable = "true"; el.spellcheck = false;
   el.dataset.k = "text"; // 编辑态即有类型：拖四角锚走字号缩放分支（否则误入形状 w/h 分支，框大字不变）
@@ -1744,7 +1858,14 @@ function drawArrowGeom(el, g) {
 // 把当前全局工具属性写回选中对象并重绘（属性写回）
 function syncSelProps() {
   scheduleSave(); // 即改即存：无选中时改工具属性同样要记住
-  if (!selectedObj || !selectedObj.isConnected) return;
+  // 属性作用目标：正在编辑的优先（编辑态点样式=改编辑框），否则选中对象。
+  // 曾只用 selectedObj：双击编辑 B 时 selectedObj 仍是 A → 点斜体改了 A（用户报"另一个也变斜体"）
+  if ((!selectedObj || !selectedObj.isConnected)) {
+    // 无选中但编辑中（reEditText 会先 setObjSel(null)）：属性作用于编辑框。
+    // 曾直接 return——编辑 B 时点斜体落到旧 selectedObj 或丢失（用户报"另一个也变斜体"）
+    if (editing && editing.isConnected && editing.dataset.k === "text") syncEditProps();
+    return;
+  }
   const el = selectedObj, k = el.dataset.k;
   if (k === "arrow") {
     const g = JSON.parse(el.dataset.geom);
@@ -1761,9 +1882,10 @@ function syncSelProps() {
     const p = JSON.parse(el.dataset.params);
     if (k === "rect" || k === "ellipse") { p.color = toolColor; p.lw = toolW; p.fill = fillMode; p.dash = shapeDash; p.radius = shapeRadius ? 12 : 0; p.opacity = shapeOpacity; }
     if (k === "marker") p.color = toolColor;
-    if (k === "mosaic") p.mos = mosStrength;
+    if (k === "mosaic") { p.mos = mosStrength; p.mode = mosMode; } // 模式也跟随（曾漏：改马赛克/模糊不作用于选中对象）
     el.dataset.params = JSON.stringify(p);
     applyShapeStyle(el, k, p);
+    if (k === "mosaic") mosaicPreview(el); // 改强度/模式后刷新真实预览
   } else if (k === "num") {
     const p = JSON.parse(el.dataset.params);
     p.color = toolColor; p.style = numStyle;
@@ -2004,7 +2126,11 @@ function restoreHint() {
 /* ================= 键盘 ================= */
 window.addEventListener("keydown", (e) => {
   const et = e.target;
-  if (et && (et.isContentEditable || et.tagName === "INPUT" || et.tagName === "TEXTAREA")) return;
+  if (et && (et.isContentEditable || et.tagName === "INPUT" || et.tagName === "TEXTAREA")) {
+    // Escape 永远放行：焦点在滑杆/输入框时 Esc 也必须一次退出截图
+    //（曾直接 return——拖过强度滑杆后 Esc 被吞，需先点别处才能退，用户实测报障）
+    if (e.key !== "Escape") return;
+  }
   if (ann) return; // 完整编辑器模式由 annotate.js 接管
   if (document.getElementById("escdlg").classList.contains("open")) {
     if (e.key === "Escape") document.getElementById("escdlg").classList.remove("open");
@@ -2071,7 +2197,7 @@ document.addEventListener("mousedown", (e) => {
     // 弹层面板（A 设置/色板）：板内点击不触发分发；点外自动收起
     for (const pid of ["pr-text-menu", "pr-color-menu"]) {
       const pm = document.getElementById(pid);
-      if (!e.target.closest("#" + pid) && !e.target.closest("#pr-aset") && !e.target.closest("#pr-chip") && !e.target.closest("#pr-tbgchip") && pm.style.display === "block") pm.style.display = "none";
+      if (!e.target.closest("#" + pid) && !e.target.closest("#pr-chip") && !e.target.closest("#pr-tbgchip") && pm.style.display === "block") pm.style.display = "none";
       if (e.target.closest("#" + pid)) return;
     }
     // 文字编辑态：四角手柄绝对优先（拖角等比缩放字号，复用 objresize 数学）
@@ -2119,10 +2245,10 @@ document.addEventListener("mousedown", (e) => {
     // 画图工具激活时，手柄(z4)被画图层(z5)盖住点不到：
     // 角 8px → 调整大小；边缘 8px 条带 → 平移选区（同类产品 手型）；其余 → 画图
     if (tool && e.target.closest("#layer")) {
-      const r = layerPt(e);
+      const r = layerPt(e); // 本地坐标（0..sel.w）——四角判定必须同坐标系，勿混视口系 sel.x
       const corners = [[0, 0, "nw"], [1, 0, "ne"], [0, 1, "sw"], [1, 1, "se"]];
       for (const [fx, fy, cls] of corners) {
-        const cx = sel.x + sel.w * fx, cy = sel.y + sel.h * fy;
+        const cx = sel.w * fx, cy = sel.h * fy;
         if (Math.hypot(r.x - cx, r.y - cy) <= 8) {
           draft = null;
           drag = { type: "resize", handle: cls, sx: e.clientX, sy: e.clientY, orig: { ...sel } };

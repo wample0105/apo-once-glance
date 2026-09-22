@@ -1016,7 +1016,10 @@ fn draw_rect(
         "fill" => pixmap.fill_path(&path, &paint(color), FillRule::Winding, xf, None),
         "outline_fill" => {
             let mut p = paint(color);
-            p.set_color(Color::from_rgba8((color.red() * 255.0) as u8, (color.green() * 255.0) as u8, (color.blue() * 255.0) as u8, 60));
+            // 内部蒙层 alpha=24%×整体不透明度：不透明度滑杆对描边+填充同样生效（曾固定 60 致滑杆只淡边框）
+            let op = opacity.unwrap_or(1.0);
+            let fa = (60.0 * op).round().clamp(0.0, 60.0) as u8;
+            p.set_color(Color::from_rgba8((color.red() * 255.0) as u8, (color.green() * 255.0) as u8, (color.blue() * 255.0) as u8, fa));
             pixmap.fill_path(&path, &p, FillRule::Winding, xf, None);
             let stroke = stroke_style(lw, dash);
             pixmap.stroke_path(&path, &paint(color), &stroke, xf, None);
@@ -1062,7 +1065,10 @@ fn draw_ellipse(
         "fill" => pixmap.fill_path(&path, &paint(color), FillRule::Winding, xf, None),
         "outline_fill" => {
             let mut p = paint(color);
-            p.set_color(Color::from_rgba8((color.red() * 255.0) as u8, (color.green() * 255.0) as u8, (color.blue() * 255.0) as u8, 60));
+            // 与矩形一致：蒙层 alpha=24%×整体不透明度（滑杆全局生效）
+            let op = opacity.unwrap_or(1.0);
+            let fa = (60.0 * op).round().clamp(0.0, 60.0) as u8;
+            p.set_color(Color::from_rgba8((color.red() * 255.0) as u8, (color.green() * 255.0) as u8, (color.blue() * 255.0) as u8, fa));
             pixmap.fill_path(&path, &p, FillRule::Winding, xf, None);
             pixmap.stroke_path(&path, &paint(color), &stroke, xf, None);
         }
