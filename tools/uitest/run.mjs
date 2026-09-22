@@ -108,7 +108,7 @@ check("T3 换色后字号仍 45", t3size === 45, "fontSize=" + t3size);
 check("T3b 换色生效", t3color === "#00FF00", "color=" + t3color);
 
 // T4 背景面板弹出：点 ▾
-await evl(`document.getElementById("pr-aset").click(); "clicked"`);
+await evl(`document.getElementById("pr-tbgchip").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); "clicked"`);
 const t4 = await evl(`document.getElementById("pr-text-menu").style.display`);
 check("T4 面板弹出 display=block", t4 === "block", "display=" + t4);
 const t4b = await evl(`document.querySelectorAll("#pr-text-menu .sw").length`);
@@ -121,7 +121,7 @@ check("T4d 透明度+圆角两滑杆", t4d === 2, "ranges=" + t4d);
 // T5 选蓝色背景 → 实时应用（rgba + 回填对象）
 await evl(`(() => {
   const sws0 = [...document.querySelectorAll("#pr-text-menu .sw[data-c]")];
-  sws0.find(s => s.dataset.c === '#E0F0FF').click(); "blue-bg"
+  sws0.find(s => s.dataset.c === '#E0F0FF').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); "blue-bg"
 })()`);
 const t5bg = await evl(`layer.querySelector('.obj').style.background`);
 check("T5 蓝底应用（alpha1 浏览器序列化为 rgb）", /rgba?\(224,\s*240,\s*255(,\s*1)?\)/.test(t5bg || ""), "bg=" + t5bg);
@@ -149,7 +149,7 @@ check("T7 圆角 20px", t7r === "20px", "radius=" + t7r);
 // T8 白底黑字场景：选白色 sw
 await evl(`(() => {
   const sws1 = [...document.querySelectorAll("#pr-text-menu .sw[data-c]")];
-  sws1.find(s => s.dataset.c === "#FFFFFF").click(); "white"
+  sws1.find(s => s.dataset.c === "#FFFFFF").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); "white"
 })()`);
 const t8 = await evl(`JSON.parse(layer.querySelector('.obj').dataset.params).background`);
 check("T8 白底写进 params", t8 === "#FFFFFF", "bg=" + t8);
@@ -163,7 +163,7 @@ check("T9c 契约 background_radius=20", top.background_radius === 20, "r=" + to
 
 // T10 描边按钮：A → params.stroke + 契约 stroke_color/width
 await evl(`(() => {
-  document.getElementById('pr-aset').click(); const b = document.getElementById('pr-stroke-btn');
+  document.getElementById('pr-chip').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); const b = document.getElementById('pr-stroke-btn');
   b.click(); "stroke-on"
 })()`);
 const ops2 = await evl(`serializeOps().operations`, true);
@@ -217,7 +217,7 @@ await evl(`(() => { setTool("text"); startText({x:100,y:100}); editing.textConte
 const t15 = await evl(`editing ? { h: editing.offsetHeight, top: document.querySelector('.t-anc-se').style.top } : null`, true);
 check("T15 换行锚框跟随", t15 && t15.h > 40, JSON.stringify(t15));
 // T16 编辑中点面板滑杆：编辑态保留+属性生效（focusout 分流）
-const t16a = await evl(`(() => { const r = [...document.querySelectorAll("#pr-text-menu input[type=range]")][0]; document.getElementById("pr-aset").click(); return document.getElementById("pr-text-menu").style.display; })()`, true);
+const t16a = await evl(`(() => { const r = [...document.querySelectorAll("#pr-text-menu input[type=range]")][0]; document.getElementById("pr-tbgchip").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); return document.getElementById("pr-text-menu").style.display; })()`, true);
 const t16b = await evl(`(() => { const rs = [...document.querySelectorAll("#pr-text-menu input[type=range]")]; rs[1].value = "20"; rs[1].dispatchEvent(new Event("input", { bubbles: true })); return { editing: !!editing, r: editing ? editing.style.borderRadius : "none" }; })()`, true);
 check("T16 编辑态保留+圆角生效", t16b && t16b.editing === true && t16b.r === "20px", JSON.stringify(t16b));
 
@@ -258,10 +258,10 @@ check("T21 背景直达块存在", t21.exists && t21.inTextRow, JSON.stringify(t
 await evl(`document.getElementById("pr-text-menu").style.display = "none"; document.getElementById("pr-tbgchip").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); "open"`);
 const t21b = await evl(`(() => { const m = document.getElementById("pr-text-menu"); return { open: !!m && m.style.display === "block", rowSelects: document.querySelectorAll("#pr-text > select").length, panelSelects: m ? m.querySelectorAll("select").length : -1, sws: m ? m.querySelectorAll(".sw[data-c]").length : 0, ranges: m ? m.querySelectorAll("input[type=range]").length : 0 }; })()`);
 check("T21b 面板开+字体3下拉在属性行+面板只余背景", t21b.open && t21b.rowSelects === 3 && t21b.panelSelects === 0 && t21b.sws === 13 && t21b.ranges === 2, JSON.stringify(t21b));
-await evl(`(() => { const b = [...document.querySelectorAll("#pr-text-menu .sw[data-c]")].find(s => s.dataset.c === "#000000"); b.click(); return "clicked"; })()`);
+await evl(`(() => { const b = [...document.querySelectorAll("#pr-text-menu .sw[data-c]")].find(s => s.dataset.c === "#000000"); b.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); return "clicked"; })()`);
 const t21c = await evl(`(() => { const c = document.getElementById("pr-tbgchip"); return { bg: textBgColor, on: textBackground, chipBg: c.style.background.toUpperCase(), chipNone: c.classList.contains("none") }; })()`);
 check("T21c 点黑块生效+chip 变黑", t21c.bg === "#000000" && t21c.on === true && /RGB\(0, ?0, ?0\)|#000000/.test(t21c.chipBg) && !t21c.chipNone, JSON.stringify(t21c));
-await evl(`(() => { const n = document.querySelector("#pr-text-menu .sw.none"); n.click(); return "none"; })()`);
+await evl(`(() => { const n = document.querySelector("#pr-text-menu .sw.none"); n.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); return "none"; })()`);
 const t21d = await evl(`(() => document.getElementById("pr-tbgchip").classList.contains("none") && textBackground === false)()`);
 check("T21d 无背景=斜纹态", t21d === true);
 // T21e 双入口同面板：面板关时背景块点开 = A 面板本体，无第二浮层
@@ -290,12 +290,137 @@ await evl(`resetOverlayState(); "reset"`);
 const t22c = await evl(`(function(){ document.getElementById("toolbar").style.display = "flex"; positionToolbar(); return { free: toolbarFree }; })()`);
 check("T22c 重置后恢复自动定位", t22c.free === false, JSON.stringify(t22c));
 
+// T23 模式类全 icon 化（无文字按钮残留）+ 透明度滑杆
+const t23 = await evl(`(function(){
+  const arrowIcons = document.querySelectorAll("#pr-arrow-style button svg").length;
+  const lineIcons = document.querySelectorAll("#pr-arrow-line button svg").length;
+  const ddls = document.querySelectorAll("#pr-shape .ddl").length;
+  const lineItems = document.querySelectorAll("#ddl-line .ddl-item").length;
+  const fillItems = document.querySelectorAll("#ddl-fill .ddl-item").length;
+  const numIcons = document.querySelectorAll("#pr-num-style button svg").length;
+  const mosIcons = document.querySelectorAll("#pr-mos-mode button svg").length;
+  const mosRange = !!document.getElementById("pr-mos-range");
+  const opSlider = !!document.getElementById("pr-opacity-range");
+  const noOldSelect = !document.querySelector("#pr-arrow-style select, #pr-arrow-line select, #pr-shape select[id=pr-opacity]");
+  return { arrowIcons, lineIcons, ddls, fillItems, lineItems, numIcons, mosIcons, mosRange, opSlider, noOldSelect };
+})()`);
+check("T23 模式类全 icon 化+透明度滑杆", t23.arrowIcons === 4 && t23.lineIcons === 3 && t23.ddls === 2 && t23.fillItems === 3 && t23.lineItems === 2 && t23.numIcons === 3 && t23.mosIcons === 2 && t23.mosRange && t23.opSlider && t23.noOldSelect, JSON.stringify(t23));
+
+// T24 马赛克：blur 预览带 filter；pixelate 落定后真实块化预览
+await evl(`(function(){
+  if (editing) finishText(editing); // 精确清理（resetOverlayState 会清 magImg.src 致预览无冻结图）
+  setObjSel(null); objDrag = null; draft = null;
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove());
+  if (!magImg.src) magImg.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  setSel({ x: 100, y: 100, w: 600, h: 400 }); setState("selected");
+  setTool("mosaic");
+  const lay = document.getElementById("layer");
+  lay.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: 200, clientY: 200, button: 0 }));
+  window.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 350, clientY: 300 }));
+  window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  return "painted:" + (draft ? "draft-live" : "done");
+})()`);
+const t24 = await evl(`(function(){
+  const m = document.querySelector('#layer .obj[data-k="mosaic"]');
+  if (!m) return { found: false };
+  let err = null;
+  try { mosaicPreview(m); } catch (e) { err = String(e); }
+  return { found: true, err, mode: JSON.parse(m.dataset.params).mode, nw: magImg.naturalWidth, w: m.style.width, realPrev: m.dataset.realPrev === "1", bgHasData: (m.style.background || "").includes("url(") };
+})()`);
+check("T24 pixelate 落定=真实块化预览", t24.found && !t24.err && t24.realPrev && t24.bgHasData, JSON.stringify(t24));
+await evl(`(function(){
+  const b = document.querySelector('#pr-mos-mode button[data-mm="blur"]');
+  b.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+  return "blur-on";
+})()`);
+const t24b = await evl(`(function(){
+  const m = document.querySelector('#layer .obj[data-k="mosaic"]');
+  return { filter: m.style.filter, mode: JSON.parse(m.dataset.params).mode, bgPos: m.style.backgroundPosition, realPrev: m.dataset.realPrev === "1", bgHasData: (m.style.background || "").includes("url(") };
+})()`);
+check("T24b 模糊落定=canvas 真模糊预览+模式同步", t24b.mode === "blur" && t24b.realPrev && t24b.bgHasData, JSON.stringify(t24b));
+await evl(`(function(){ document.querySelector('#pr-mos-mode button[data-mm="mosaic"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); document.querySelectorAll('#layer .obj').forEach(e => e.remove()); return "reset"; })()`);
+
+// T25 背景块状态同步：状态变化经 syncPropsUI 后 chip 必须跟随（曾漏致"斜纹但实际有背景"）
+const t25 = await evl(`(function(){
+  textBackground = false; textBgColor = "#FFF7D6"; bgRefresh();
+  const before = document.getElementById("pr-tbgchip").classList.contains("none");
+  textBackground = true; textBgColor = "#000000";
+  syncPropsUI();
+  const c = document.getElementById("pr-tbgchip");
+  return { beforeNone: before, afterNone: c.classList.contains("none"), bg: c.style.background.toUpperCase() };
+})()`);
+check("T25 回填刷新背景直达块", t25.beforeNone === true && t25.afterNone === false && /RGB\(0, ?0, ?0\)|#000000/.test(t25.bg), JSON.stringify(t25));
+
+// T26 焦点在滑杆上按 Esc 不被吞（曾 INPUT 一律 return：拖过滑杆后 Esc 无法退出截图）
+const t26 = await evl(`(function(){
+  setSel({ x: 100, y: 100, w: 600, h: 400 }); setState("selected");
+  setTool("rect");
+  const lay = document.getElementById("layer");
+  lay.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: 200, clientY: 200, button: 0 }));
+  window.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 300, clientY: 280 }));
+  window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  setTool("mosaic");
+  const r = document.getElementById("pr-mos-range");
+  r.focus();
+  r.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  return { dlgOpen: document.getElementById("escdlg").classList.contains("open") };
+})()`);
+check("T26 滑杆持焦时 Esc 仍可退出", t26.dlgOpen === true, JSON.stringify(t26));
+await evl(`(function(){ document.getElementById("escdlg").classList.remove("open"); document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null); return "clean"; })()`);
+
+
+// T27 填充/线条下拉（业界同款）：点开→选项生效→三角朝向→点外关闭
+const t27 = await evl(`(function(){
+  const box = document.getElementById("ddl-fill");
+  box.querySelector(".ddl-btn").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+  const opened = box.classList.contains("open");
+  const items = box.querySelectorAll(".ddl-item");
+  items[1].dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); // 选"填充"
+  const onItem = box.querySelector(".ddl-item.on");
+  const curHtml = box.querySelector(".ddl-cur").innerHTML;
+  return { opened, closedAfterPick: !box.classList.contains("open"), fillMode, curOn: curHtml.includes("svg"), onVal: onItem ? onItem.dataset.v : null, curMatches: curHtml.includes('fill="currentColor"') && !curHtml.includes("stroke") };
+})()`);
+check("T27 填充下拉开/选/生效+入口图标与选中态同步", t27.opened && t27.closedAfterPick && t27.fillMode === "fill" && t27.curOn && t27.onVal === "fill" && t27.curMatches, JSON.stringify(t27));
+const t27b = await evl(`(function(){
+  const box = document.getElementById("ddl-line");
+  box.querySelector(".ddl-btn").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+  const opened = box.classList.contains("open");
+  document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); // 点外
+  return { opened, closedByOutside: !box.classList.contains("open"), dash: shapeDash };
+})()`);
+check("T27b 线条下拉+点外关闭", t27b.opened && t27b.closedByOutside, JSON.stringify(t27b));
+
+
+
 await evl(`layer.querySelector('[data-k="arrow"]').remove(); setObjSel(null); "cleaned"`);
 
 // 截图留档
 await shot("uitest_final.png");
-await evl(`document.getElementById("pr-aset").click(); "open"`);
+await evl(`document.getElementById("pr-tbgchip").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); "open"`);
 await shot("uitest_panel.png");
+
+// T28 文字属性独立性：编辑 B 时点斜体只改 B，A 不受影响（曾双改）
+const t28 = await evl(`(function(){
+  // A：已确认文字对象
+  editing = null; textItalic = false; document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null);
+  setTool("text");
+  const lay = document.getElementById("layer");
+  lay.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: 120, clientY: 120, button: 0 }));
+  const a = document.querySelector(".txtedit"); a.textContent = "AAA"; finishText(a);
+  const aEl = layer.querySelector('[data-k="text"]');
+  // B：进入编辑态（编辑前先清 A 的选中——真实链路 reEditText/startText 均会断开；此处直设 editing 模拟"正在编辑另一个"）
+  setObjSel(null); editing = null;
+  const bb = document.createElement("div");
+  bb.className = "txtedit"; bb.dataset.k = "text"; bb.contentEditable = "true";
+  bb.style.cssText = "position:absolute;left:500px;top:120px;font-size:20px;";
+  bb.textContent = "BBB"; lay.appendChild(bb); editing = bb;
+  textItalic = false; syncEditProps(); // A/B 均非斜体基线
+  // 编辑 B 中点斜体
+  textItalic = true; syncTextProps();
+  return { bItalic: bb.style.fontStyle, aItalic: aEl.style.fontStyle, editingNow: editing === bb, objs: document.querySelectorAll("#layer .obj").length };
+})()`);
+check("T28 编辑态改斜体不串已确认对象", t28.bItalic === "italic" && t28.aItalic !== "italic", JSON.stringify(t28));
+await evl(`(function(){ textItalic = false; document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null); editing = null; return "clean"; })()`);
 
 console.log('PAGE ERRORS:', await evl('JSON.stringify(window.__errs||[])'));
 const fails = results.filter((r) => !r.ok).length;
