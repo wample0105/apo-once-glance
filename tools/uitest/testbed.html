@@ -120,7 +120,7 @@
     cursor: default;
   }
   #toolbar .row { display: flex; align-items: center; gap: 2px; }
-  /* 左侧拖动把手（同类产品/Material drag indicator ⋮⋮ 点阵）：拖动自由摆放；本次截图会话内有效 */
+  /* 左侧拖动把手（与 overlay.html 同步） */
   #tb-handle {
     position: absolute; left: 2px; top: 50%; transform: translateY(-50%);
     width: 16px; height: 40px; display: flex; align-items: center; justify-content: center;
@@ -174,7 +174,7 @@
     width: 0; height: 0; border-left: 7px solid transparent; border-bottom: 7px solid rgba(255,255,255,0.9);
     border-radius: 0 0 5px 0;
   }
-  /* 文字背景色直达块：与字色 chip 对称，无背景态显示斜纹 */
+  /* 文字背景色直达块（与 overlay.html 同步） */
   #pr-tbgchip {
     width: 22px; height: 22px; border-radius: 5px;
     border: 1px solid rgba(255,255,255,.4); cursor: pointer; padding: 0; flex: none;
@@ -305,8 +305,7 @@
   .flymenu .row:last-child { margin-bottom: 0; }
   .flymenu .lbl { width: 34px; color: var(--ov-fg-dim); flex: none; }
   .flymenu .sws { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
-  .flymenu .sw { width: 26px; height: 26px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); cursor: pointer; padding: 0; flex: none; position: relative; }
-  .flymenu .sw::after { content: ""; position: absolute; inset: -4px; } /* 扩热区：22px 色块易点空 */
+  .flymenu .sw { width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); cursor: pointer; padding: 0; flex: none; }
   .flymenu .sw.on { outline: 2px solid var(--accent); outline-offset: 1px; }
   .flymenu .sw.none { background: repeating-linear-gradient(45deg, #666 0 4px, #333 4px 8px); }
   .flymenu input[type="range"] { flex: 1; accent-color: var(--accent); height: 18px; }
@@ -564,7 +563,7 @@
     }
     #cancel-x:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
   </style>
-  <script src="js/overlay.js"></script>
-  <script src="js/annotate.js"></script>
+  <script>window.__TAURI__ = { core: { invoke: async (cmd, args) => { if (cmd === "get_overlay_kind") return ""; if (cmd === "freeze_begin") return { dataUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" }; if (cmd === "get_settings") return { annotation: {} }; if (cmd === "set_setting") { window.__saved = window.__saved || []; window.__saved.push(args && args.value); return null; } return null; }, convertFileSrc: (p) => p } };</script><script src="../../ui/js/overlay.js"></script>
+  <script src="../../ui/js/annotate.js"></script>
 </body>
 </html>

@@ -69,14 +69,16 @@ pub fn deliver_capture(
     };
     history::upsert_capture(&row)?;
 
-    // 剪贴板（CLP-1）：PNG + DIB + 文件路径
+    // 剪贴板（CLP-1）：PNG + DIB + 文件路径。
+    // 业界语义：save=只落盘不占剪贴板（同类产品「保存」不覆盖用户剪贴板），copy 才写。
+    let skip_clip = action == "save";
     let clip = clipboard::ClipboardPayload {
         png: Some(&png),
         rgba: Some((&bmp.pixels, bmp.width, bmp.height)),
         files: vec![paths.png.clone()],
         text: None,
     };
-    let clip_result = clipboard::write(&clip);
+    let clip_result = if skip_clip { Ok(()) } else { clipboard::write(&clip) };
 
     let mut outcome = DeliverOutcome {
         id,
@@ -147,17 +149,21 @@ pub fn deliver_capture(
             }
         }
         _ => {
-            match clip_result {
-                Ok(()) => {
-                    let msg = match kind {
-                        "scroll" => "长截图已保存 · 本地完成",
-                        _ => "已复制 · 本地完成",
-                    };
-                    toast(app, "success", msg);
-                }
-                Err(e) => {
-                    // 保存成功但剪贴板失败：警告 + 路径兜底（退出码 4）
-                    toast_error(app, &e);
+            if skip_clip {
+                toast(app, "success", &format!("已保存 · {}", paths.png.display()));
+            } else {
+                match clip_result {
+                    Ok(()) => {
+                        let msg = match kind {
+                            "scroll" => "长截图已保存 · 本地完成",
+                            _ => "已复制 · 本地完成",
+                        };
+                        toast(app, "success", msg);
+                    }
+                    Err(e) => {
+                        // 保存成功但剪贴板失败：警告 + 路径兜底（退出码 4）
+                        toast_error(app, &e);
+                    }
                 }
             }
         }

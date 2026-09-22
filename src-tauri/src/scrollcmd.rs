@@ -736,8 +736,11 @@ pub async fn annotate_save(
     app: AppHandle,
     base_path: String,
     script: serde_json::Value,
+    action: Option<String>,
 ) -> Result<serde_json::Value, String> {
     use once_core::annotate;
+    // 业界语义：save=只落盘不占剪贴板（同类产品 同款）；默认 copy 兼容历史编辑器调用
+    let action = action.unwrap_or_else(|| "copy".into());
     let path = std::path::PathBuf::from(&base_path);
     let png = std::fs::read(&path)
         .map_err(|e| format!("读取原图失败：{e}"))?;
@@ -805,17 +808,21 @@ pub async fn annotate_save(
     let json_path = out.with_extension("json");
     let _ = storage::write_atomic(&json_path, &serde_json::to_vec_pretty(&manifest).unwrap_or_default());
 
-    // 剪贴板 + toast（复制图片 + 文件路径）
-    let clip = clipboard::ClipboardPayload {
-        png: Some(&rendered.png),
-        rgba: None,
-        files: vec![out.clone()],
-        text: None,
-    };
-    if clipboard::write(&clip).is_ok() {
-        crate::deliver::toast(&app, "success", &format!("已保存标注 · {} 个操作", script_parsed.operations.len()));
+    // 剪贴板 + toast（复制图片 + 文件路径）；save 模式只落盘
+    if action == "save" {
+        crate::deliver::toast(&app, "success", &format!("已保存标注 · {}", out.display()));
     } else {
-        crate::deliver::toast(&app, "warn", "标注已保存，剪贴板写入失败（退出码 4）");
+        let clip = clipboard::ClipboardPayload {
+            png: Some(&rendered.png),
+            rgba: None,
+            files: vec![out.clone()],
+            text: None,
+        };
+        if clipboard::write(&clip).is_ok() {
+            crate::deliver::toast(&app, "success", &format!("已保存标注 · {} 个操作", script_parsed.operations.len()));
+        } else {
+            crate::deliver::toast(&app, "warn", "标注已保存，剪贴板写入失败（退出码 4）");
+        }
     }
     Ok(serde_json::json!({
         "id": did,
@@ -1027,19 +1034,9 @@ pub fn freeze_take_region(
     }))
 }
 
-/// 冻结交付：从冻结帧裁剪选区 → 走标准 deliver（落盘+剪贴板+取字/OCR+审计）。
-/// action: copy | ocr。保证"所见即所得"——不受实时桌面已变化影响。
-/// 必须为 async：deliver 内部 toast 会创建窗口，同步命令阻塞主线程会造成死锁。
-#[tauri::command]
-pub async fn freeze_deliver(
-    app: AppHandle,
-    screen: usize,
-    x: i32,
-    y: i32,
-    w: u32,
-    h: u32,
-    action: String,
-) -> Result<serde_json::Value, String> {
+/// 冻结帧裁剪（同步 helper：guard 生命周期锁死在本函数内——
+/// async 命令体里的 MutexGuard 即便显式 drop 也会破坏 future 的 Send，曾致编译失败）
+fn freeze_crop(x: i32, y: i32, w: u32, h: u32) -> Result<(Vec<u8>, u32, u32), String> {
     let g = FREEZE.lock().unwrap();
     let Some(f) = g.as_ref() else { return Err("冻结画面不存在".into()) };
     let lx = (x - f.origin.0).clamp(0, f.width as i32 - 1);
@@ -1052,11 +1049,104 @@ pub async fn freeze_deliver(
         let start = (ly as usize + row) * stride + lx as usize * 4;
         cropped.extend_from_slice(&f.rgba[start..start + w as usize * 4]);
     }
-    drop(g);
+    Ok((cropped, w, h))
+}
+
+/// 冻结交付：从冻结帧裁剪选区 → 走标准 deliver（落盘+剪贴板+取字/OCR+审计）。
+/// action: copy | save | ocr | saveas。保证"所见即所得"——不受实时桌面已变化影响。
+/// 必须为 async：deliver 内部 toast 会创建窗口，同步命令阻塞主线程会造成死锁。
+#[tauri::command]
+pub async fn freeze_deliver(
+    app: AppHandle,
+    screen: usize,
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+    action: String,
+) -> Result<serde_json::Value, String> {
+    let (cropped, w, h) = freeze_crop(x, y, w, h)?;
+    // 另存为（业界语义）：只写用户选择的路径——不进默认目录、不进历史、不占剪贴板；
+    // 取消对话框不算错误，返回 saved=false（覆盖层保持，可继续编辑）
+    if action == "saveas" {
+        let png = capture::encode_png(&capture::CapturedBitmap {
+            pixels: cropped, width: w, height: h, origin: (x, y),
+        })
+        .map_err(|e| e.to_string())?;
+        let root = settings::load().save_root();
+        let default_name = storage::new_asset_paths(&root, "region")
+            .ok()
+            .and_then(|p| p.png.file_name().map(|s| s.to_string_lossy().into_owned()))
+            .unwrap_or_else(|| "onceglance.png".into());
+        let dest = tauri::async_runtime::spawn_blocking(move || {
+            rfd::FileDialog::new()
+                .set_title("另存为")
+                .set_file_name(&default_name)
+                .add_filter("PNG 图片", &["png"])
+                .save_file()
+        })
+        .await
+        .map_err(|e| format!("对话框任务失败：{e}"))?;
+        let Some(dest) = dest else {
+            return Ok(serde_json::json!({ "saved": false }));
+        };
+        std::fs::write(&dest, &png).map_err(|e| format!("保存失败：{e}"))?;
+        crate::deliver::toast(&app, "success", &format!("已保存到 {}", dest.display()));
+        return Ok(serde_json::json!({ "saved": true, "path": dest.to_string_lossy() }));
+    }
     let bmp = capture::CapturedBitmap { pixels: cropped, width: w, height: h, origin: (x, y) };
     let outcome = crate::deliver::deliver_capture(&app, "region", &action, &bmp, Some(screen), None)
         .map_err(|e| e.message)?;
     Ok(serde_json::to_value(outcome).unwrap_or_default())
+}
+
+/// 有标注的另存为：冻结帧裁剪 → 引擎渲染 → 直接写用户选择路径。
+/// 不落默认目录（无原图/-ann 衍生）、不进历史、不占剪贴板——与无标注 saveas 同语义。
+#[tauri::command]
+pub async fn freeze_annotate_saveas(
+    app: AppHandle,
+    screen: usize,
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+    script: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    use once_core::annotate;
+    let (cropped, cw, ch) = freeze_crop(x, y, w, h)?;
+    let _ = screen;
+    let png = capture::encode_png(&capture::CapturedBitmap { pixels: cropped, width: cw, height: ch, origin: (x, y) })
+        .map_err(|e| e.to_string())?;
+    let script_parsed: annotate::AnnotationScript = serde_json::from_value(script)
+        .map_err(|e| format!("标注脚本解析失败：{e}"))?;
+    let settings = once_core::settings::load();
+    let rendered = annotate::render(&annotate::RenderInput {
+        png: &png,
+        script: &script_parsed,
+        anchor_blocks: None,
+        defaults: &settings.annotation,
+    })
+    .map_err(|e| e.to_string())?;
+    let root = settings::load().save_root();
+    let default_name = storage::new_asset_paths(&root, "region")
+        .ok()
+        .and_then(|p| p.png.file_name().map(|s| s.to_string_lossy().into_owned()))
+        .unwrap_or_else(|| "onceglance.png".into());
+    let dest = tauri::async_runtime::spawn_blocking(move || {
+        rfd::FileDialog::new()
+            .set_title("另存为")
+            .set_file_name(&default_name)
+            .add_filter("PNG 图片", &["png"])
+            .save_file()
+    })
+    .await
+    .map_err(|e| format!("对话框任务失败：{e}"))?;
+    let Some(dest) = dest else {
+        return Ok(serde_json::json!({ "saved": false }));
+    };
+    std::fs::write(&dest, &rendered.png).map_err(|e| format!("保存失败：{e}"))?;
+    crate::deliver::toast(&app, "success", &format!("已保存到 {}", dest.display()));
+    Ok(serde_json::json!({ "saved": true, "path": dest.to_string_lossy() }))
 }
 
 /// 另存为：系统保存对话框选择目标路径，把源文件（原图或标注衍生图）复制过去。
