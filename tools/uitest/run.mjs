@@ -66,6 +66,9 @@ function check(name, ok, info = "") {
 await goto();
 await evl(`window.__errs = []; window.addEventListener("error", e => window.__errs.push(e.message + " @ " + (e.filename||"") + ":" + e.lineno)); "hooked"`);
 
+// ===== 全局清理（T0，新增）：跨用例的编辑态残留统一收尾，保证各用例前置状态干净 =====
+await evl(`(() => { try { if (editing) finishText(editing); } catch (e) {} try { setObjSel(null); } catch (e) {} return "T0-clean"; })()`);
+
 // ===== 场景搭建：直接进入 selected 态 + 造一个文字对象 =====
 await evl(`(() => {
   sel = { x: 100, y: 100, w: 800, h: 600 };
@@ -233,6 +236,9 @@ check("T17d 填充模式", t17.f === "fill", "f=" + t17.f);
 check("T17e 背景色同存", !!t17.c, "c=" + t17.c);
 
 
+// T17.5（新增）：清掉前序用例遗留的编辑态。新语义下 setTool 切走时会把编辑中文字落定并回填
+// 文字记忆色（业界行为：确认什么颜色下个文字默认什么颜色），故每个涉色用例的前置必须自己干净
+await evl(`(() => { try { if (editing) finishText(editing); } catch (e) {} try { setObjSel(null); } catch (e) {} return "clean"; })()`);
 // T18 颜色按工具独立：文字设白→切箭头应红→设箭头蓝→切回文字仍白
 await evl(`(() => { setTool("text"); setColorForTool("#FFFFFF"); return toolColors.text; })()`);
 const t18a = await evl(`(() => { setTool("arrow"); return { arrow: toolColor, text: toolColors.text }; })()`);
@@ -421,6 +427,113 @@ const t28 = await evl(`(function(){
 })()`);
 check("T28 编辑态改斜体不串已确认对象", t28.bItalic === "italic" && t28.aItalic !== "italic", JSON.stringify(t28));
 await evl(`(function(){ textItalic = false; document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null); editing = null; return "clean"; })()`);
+
+// ===== 独立会话段（新增）：T29-T32 在 goto 复位后的干净环境跑 =====
+// （长链路会话中全局状态残留会让合成/物理事件链失效——污染源排查见 backlog）
+await goto();
+await evl(`(function(){ sel = { x: 100, y: 100, w: 800, h: 600 }; setState("selected"); return "fresh"; })()`);
+
+// T29-T32：业界最佳实践对齐（非破坏编辑/标准操纵模型，全部验行为结果）
+
+// T29 属性修改可撤销：选中矩形改色 → Ctrl+Z 撤销恢复旧色 → 重做再变新色
+const t29 = await evl(`(function(){
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null);
+  const el = document.createElement("div");
+  el.className = "obj"; el.dataset.k = "rect";
+  el.dataset.params = JSON.stringify({ lw: 4, color: "#FF3B30", fill: "none", dash: false, radius: 0, opacity: 1 });
+  el.style.cssText = "position:absolute;left:120px;top:120px;width:160px;height:100px;border:4px solid #FF3B30;";
+  layer.appendChild(el);
+  setObjSel(el);
+  setColorForTool("#00A2E8"); syncSelProps();
+  const after = getComputedStyle(el).borderColor;
+  undoOp();
+  const undone = getComputedStyle(el).borderColor;
+  redoOp();
+  const redone = getComputedStyle(el).borderColor;
+  return { after, undone, redone };
+})()`);
+check("T29 改色可撤销可重做（边色 蓝→红→蓝）", /162,\s*232/.test(t29.after) && /255,\s*59,\s*48/.test(t29.undone) && /162,\s*232/.test(t29.redone), JSON.stringify(t29));
+
+// T30a 画笔选中框贴墨迹（而非覆盖整个选区）且出现缩放手柄
+const t30a = await evl(`(function(){
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null);
+  const el = document.createElement("div");
+  el.className = "obj"; el.dataset.k = "pen"; el.style.position = "absolute";
+  el.style.left = "0px"; el.style.top = "0px"; el.style.width = "100%"; el.style.height = "100%";
+  el.innerHTML = '<svg style="overflow:visible;pointer-events:none" width="100%" height="100%"><polyline fill="none" stroke="#FF3B30" stroke-width="4" points="150,150 250,200 350,170"/></svg>';
+  el.dataset.geom = JSON.stringify({ pts: [{x:150,y:150},{x:250,y:200},{x:350,y:170}], lw: 4, color: "#FF3B30" });
+  layer.appendChild(el);
+  setObjSel(el);
+  const b = objBBox(el);
+  return { bw: b.w, bh: b.h, resizable: document.getElementById("objsel").classList.contains("resizable") };
+})()`);
+check("T30a 画笔选中框贴墨迹且可缩放", t30a.bw >= 180 && t30a.bw <= 220 && t30a.bh >= 40 && t30a.bh <= 62 && t30a.resizable, JSON.stringify(t30a));
+
+// T30b 拖 se 角：笔迹点序等比放大（CDP Input 物理鼠标序列，真实输入链——
+// 合成 dispatchEvent 在长会话 testbed 里会被某监听拦下，物理链才是用户真实路径）
+const hpos = await evl(`(function(){
+  const el = document.querySelector('#layer .obj[data-k=pen]');
+  if (!el) return null;
+  setObjSel(el);
+  const h = document.querySelector('#objsel .h.se');
+  if (!h) return null;
+  const r = h.getBoundingClientRect();
+  const el2 = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+  return { x: r.x + r.width / 2, y: r.y + r.height / 2, hit: el2 ? (el2.className || el2.id || el2.tagName) : null };
+})()`);
+console.log("T30b hpos:", JSON.stringify(hpos));
+await evl(`document.addEventListener("mousedown", (e) => { window.__lastTarget = ((e.target.className && e.target.className.baseVal !== undefined) ? e.target.className.baseVal : e.target.className || e.target.id || e.target.tagName) + " @" + e.clientX + "," + e.clientY; }, true); "hooked"`);
+await evl(`(function(){ window.__sp = []; const orig = MouseEvent.prototype.stopPropagation; MouseEvent.prototype.stopPropagation = function() { try { window.__sp.push(((this.target && (this.target.className && this.target.className.baseVal !== undefined) ? this.target.className.baseVal : (this.target.className || this.target.id || this.target.tagName))) + "@" + this.type + "@" + this.eventPhase); } catch (e) { window.__sp.push("ERR"); } return orig.apply(this, arguments); }; return "sp-hooked"; })()`);
+if (hpos) {
+  const X = Math.round(hpos.x), Y = Math.round(hpos.y);
+  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: X, y: Y, button: "left", buttons: 1, clickCount: 1 });
+  await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: X + 100, y: Y + 50, button: "left", buttons: 1 });
+  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: X + 100, y: Y + 50, button: "left", buttons: 0, clickCount: 1 });
+  await sleep(250);
+}
+const t30b = await evl(`(function(){
+  const lt = window.__lastTarget; window.__lastTarget = null;
+  const el = document.querySelector('#layer .obj[data-k=pen]');
+  const g = JSON.parse(el.dataset.geom);
+  const xs = g.pts.map(p => p.x), ys = g.pts.map(p => p.y);
+  return { lastTarget: lt, sp: window.__sp || [], maxX: Math.max.apply(null, xs), maxY: Math.max.apply(null, ys), n: g.pts.length,
+    ann: typeof ann !== "undefined" ? ann : "undef", editing: typeof editing !== "undefined" ? !!editing : null,
+    draft: typeof draft !== "undefined" ? !!draft : null, cropMode: typeof cropMode !== "undefined" ? cropMode : null,
+    escdlg: document.getElementById("escdlg") ? document.getElementById("escdlg").classList.contains("open") : null,
+    state: typeof state !== "undefined" ? state : "?" };
+})()`);
+check("T30b 拖角后笔迹等比放大", hpos && t30b.maxX >= 420 && t30b.maxX <= 480 && t30b.maxY >= 195 && t30b.maxY <= 255, JSON.stringify(t30b));
+
+// T31 选中马赛克：强度/模式回填到面板（改哪项只动哪项的正向一致性）
+const t31 = await evl(`(function(){
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null);
+  const el = document.createElement("div");
+  el.className = "obj"; el.dataset.k = "mosaic";
+  el.dataset.params = JSON.stringify({ lw: 4, color: "#000000", fill: "none", mos: 25, mode: "blur", dash: false, radius: 0, opacity: 1 });
+  el.style.cssText = "position:absolute;left:100px;top:100px;width:120px;height:80px;";
+  layer.appendChild(el);
+  setObjSel(el);
+  const rng = document.getElementById("pr-mos-range");
+  return { mos: mosStrength, mode: mosMode, rangeVal: rng ? rng.value : null };
+})()`);
+check("T31 选中马赛克回填强度25/模糊模式", t31.mos === 25 && t31.mode === "blur" && t31.rangeVal === "25", JSON.stringify(t31));
+
+// T32 选中序号：颜色/样式回填
+const t32 = await evl(`(function(){
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null);
+  const el = document.createElement("div");
+  el.className = "obj"; el.dataset.k = "num";
+  el.dataset.params = JSON.stringify({ d: 36, color: "#00FF00", style: "outline" });
+  el.style.cssText = "position:absolute;left:150px;top:150px;width:36px;height:36px;";
+  el.innerHTML = '<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">1</span>';
+  layer.appendChild(el);
+  setObjSel(el);
+  return { color: toolColor, style: numStyle };
+})()`);
+check("T32 选中序号回填颜色与样式", t32.color === "#00FF00" && t32.style === "outline", JSON.stringify(t32));
+
+// 收尾清场
+await evl(`(function(){ document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null); return "clean"; })()`);
 
 console.log('PAGE ERRORS:', await evl('JSON.stringify(window.__errs||[])'));
 const fails = results.filter((r) => !r.ok).length;

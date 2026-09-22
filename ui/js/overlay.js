@@ -67,7 +67,7 @@ function resetOverlayState() {
   document.getElementById("pr-color-menu").style.display = "none";
   document.getElementById("ctxmenu").classList.remove("open");
   hideTxtAnchors(); setObjSel(null); setHover(null);
-  selectedObj = null; editing = null; objDrag = null; draft = null; drag = null;
+  selectedObj = null; editing = null; objDrag = null; draft = null; drag = null; propsUndo = null;
   objStack = { undo: [], redo: [] };
   cropMode = false; cropSaved = null; numNext = numStart;
   tool = null; setSel({ x: 0, y: 0, w: 0, h: 0 }); setState("idle");
@@ -872,6 +872,10 @@ function wireToolbar() {
 function setTool(t) {
   if (t === "select") t = null; // 选择=退出画图模式（点选标注在分发器处理）
   if (t === "shape") t = shapeSlot; // 形状槽位：用当前槽位形状画
+  // 切走文字工具时先确认编辑中的文字：编辑中点工具栏会触发 focusout 分流"保编辑态"，
+  // editing 残留后 layer mousedown 首行守卫直接 return——画布上点什么都没反应
+  //（用户报"来回切换工具后点旧文字点不动、出不了锚点"）
+  if (editing && t !== "text") finishText(editing);
   tool = t;
   // 颜色按工具独立：切工具即恢复该工具记忆的色（箭头红/文字白互不干扰）
   colorKey = t && toolColors[t] !== undefined ? t : colorKey;
@@ -1272,6 +1276,23 @@ window.addEventListener("mousemove", (e) => {
     objDrag.el.style.fontSize = size + "px";
     if (objDrag.el.classList.contains("txtedit")) updateTxtAnchors();
     else placeObjsel({ l, t, w, h: hh });
+  } else if (objDrag.el.dataset.k === "pen") {
+    // 画笔缩放：以墨迹 bbox 为基准等比变换点序（线宽保持）；geom 在 mouseup 落定
+    const dx = e.clientX - objDrag.sx, dy = e.clientY - objDrag.sy;
+    const o = objDrag.orig, hd = objDrag.handle;
+    let nl = o.l, nt = o.t, nw = o.w, nh = o.h;
+    if (hd.includes("w")) { nl = o.l + dx; nw = Math.max(12, o.w - dx); }
+    if (hd.includes("e")) { nw = Math.max(12, o.w + dx); }
+    if (hd.includes("n")) { nt = o.t + dy; nh = Math.max(12, o.h - dy); }
+    if (hd.includes("s")) { nh = Math.max(12, o.h + dy); }
+    const skx = nw / Math.max(1, o.w), sky = nh / Math.max(1, o.h);
+    objDrag.cur = { l: nl, t: nt, w: nw, hh: nh, sx: skx, sy: sky };
+    try {
+      const g0 = JSON.parse(objDrag.el.dataset.geom);
+      objDrag.el.querySelector("polyline").setAttribute("points",
+        g0.pts.map((q) => (nl + (q.x - o.l) * skx) + "," + (nt + (q.y - o.t) * sky)).join(" "));
+    } catch (err) {}
+    placeObjsel({ l: nl, t: nt, w: nw, h: nh });
   } else {
     // 手柄缩放（rect/ellipse/marker/mosaic）
     const dx = e.clientX - objDrag.sx, dy = e.clientY - objDrag.sy;
@@ -1300,6 +1321,9 @@ window.addEventListener("mouseup", () => {
     const dx = b2.l - b1.l, dy = b2.t - b1.t;
     if (dx || dy) pushUndo({ t: "move", el: d.el, dx, dy });
     mosaicPreview(d.el); // 马赛克/模糊=动态遮罩语义：移动后对新区域重新采样（曾漏：移动后仍是旧位置快照）
+    // 文字工具下单击（无位移）已有文字 = 直接进编辑（同款语义）：分发器 mousedown 已把
+    // 点击接管为 objDrag，layer 的 reEditText 分支到不了——在此补齐；拖动（有位移）仍是移动
+    if (!dx && !dy && tool === "text" && d.el.dataset.k === "text" && !editing) { reEditText(d.el); return; }
     setObjSel(d.el);
   } else if (d.type === "objend") {
     const after = JSON.parse(d.el.dataset.geom);
@@ -1312,6 +1336,23 @@ window.addEventListener("mouseup", () => {
     if (after !== d.before) pushUndo({ t: "rot", el: d.el, before: d.before, after });
     setObjSel(d.el);
   } else {
+    if (d.el.dataset.k === "pen") {
+      // 画笔：点序按拖拽比例落定进 geom；撤销走 props 原串快照（style 尺寸是 100% 整层，不适用）
+      if (d.cur) {
+        const gp = JSON.parse(d.el.dataset.geom);
+        gp.pts = gp.pts.map((q) => ({ x: d.cur.l + (q.x - d.orig.l) * d.cur.sx, y: d.cur.t + (q.y - d.orig.t) * d.cur.sy }));
+        d.el.dataset.geom = JSON.stringify(gp);
+        d.el.querySelector("polyline").setAttribute("points", gp.pts.map((q) => q.x + "," + q.y).join(" "));
+      }
+      const changed = d.cur && (d.cur.w !== d.orig.w || d.cur.hh !== d.orig.hh);
+      if (changed) {
+        pushUndo({ t: "props", el: d.el,
+          before: { geom: d.beforeGeom, params: null, style: null, points: d.beforePoints, spanStyle: null },
+          after: { geom: d.el.dataset.geom, params: null, style: null, points: d.el.querySelector("polyline").getAttribute("points"), spanStyle: null } });
+      }
+      setObjSel(d.el);
+      return;
+    }
     const after = { l: parseFloat(d.el.style.left), t: parseFloat(d.el.style.top), w: parseFloat(d.el.style.width), h: parseFloat(d.el.style.height) };
     if (d.el.dataset.k === "num") {
       // 序号保持正方形：直径=缩放后较小边，字号联动
@@ -1534,7 +1575,9 @@ function pushUndo(u) {
   updateStatusbar();
 }
 function undoOp() {
+  flushPropsUndo();
   const u = objStack.undo.pop(); if (!u) return;
+  if (u.t === "props") { applyPropsSnap(u.el, u.before); objStack.redo.push(u); updateStatusbar(); return; }
   if (u.t === "add") u.el.remove();
   else if (u.t === "del") layer.appendChild(u.el); // 橡皮擦撤销：对象放回
   else if (u.t === "move") moveObj(u.el, -u.dx, -u.dy);
@@ -1545,7 +1588,9 @@ function undoOp() {
   updateStatusbar();
 }
 function redoOp() {
+  flushPropsUndo();
   const u = objStack.redo.pop(); if (!u) return;
+  if (u.t === "props") { applyPropsSnap(u.el, u.after); objStack.undo.push(u); updateStatusbar(); return; }
   if (u.t === "add") layer.appendChild(u.el);
   else if (u.t === "del") u.el.remove(); // 橡皮擦重做：再删一次
   else if (u.t === "move") moveObj(u.el, u.dx, u.dy);
@@ -1573,10 +1618,51 @@ function distToSeg(px, py, x1, y1, x2, y2) {
   return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
 }
 function objBBox(el) {
+  if (el.dataset.k === "pen") {
+    try {
+      const pts = JSON.parse(el.dataset.geom).pts;
+      let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+      for (const q of pts) { x1 = Math.min(x1, q.x); y1 = Math.min(y1, q.y); x2 = Math.max(x2, q.x); y2 = Math.max(y2, q.y); }
+      return { l: x1, t: y1, w: x2 - x1, h: y2 - y1 };
+    } catch (err) {}
+  }
   const l = parseFloat(el.style.left) || 0, t = parseFloat(el.style.top) || 0;
   const w = el.offsetWidth || parseFloat(el.style.width) || 0;
   const h = el.offsetHeight || parseFloat(el.style.height) || 0;
   return { l, t, w, h };
+}
+let propsUndo = null;
+function p_int(v) { const n = parseInt(v, 10); return isNaN(n) ? 14 : n; }
+function snapProps(el) {
+  const sp = el.querySelector("span");
+  const pl = el.dataset.k === "pen" ? el.querySelector("polyline") : null;
+  return {
+    geom: el.dataset.geom || null, params: el.dataset.params || null,
+    style: el.getAttribute("style") || "",
+    points: pl ? pl.getAttribute("points") : null,
+    spanStyle: el.dataset.k === "num" && sp ? sp.getAttribute("style") : null,
+  };
+}
+function applyPropsSnap(el, sn) {
+  if (!el || !el.isConnected) return; // 对象已被后续删除：跳过
+  if (sn.geom !== null && sn.geom !== undefined) el.dataset.geom = sn.geom;
+  if (sn.params !== null && sn.params !== undefined) el.dataset.params = sn.params;
+  if (sn.style !== null && sn.style !== undefined) el.setAttribute("style", sn.style);
+  if (sn.points) { const pl = el.querySelector("polyline"); if (pl) pl.setAttribute("points", sn.points); }
+  if (sn.spanStyle) { const sp = el.querySelector("span"); if (sp) sp.setAttribute("style", sn.spanStyle); }
+  const k = el.dataset.k;
+  try {
+    if (k === "arrow" && sn.geom) drawArrowGeom(el, JSON.parse(sn.geom));
+    else if (k === "mosaic" && sn.params) { const pp = JSON.parse(sn.params); applyShapeStyle(el, k, pp); mosaicPreview(el); }
+    else if ((k === "rect" || k === "ellipse" || k === "marker") && sn.params) applyShapeStyle(el, k, JSON.parse(sn.params));
+  } catch (err) {}
+}
+function flushPropsUndo() {
+  if (propsUndo && propsUndo.after) {
+    const b = propsUndo.before, a = propsUndo.after;
+    if (b.geom !== a.geom || b.params !== a.params || b.style !== a.style || b.points !== a.points || b.spanStyle !== a.spanStyle) pushUndo(propsUndo);
+  }
+  propsUndo = null;
 }
 // 命中检测：从最上层往下找（箭头/画笔按几何点到线段距离，其余按包围盒）
 function pickObj(lx, ly) {
@@ -1613,6 +1699,8 @@ function pickObj(lx, ly) {
   return null;
 }
 function setObjSel(el) {
+  // 属性撤销链封存：切到别的对象/清空选中时（同对象继续累积，拖滑杆连发合并为一条）
+  if (propsUndo && propsUndo.el !== el) flushPropsUndo();
   // 旧选中清辉光
   if (selectedObj && selectedObj.classList) selectedObj.classList.remove("obj-sel-glow");
   selectedObj = el;
@@ -1630,10 +1718,34 @@ function setObjSel(el) {
       if (src.color) { toolColor = src.color; if (toolColors[k] !== undefined) toolColors[k] = src.color; }
       colorKey = k;
       if (src.lw) { toolW = src.lw; const wr0 = document.getElementById("pr-width-range"); if (wr0) { wr0.value = String(toolW); document.getElementById("pr-width-val").textContent = String(toolW); } }
+      // 矩形/椭圆补全回填：不回填的话，改一项属性会把全局旧值连坐写进对象
+      if (k === "rect" || k === "ellipse") {
+        if (src.fill) fillMode = src.fill;
+        shapeDash = !!src.dash; shapeRadius = !!src.radius;
+        if (src.opacity != null) shapeOpacity = src.opacity;
+        const df = document.getElementById("ddl-fill"); if (df && df._ddlUpd) df._ddlUpd();
+        const dl2 = document.getElementById("ddl-line"); if (dl2 && dl2._ddlUpd) dl2._ddlUpd();
+        document.querySelectorAll("#pr-round button").forEach((b) => b.classList.toggle("on", !!shapeRadius === (b.dataset.r === "1")));
+        const ov = Math.round(shapeOpacity * 100);
+        const or0 = document.getElementById("pr-opacity-range"); if (or0) or0.value = String(ov);
+        const ov0 = document.getElementById("pr-opacity-val"); if (ov0) ov0.textContent = String(ov);
+      }
       const pc0 = document.getElementById("pr-chip"); if (pc0) pc0.style.background = toolColor;
     } catch (err) {}
+  } else if (k === "mosaic") {
+    // 马赛克/模糊：强度与模式回填面板（选中旧遮罩后滑杆显示对象值）
+    try { const mp = JSON.parse(el.dataset.params); if (mp.mos) mosStrength = p_int(mp.mos); if (mp.mode) mosMode = mp.mode; } catch (err) {}
+    const mr1 = document.getElementById("pr-mos-range"); if (mr1) mr1.value = String(mosStrength);
+    const mv1 = document.getElementById("pr-mos-val"); if (mv1) mv1.textContent = mosStrength;
+    document.querySelectorAll("#pr-mos-mode button").forEach((b) => b.classList.toggle("on", b.dataset.mm === mosMode));
+  } else if (k === "num") {
+    // 序号：颜色/样式回填
+    try { const np = JSON.parse(el.dataset.params); if (np.color) { toolColor = np.color; if (toolColors.num !== undefined) toolColors.num = np.color; } if (np.style) numStyle = np.style; } catch (err) {}
+    colorKey = "num";
+    const pc1 = document.getElementById("pr-chip"); if (pc1) pc1.style.background = toolColor;
+    document.querySelectorAll("#pr-num-style button").forEach((b) => b.classList.toggle("on", b.dataset.ns === numStyle));
   }
-  const resizable = ["rect", "ellipse", "marker", "mosaic", "num", "text"].includes(k);
+  const resizable = ["rect", "ellipse", "marker", "mosaic", "num", "text", "pen"].includes(k);
   objselEl.classList.toggle("resizable", resizable);
   // 箭头：端点锚直接钉在两端视口坐标 + 本体辉光（归属一目了然）
   const isArrow = k === "arrow";
@@ -1866,6 +1978,7 @@ function syncSelProps() {
     return;
   }
   const el = selectedObj, k = el.dataset.k;
+  if (!propsUndo || propsUndo.el !== el) propsUndo = { t: "props", el, before: snapProps(el), after: null };
   if (k === "arrow") {
     const g = JSON.parse(el.dataset.geom);
     g.color = toolColor; g.lw = toolW; g.heads = arrowHeads; g.ls = arrowLineStyle;
@@ -1919,6 +2032,7 @@ function syncSelProps() {
     el.style.webkitTextStroke = p.stroke ? "1.5px " + strokeContrast(p.color) : "";
     el.dataset.text = el.textContent;
   }
+  if (propsUndo && propsUndo.el === el) propsUndo.after = snapProps(el);
   setObjSel(el);
 }
 // 字体族 → CSS font-family（startText/属性写回共用）
@@ -2015,6 +2129,7 @@ function serializeOps() {
 }
 
 async function output(action) {
+  flushPropsUndo(); // 输出前封存未入栈的属性修改链
   if (state !== "selected" && state !== "drawing") return;
   const screen = 1;
   const rect = { screen, x: toPhys(sel.x), y: toPhys(sel.y), w: toPhys(sel.w), h: toPhys(sel.h) };
@@ -2216,6 +2331,10 @@ document.addEventListener("mousedown", (e) => {
       let sz0 = 0;
       try { sz0 = JSON.parse(selectedObj.dataset.params || "{}").size || 0; } catch (err) {}
       objDrag = { type: "objresize", el: selectedObj, handle: cls, sx: e.clientX, sy: e.clientY, orig: b0, origSize: sz0, before: b0 };
+      if (selectedObj.dataset.k === "pen") {
+        objDrag.beforeGeom = selectedObj.dataset.geom;
+        objDrag.beforePoints = selectedObj.querySelector("polyline").getAttribute("points");
+      }
       e.preventDefault(); e.stopPropagation(); // 阻断画图层双重响应（同一次点击既拖对象又画新图）
       return;
     }
