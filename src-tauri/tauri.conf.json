@@ -18,21 +18,33 @@
         "minWidth": 680,
         "minHeight": 520,
         "decorations": false,
-        "center": true
+        "center": true,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port=9222"
       }
     ],
     "security": {
       "csp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": ["**/assets/logo/**"]
+        "scope": [
+          "**/assets/logo/**",
+          "**/Pictures/**",
+          "$APPDATA/**"
+        ]
       }
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "icon": ["icons/icon.ico"],
-    "resources": ["../assets/logo/*", "../assets/logo/png/*"]
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "../assets/logo/*",
+      "../assets/logo/png/*"
+    ]
   }
 }

@@ -203,6 +203,7 @@ pub fn toast(app: &AppHandle, level: &str, text: &str) {
     .resizable(false)
     .focused(false)
     .visible(false)
+    .additional_browser_args(crate::DEBUG_BROWSER_ARGS)
     .build();
     let Ok(win) = win else { return };
     let _ = win.set_position(PhysicalPosition::new(x, y));

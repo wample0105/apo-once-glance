@@ -135,13 +135,32 @@ fn create_endbar_window(
         .minimizable(false)
         .focused(false)
         .visible(false)
+        .additional_browser_args(crate::DEBUG_BROWSER_ARGS)
         .build()
         .map_err(|e| e.to_string())?;
     let _ = win.set_position(tauri::PhysicalPosition::new(bx, by));
     let _ = win.set_size(tauri::PhysicalSize::new(bar_w as u32, bar_h as u32));
     let _ = win.eval(&format!("window.__SESSION={{id:{session}}};"));
     let _ = win.show();
+    // visible(false)→show 的 WebView2 窗口渲染会挂起（预驻留同款坑）：kick 一帧强制合成，
+    // 否则结束条不可见——用户看到的正是"框选完就没了"（会话在跑但无任何 UI 反馈）
+    if let Ok(hwnd) = win.hwnd() {
+        use windows::Win32::Graphics::Gdi::{InvalidateRect, RDW_INVALIDATE};
+        unsafe {
+            let _ = InvalidateRect(Some(hwnd.into()), None, true);
+            let _ = windows::Win32::Graphics::Gdi::RedrawWindow(
+                hwnd.into(), None, None,
+                RDW_INVALIDATE | windows::Win32::Graphics::Gdi::RDW_UPDATENOW | windows::Win32::Graphics::Gdi::RDW_ALLCHILDREN,
+            );
+        }
+    }
     Ok(())
+}
+
+/// 长截图出口必须恢复 overlay 可点击：scroll_start 设置的 WS_EX_LAYERED|WS_EX_TRANSPARENT
+/// 不恢复的话，强加的 LAYERED 未设 alpha=窗口永久全透明，且下次截图蒙版收不到鼠标。
+fn restore_overlay_passthrough(app: &AppHandle) {
+    set_overlay_passthrough(app, false);
 }
 
 fn destroy_endbar_window(app: &AppHandle) {
@@ -151,10 +170,10 @@ fn destroy_endbar_window(app: &AppHandle) {
 }
 
 /// 覆盖层鼠标穿透（WS_EX_TRANSPARENT | WS_EX_LAYERED）。
-fn set_overlay_passthrough(app: &AppHandle, on: bool) {
+pub(crate) fn set_overlay_passthrough(app: &AppHandle, on: bool) {
     use windows::Win32::UI::WindowsAndMessaging::{GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE};
-    let Some(win) = app.get_webview_window("overlay") else { return };
-    let Ok(hwnd) = win.hwnd() else { return };
+    let Some(win) = app.get_webview_window("overlay") else { eprintln!("[pt] on={on} no overlay win"); return };
+    let Ok(hwnd) = win.hwnd() else { eprintln!("[pt] on={on} no hwnd"); return };
     unsafe {
         let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
         const WS_EX_LAYERED: u32 = 0x0008_0000;
@@ -164,7 +183,9 @@ fn set_overlay_passthrough(app: &AppHandle, on: bool) {
         } else {
             ex & !(WS_EX_LAYERED | WS_EX_TRANSPARENT)
         };
-        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, new_ex as isize);
+        let ret = SetWindowLongPtrW(hwnd, GWL_EXSTYLE, new_ex as isize);
+        let after = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+        eprintln!("[pt] on={on} ex 0x{ex:08X}->0x{new_ex:08X} ret=0x{ret:08X} after=0x{after:08X} applied={}", after == new_ex);
     }
 }
 
@@ -306,6 +327,7 @@ fn scroll_finish_sync(app: AppHandle, session_in: u64) -> Result<serde_json::Val
     })?;
     eprintln!("[scroll-finish] saved ok: {}", outcome["path"]);
     destroy_endbar_window(&app);
+    restore_overlay_passthrough(&app);
     Ok(serde_json::json!({ "needs_review": false, "saved": outcome }))
 }
 
@@ -385,11 +407,13 @@ fn scroll_cancel_sync(app: AppHandle, session: u64) -> Result<(), String> {
     };
     ACTIVE_SESSION.store(0, std::sync::atomic::Ordering::SeqCst);
     destroy_endbar_window(&app);
-    // 覆盖层也一并销毁（Esc 取消后不应残留全屏窗口）
+    // 覆盖层屏外驻留（不 destroy：预驻留窗口永不销毁，destroy 异步会让紧随的热键
+    // 拍在濒死窗口上=没反应；park 屏外画面同样即时消失）
     if let Some(w) = app.get_webview_window("overlay") {
-        let _ = w.destroy();
+        crate::park_overlay_offscreen(&w);
     }
     scrolls().remove(&session);
+    restore_overlay_passthrough(&app);
     // Esc 取消：不落盘（说明书 §4.4 明确："取消就是取消"）
     crate::deliver::toast(&app, "success", "已取消长截图");
     Ok(())
@@ -433,12 +457,16 @@ pub async fn scroll_save(app: AppHandle, session: u64) -> Result<serde_json::Val
         map.remove(&session).ok_or("会话不存在（可能已结束）")?
     };
     let outcome = save_scroll(&app, &mut st.session).map_err(|e| e.to_string())?;
-    // 收尾：结束条/覆盖层/质检页一并销毁（WebView2 拦截 JS window.close()，统一在 Rust 侧关）
-    for label in ["endbar", "overlay", "quality"] {
+    // 收尾：结束条/质检页销毁；覆盖层屏外驻留（预驻留窗口永不 destroy，理由同 scroll_cancel）
+    for label in ["endbar", "quality"] {
         if let Some(w) = app.get_webview_window(label) {
             let _ = w.destroy();
         }
     }
+    if let Some(w) = app.get_webview_window("overlay") {
+        crate::park_overlay_offscreen(&w);
+    }
+    restore_overlay_passthrough(&app);
     Ok(serde_json::json!({ "saved": outcome }))
 }
 
@@ -536,6 +564,7 @@ fn open_quality_sync(
         .resizable(true)
         .inner_size(860.0, 560.0)
         .visible(false)
+        .additional_browser_args(crate::DEBUG_BROWSER_ARGS)
         .build()
         .map_err(|e| e.to_string())?;
     let _ = win.eval(&format!(
@@ -1078,12 +1107,17 @@ pub async fn freeze_deliver(
             .ok()
             .and_then(|p| p.png.file_name().map(|s| s.to_string_lossy().into_owned()))
             .unwrap_or_else(|| "onceglance.png".into());
+        let app2 = app.clone();
         let dest = tauri::async_runtime::spawn_blocking(move || {
-            rfd::FileDialog::new()
+            let mut dlg = rfd::FileDialog::new()
                 .set_title("另存为")
                 .set_file_name(&default_name)
-                .add_filter("PNG 图片", &["png"])
-                .save_file()
+                .add_filter("PNG 图片", &["png"]);
+            // 挂覆盖层为父窗口：对话框跟随 always_on_top 显示在最上层（曾沉在遮罩下用户看不见）
+            if let Some(w) = app2.get_webview_window("overlay") {
+                dlg = dlg.set_parent(&w);
+            }
+            dlg.save_file()
         })
         .await
         .map_err(|e| format!("对话框任务失败：{e}"))?;
@@ -1132,12 +1166,16 @@ pub async fn freeze_annotate_saveas(
         .ok()
         .and_then(|p| p.png.file_name().map(|s| s.to_string_lossy().into_owned()))
         .unwrap_or_else(|| "onceglance.png".into());
+    let app2 = app.clone();
     let dest = tauri::async_runtime::spawn_blocking(move || {
-        rfd::FileDialog::new()
+        let mut dlg = rfd::FileDialog::new()
             .set_title("另存为")
             .set_file_name(&default_name)
-            .add_filter("PNG 图片", &["png"])
-            .save_file()
+            .add_filter("PNG 图片", &["png"]);
+        if let Some(w) = app2.get_webview_window("overlay") {
+            dlg = dlg.set_parent(&w); // 同上：跟随覆盖层置顶
+        }
+        dlg.save_file()
     })
     .await
     .map_err(|e| format!("对话框任务失败：{e}"))?;

@@ -137,7 +137,7 @@ fn overlay_take_pending() -> Option<serde_json::Value> {
     OVERLAY_PENDING.lock().unwrap().take()
 }
 
-fn park_overlay_offscreen(win: &tauri::WebviewWindow) {
+pub(crate) fn park_overlay_offscreen(win: &tauri::WebviewWindow) {
     // 屏外驻留：不 hide（WebView2 隐藏窗口渲染挂起，再 show 黑屏/透明），移出屏幕保持可渲染
     // 驻留前让页面清屏：下次移回的瞬间只显示空白，不闪上一轮画面（也避免 freeze 拍到旧内容）
     let _ = win.emit("overlay-cleared", ());
@@ -181,6 +181,7 @@ fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
                 .minimizable(false)
                 .focused(true)
                 .visible(false)
+                .additional_browser_args(DEBUG_BROWSER_ARGS)
                 .build()
             {
                 Ok(w) => { park_overlay_offscreen(&w); built = Some(w); break; }
@@ -219,22 +220,48 @@ fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
     OVERLAY_ACTIVE.store(true, Ordering::SeqCst);
+    // 自愈：长截图路径可能残留 WS_EX_LAYERED|WS_EX_TRANSPARENT（未恢复时窗口全透明
+    // 且蒙版收不到点击）——每次激活强制回归可点击态
+    scrollcmd::set_overlay_passthrough(&app, false);
     win.set_focus()?;
-    // 屏外驻留窗口被 Chromium 判 occluded 停止合成；移回后强制重绘 kick 一帧
-    if let Ok(hwnd) = win.hwnd() {
-        unsafe { let _ = InvalidateRect(Some(hwnd), None, true); } // 异步失效即触发重绘 kick
-    }
+    // 屏外驻留窗口被 Chromium 判 occluded 停止合成；移回后强制重绘 kick 一帧。
+    // 必须用 RedrawWindow(RDW_UPDATENOW) 同步强制：仅异步 InvalidateRect 会被吞
+    //（用户实测"激活了但全透明遮罩点不动"= 合成未恢复，窗口隐形挡住全屏）
+    kick_repaint(&win);
     *OVERLAY_PENDING.lock().unwrap() = Some(payload.clone());
     let _ = win.emit("overlay-activate", &payload);
+    // JS 收到事件渲染蒙版是另一帧：再 kick 一次确保蒙版上屏
+    std::thread::sleep(std::time::Duration::from_millis(60));
+    kick_repaint(&win);
     eprintln!("overlay shown on monitor {} rect {:?} in {:?}", m.index, m.rect, t0.elapsed());
     Ok(())
+}
+
+/// 强制 WebView2 立即合成一帧（visible(false)→show / 屏外移回的渲染挂起共用方案）。
+fn kick_repaint(win: &tauri::WebviewWindow) {
+    if let Ok(hwnd) = win.hwnd() {
+        use windows::Win32::Graphics::Gdi::{RDW_ALLCHILDREN, RDW_INVALIDATE, RDW_UPDATENOW, RedrawWindow};
+        unsafe {
+            let _ = RedrawWindow(
+                hwnd.into(),
+                None,
+                None,
+                RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN,
+            );
+        }
+    }
 }
 
 /// 隐藏覆盖层（长截图模式：让出画面但不销毁）。
 #[tauri::command]
 fn overlay_hide(app: AppHandle) {
+    // 让位即退出"截图态"：否则下次热键被 start_overlay 的 toggle 判为"关闭"，
+    // 用户看到的就是长截图后截图没反应
+    OVERLAY_ACTIVE.store(false, Ordering::SeqCst);
     if let Some(win) = app.get_webview_window("overlay") {
-        let _ = win.hide();
+        // 必须屏外驻留（同 close_overlay）：hide() 触发 WebView2 渲染挂起 + emit 丢失，
+        // 长截图结束后区域截图将永久"没反应"
+        park_overlay_offscreen(&win);
     }
 }
 
@@ -814,6 +841,7 @@ pub fn run() {
                             .minimizable(false)
                             .focused(false)
                             .visible(true)
+                            .additional_browser_args(DEBUG_BROWSER_ARGS)
                             .build()
                         {
                             Ok(w) => {
@@ -986,6 +1014,10 @@ fn copy_image_bytes(path: String) -> Result<(), String> {
 /// 开机自启（SYS-4）：任务计划程序方式（说明书 §3-20）。
 const TASK_NAME: &str = "OnceglanceAutostart";
 
+/// 所有窗口统一的 WebView2 启动参数（含 CDP 调试端口；与 tauri.conf.json main 窗口逐字符一致，
+/// 否则 WebView2 按参数差异分裂出第二个 browser process，调试端口看不到 overlay/pin 页面）。
+pub(crate) const DEBUG_BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port=9222";
+
 #[tauri::command]
 fn autostart_status() -> bool {
     std::process::Command::new("schtasks")
@@ -1034,6 +1066,7 @@ fn open_onboarding(app: AppHandle) -> Result<(), String> {
         .resizable(false)
         .inner_size(640.0, 460.0)
         .center()
+        .additional_browser_args(DEBUG_BROWSER_ARGS)
         .build()
         .map_err(|e| e.to_string())?;
     let _ = win.set_focus();
