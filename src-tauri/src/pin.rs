@@ -71,12 +71,20 @@ pub async fn pin_create(
         .minimizable(false)
         .shadow(false)
         .visible(false)
+        .additional_browser_args(crate::DEBUG_BROWSER_ARGS)
         .build()
         .map_err(|e| e.to_string())?;
     let _ = win.set_position(tauri::PhysicalPosition::new(px, py));
     let _ = win.set_size(tauri::PhysicalSize::new(pw, ph));
     // Tauri App URL 不支持查询串，id 用 eval 注入（pin.js 会轮询等待）
     let _ = win.eval(&format!("window.__PIN_ID={id};"));
+    // 图片内联 data URL：asset 协议 scope 对 Pictures 路径在真机不可靠（曾 403 空窗），
+    // base64 一次注入最稳（单截图 1-3MB，WebView2 可承受）
+    let data_url = format!("data:image/png;base64,{}", {
+        use base64::Engine as _;
+        base64::engine::general_purpose::STANDARD.encode(&bytes)
+    });
+    let _ = win.eval(&format!("window.__PIN_SRC={};", serde_json::to_string(&data_url).unwrap_or_default()));
     let _ = win.show();
     let _ = win.set_always_on_top(true);
 

@@ -12,7 +12,9 @@ async function boot() {
   if (!id) { document.title = "贴图?"; return; }
   try {
     const m = await invoke("pin_meta", { id });
-    document.getElementById("img").src = convertFileSrc(m.path);
+    // 优先用 Rust 注入的 data URL（asset 协议对 Pictures 路径真机不可靠，曾 403 空窗）
+    if (window.__PIN_SRC) document.getElementById("img").src = window.__PIN_SRC;
+    else document.getElementById("img").src = convertFileSrc(m.path);
     lastPos = [m.x, m.y];
   } catch (e) { /* 元数据缺失：保持空窗 */ }
 }

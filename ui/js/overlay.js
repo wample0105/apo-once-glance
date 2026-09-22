@@ -621,7 +621,6 @@ function wireToolbar() {
     if (!e.target.closest("#tb-shape")) { shapeMenu.style.display = "none"; document.getElementById("tb-shape").classList.remove("open"); }
   }, true);
   document.getElementById("tb-crop").addEventListener("click", startCrop);
-  document.getElementById("tb-saveas").addEventListener("click", () => output("saveas"));
   // 箭头：样式（单/双/反/无）/ 线型（实/虚/点）
   document.querySelectorAll("#pr-arrow-style button").forEach((b) => b.addEventListener("click", () => {
     arrowHeads = b.dataset.a;
@@ -864,7 +863,7 @@ function wireToolbar() {
   document.getElementById("tb-ocr").addEventListener("click", () => output("ocr"));
   document.getElementById("tb-scroll").addEventListener("click", startLongshot);
   document.getElementById("tb-pin").addEventListener("click", () => output("pin"));
-  document.getElementById("tb-save").addEventListener("click", () => output("save"));
+  document.getElementById("tb-save").addEventListener("click", () => output("saveas")); // 保存=弹对话框选位置（2026-09-23 用户要求；曾误发 "save" 落默认目录不弹框）
   document.getElementById("tb-exit").addEventListener("click", cancelAll);
   document.getElementById("tb-undo").addEventListener("click", undoOp);
   document.getElementById("tb-redo").addEventListener("click", redoOp);
@@ -2059,12 +2058,13 @@ async function closeOverlay() {
 }
 
 async function startLongshot() {
-  // 先隐藏覆盖层再抓第 1 段：否则选区红框/手柄会被烤进长截图首段
+  // 先快照选区物理坐标：overlay_hide（屏外驻留）会 emit overlay-cleared →
+  // resetOverlayState 把 sel 清零，等它落地后再读 sel 拿到的是 {0,0,0,0}
+  const sx = toPhys(sel.x), sy = toPhys(sel.y), sw = toPhys(sel.w), sh = toPhys(sel.h);
+  // 快照后再隐藏覆盖层：否则选区红框/手柄会被烤进长截图首段
   await invoke("overlay_hide");
   await new Promise((r) => setTimeout(r, 180)); // 等 DWM 合成一帧
-  await invoke("scroll_start", {
-    screen: 1, x: toPhys(sel.x), y: toPhys(sel.y), w: toPhys(sel.w), h: toPhys(sel.h),
-  });
+  await invoke("scroll_start", { screen: 1, x: sx, y: sy, w: sw, h: sh });
 }
 
 function cancelAll() {
@@ -2139,7 +2139,7 @@ window.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if (e.ctrlKey || e.metaKey) {
     if (k === "c") { e.preventDefault(); output("copy"); }
-    else if (k === "s") { e.preventDefault(); output("save"); }
+    else if (k === "s") { e.preventDefault(); output("saveas"); } // Ctrl+S 同保存按钮=弹对话框
     else if (k === "z" && e.shiftKey) { e.preventDefault(); redoOp(); }
     else if (k === "z") { e.preventDefault(); undoOp(); }
     return;
