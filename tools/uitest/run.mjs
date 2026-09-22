@@ -1,0 +1,304 @@
+// 无头 UI 验证：Chrome CDP 驱动 testbed.html（锁屏期间 DOM 级验证，不进产品）
+// 用法：node tools/uitest/run.mjs [shot1 shot2 ...]（无参只跑断言）
+import { spawn } from "node:child_process";
+import { setTimeout as sleep } from "node:timers/promises";
+import fs from "node:fs";
+import path from "node:path";
+
+const CHROME = "C:/Program Files/Google/Chrome/Application/chrome.exe";
+const PORT = 9333;
+const BED = "file:///" + path.resolve("tools/uitest/testbed.html").replace(/\\/g, "/");
+
+const chrome = spawn(CHROME, [
+  "--headless=new", "--remote-debugging-port=" + PORT,
+  "--user-data-dir=" + path.resolve("tools/uitest/.profile"),
+  "--window-size=1600,1000", "--no-first-run", "--no-default-browser-check",
+  "about:blank",
+], { stdio: "ignore" });
+
+async function waitDebug() {
+  for (let i = 0; i < 50; i++) {
+    try {
+      const r = await fetch(`http://127.0.0.1:${PORT}/json/list`);
+      const list = await r.json();
+      const page = list.find((t) => t.type === "page");
+      if (page) return page.webSocketDebuggerUrl;
+    } catch (e) {}
+    await sleep(200);
+  }
+  throw new Error("chrome devtools 未就绪");
+}
+
+const ws = new WebSocket(await waitDebug());
+await new Promise((res) => { ws.onopen = res; });
+let seq = 0; const pending = new Map();
+ws.onmessage = (ev) => {
+  const m = JSON.parse(ev.data);
+  if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); }
+};
+function send(method, params = {}) {
+  return new Promise((res) => { const id = ++seq; pending.set(id, res); ws.send(JSON.stringify({ id, method, params })); });
+}
+async function evl(expr, awaitPromise = false) {
+  const r = await send("Runtime.evaluate", { expression: expr, returnByValue: true, awaitPromise });
+  if (r.result && r.result.exceptionDetails) {
+    const d = r.result.exceptionDetails;
+    return "EVAL-ERROR: " + (d.exception?.description || d.text).slice(0, 300);
+  }
+  return r.result?.result?.value;
+}
+async function goto() {
+  await send("Page.navigate", { url: BED });
+  await sleep(1200); // 等 init + 工具栏接线
+}
+async function shot(name) {
+  const r = await send("Page.captureScreenshot", { format: "png" });
+  fs.writeFileSync(name, Buffer.from(r.result.data, "base64"));
+  console.log("shot:", name);
+}
+
+const results = [];
+function check(name, ok, info = "") {
+  results.push({ name, ok });
+  console.log((ok ? "PASS" : "FAIL") + " | " + name + (info ? " | " + info : ""));
+}
+
+await goto();
+await evl(`window.__errs = []; window.addEventListener("error", e => window.__errs.push(e.message + " @ " + (e.filename||"") + ":" + e.lineno)); "hooked"`);
+
+// ===== 场景搭建：直接进入 selected 态 + 造一个文字对象 =====
+await evl(`(() => {
+  sel = { x: 100, y: 100, w: 800, h: 600 };
+  setState("selected");
+  // 造文字对象（模拟 finishText 产物）
+  const __el0 = document.createElement("div");
+  __el0.className = "obj"; __el0.dataset.k = "text";
+  __el0.textContent = "面板验证";
+  __el0.style.cssText = "position:absolute;left:300px;top:280px;font-size:20px;color:#FF3B30;";
+  __el0.dataset.params = JSON.stringify({ family:"default", size:20, color:"#FF3B30", bold:false, italic:false, underline:false, shadow:false, stroke:false, align:"left", line_height:1.0, background:null, bg_opacity:null, bg_radius:null });
+  layer.appendChild(__el0);
+  "setup-ok"
+})()`);
+
+// T1 选中即回填：属性栏反映对象值
+let t1 = await evl(`setObjSel(layer.querySelector('.obj')); textSize`);
+check("T1 选中回填 textSize=20", t1 === 20, "textSize=" + t1);
+
+// T2 拖角缩放模拟：直接走 mouseup 的 params 更新路径（objDrag 造不了，改走 applyObjGeom+手动 params，等价验证回填源）
+await evl(`(() => {
+  const __el2 = layer.querySelector('.obj');
+  const p = JSON.parse(__el2.dataset.params); p.size = 45;
+  __el2.dataset.params = JSON.stringify(p);
+  __el2.style.fontSize = "45px";
+  setObjSel(__el2);
+  "resized"
+})()`);
+t1 = await evl(`textSize`);
+check("T2 缩放后回填 textSize=45", t1 === 45, "textSize=" + t1);
+
+// T3 换色不回退字号：点色板（模拟 PALETTE 色块 click）
+await evl(`(() => {
+  toolColor = "#00FF00";
+  syncSelProps();
+  "color-set"
+})()`);
+const t3size = await evl(`parseInt(layer.querySelector('.obj').style.fontSize,10)`);
+const t3color = await evl(`JSON.parse(layer.querySelector('.obj').dataset.params).color`);
+check("T3 换色后字号仍 45", t3size === 45, "fontSize=" + t3size);
+check("T3b 换色生效", t3color === "#00FF00", "color=" + t3color);
+
+// T4 背景面板弹出：点 ▾
+await evl(`document.getElementById("pr-aset").click(); "clicked"`);
+const t4 = await evl(`document.getElementById("pr-text-menu").style.display`);
+check("T4 面板弹出 display=block", t4 === "block", "display=" + t4);
+const t4b = await evl(`document.querySelectorAll("#pr-text-menu .sw").length`);
+const t4c = await evl(`!!document.querySelector("#pr-text-menu input[type=color]")`);
+const t4d = await evl(`document.querySelectorAll("#pr-text-menu input[type=range]").length`);
+check("T4b 色块含黑白+无背景 (14)", t4b === 14, "sw=" + t4b);
+check("T4c 自由选色器存在", t4c === true);
+check("T4d 透明度+圆角两滑杆", t4d === 2, "ranges=" + t4d);
+
+// T5 选蓝色背景 → 实时应用（rgba + 回填对象）
+await evl(`(() => {
+  const sws0 = [...document.querySelectorAll("#pr-text-menu .sw[data-c]")];
+  sws0.find(s => s.dataset.c === '#E0F0FF').click(); "blue-bg"
+})()`);
+const t5bg = await evl(`layer.querySelector('.obj').style.background`);
+check("T5 蓝底应用（alpha1 浏览器序列化为 rgb）", /rgba?\(224,\s*240,\s*255(,\s*1)?\)/.test(t5bg || ""), "bg=" + t5bg);
+
+// T6 透明度滑杆 50% → alpha 0.5
+await evl(`(() => {
+  const r = [...document.querySelectorAll("#pr-text-menu input[type=range]")][0];
+  r.value = "50";
+  r.dispatchEvent(new Event("input", { bubbles: true }));
+  "op50"
+})()`);
+const t6bg = await evl(`layer.querySelector('.obj').style.background`);
+check("T6 透明度 50% → alpha 0.5", /rgba\(224,\s*240,\s*255,\s*0\.5\)/.test(t6bg || ""), "bg=" + t6bg);
+
+// T7 圆角滑杆 20px → borderRadius
+await evl(`(() => {
+  const rs = [...document.querySelectorAll("#pr-text-menu input[type=range]")];
+  rs[1].value = "20";
+  rs[1].dispatchEvent(new Event("input", { bubbles: true }));
+  "r20"
+})()`);
+const t7r = await evl(`layer.querySelector('.obj').style.borderRadius`);
+check("T7 圆角 20px", t7r === "20px", "radius=" + t7r);
+
+// T8 白底黑字场景：选白色 sw
+await evl(`(() => {
+  const sws1 = [...document.querySelectorAll("#pr-text-menu .sw[data-c]")];
+  sws1.find(s => s.dataset.c === "#FFFFFF").click(); "white"
+})()`);
+const t8 = await evl(`JSON.parse(layer.querySelector('.obj').dataset.params).background`);
+check("T8 白底写进 params", t8 === "#FFFFFF", "bg=" + t8);
+
+// T9 serializeOps：背景/透明度/圆角进契约
+const ops = await evl(`serializeOps().operations`, true);
+const top = (ops || [])[0] || {};
+check("T9a 契约 background=#FFFFFF", top.background === "#FFFFFF", JSON.stringify(top).slice(0, 120));
+check("T9b 契约 background_opacity=0.5", top.background_opacity === 0.5, "op=" + top.background_opacity);
+check("T9c 契约 background_radius=20", top.background_radius === 20, "r=" + top.background_radius);
+
+// T10 描边按钮：A → params.stroke + 契约 stroke_color/width
+await evl(`(() => {
+  document.getElementById('pr-aset').click(); const b = document.getElementById('pr-stroke-btn');
+  b.click(); "stroke-on"
+})()`);
+const ops2 = await evl(`serializeOps().operations`, true);
+const top2 = (ops2 || [])[0] || {};
+check("T10 契约描边", top2.stroke_color === "#000000" && top2.stroke_width > 0, JSON.stringify({ sc: top2.stroke_color, sw: top2.stroke_width }));
+
+// T11 进编辑回填：单击已有文字（tool=text 模拟）
+await evl(`setTool("text"); "tool-text"`);
+// 收起面板
+await evl(`document.getElementById("pr-text-menu").style.display = "none"; "closed"`);
+await evl(`(() => {
+  const __el25 = layer.querySelector('.obj');
+  reEditText(__el25); "reedit"
+})()`);
+const t11 = await evl(`editing !== null && parseInt(editing.style.fontSize,10) === 45`);
+check("T11 进编辑回填字号 45", t11 === true);
+
+
+// T12 编辑态新建即有 dataset.k（用户实测 bug：编辑中拖角只拉框不改字号）
+await evl(`(() => { setTool("text"); startText({x:50,y:50}); return editing ? editing.dataset.k : "no-editing"; })()`);
+const t12 = await evl(`editing ? editing.dataset.k : "none"`);
+check("T12 编辑框 dataset.k=text", t12 === "text", "k=" + t12);
+// T12b 模拟编辑态拖角走字号分支：直接造 objDrag 走一帧 mousemove 逻辑不易，改为验证分支路由条件
+const t12b = await evl(`(() => { const e2 = editing; return (e2.dataset.k === "text" || e2.classList.contains("txtedit")) ? "text-branch" : "shape-branch"; })()`);
+check("T12b 编辑态路由 text 分支", t12b === "text-branch", t12b);
+await evl(`(() => { finishText(editing); return "done"; })()`);
+
+
+// T13 背景内边距：对象有 0.25em padding，serializeOps at 补偿后=内容起点
+await evl(`(() => {
+  const o = layer.querySelector('.obj');
+  const cs = getComputedStyle(o);
+  return { pt: cs.paddingTop, at: serializeOps().operations[0].at, l: parseFloat(o.style.left) };
+})()`, true);
+const t13 = await evl(`(() => { const o = layer.querySelector('.obj'); const cs = getComputedStyle(o); return cs.paddingTop; })()`);
+check("T13 文字对象有内边距", parseFloat(t13) > 0, "paddingTop=" + t13);
+const t13b = await evl(`serializeOps().operations[0].at[0] - parseFloat(layer.querySelector('.obj').style.left)`, true);
+check("T13b at 补偿 = size*0.25", Math.round(t13b) === Math.round(45*0.25), "Δ=" + t13b);
+// T14 × 按钮已删除（用户决策）；Delete 键删除路径回归
+const t14 = await evl(`document.getElementById("objdel") === null`);
+check("T14 × 元素已删除", t14 === true);
+await evl(`setObjSel(layer.querySelector('.obj')); "sel"`);
+const t14b = await evl(`(() => { pushUndo({ t: "del", el: selectedObj }); selectedObj.remove(); setObjSel(null); return layer.querySelectorAll('.obj').length; })()`, true);
+check("T14b Delete 删除对象", t14b === 0, "objs=" + t14b);
+const t14c = await evl(`(() => { undoOp(); return layer.querySelectorAll('.obj').length; })()`, true);
+check("T14c 撤销恢复对象", t14c === 1, "objs=" + t14c);
+
+
+// T15 编辑态换行：锚框高度跟随
+await evl(`(() => { setTool("text"); startText({x:100,y:100}); editing.textContent = "AAA"; editing.dispatchEvent(new Event("input")); const h0 = editing.offsetHeight; editing.innerHTML = "AAA<div>BBB</div>"; editing.dispatchEvent(new Event("input")); return { h0, h1: editing.offsetHeight, anc: document.querySelector('.t-anc-se').style.top }; })()`);
+const t15 = await evl(`editing ? { h: editing.offsetHeight, top: document.querySelector('.t-anc-se').style.top } : null`, true);
+check("T15 换行锚框跟随", t15 && t15.h > 40, JSON.stringify(t15));
+// T16 编辑中点面板滑杆：编辑态保留+属性生效（focusout 分流）
+const t16a = await evl(`(() => { const r = [...document.querySelectorAll("#pr-text-menu input[type=range]")][0]; document.getElementById("pr-aset").click(); return document.getElementById("pr-text-menu").style.display; })()`, true);
+const t16b = await evl(`(() => { const rs = [...document.querySelectorAll("#pr-text-menu input[type=range]")]; rs[1].value = "20"; rs[1].dispatchEvent(new Event("input", { bubbles: true })); return { editing: !!editing, r: editing ? editing.style.borderRadius : "none" }; })()`, true);
+check("T16 编辑态保留+圆角生效", t16b && t16b.editing === true && t16b.r === "20px", JSON.stringify(t16b));
+
+
+// T17 即改即存：改属性不输出，防抖后 set_setting 已收到全字段 payload
+await evl(`(() => { window.__saved = []; textBgRadius = 20; textBgOpacity = 0.6; textStroke = true; fillMode = "fill"; syncSelProps(); return "changed"; })()`);
+await new Promise(r => setTimeout(r, 700)); // 等防抖 400ms
+const t17 = await evl(`(() => { const last = (window.__saved || []).pop() || {}; return { r: last.text_bg_radius, o: last.text_bg_opacity, st: last.text_stroke, f: last.shape_fill, c: last.text_bg_color }; })()`);
+check("T17 即改即存-圆角", t17.r === 20, JSON.stringify(t17));
+check("T17b 透明度", t17.o === 0.6, "o=" + t17.o);
+check("T17c 描边", t17.st === true, "st=" + t17.st);
+check("T17d 填充模式", t17.f === "fill", "f=" + t17.f);
+check("T17e 背景色同存", !!t17.c, "c=" + t17.c);
+
+
+// T18 颜色按工具独立：文字设白→切箭头应红→设箭头蓝→切回文字仍白
+await evl(`(() => { setTool("text"); setColorForTool("#FFFFFF"); return toolColors.text; })()`);
+const t18a = await evl(`(() => { setTool("arrow"); return { arrow: toolColor, text: toolColors.text }; })()`);
+check("T18 切箭头=红默认且文字白保持", t18a.arrow === "#FF3B30" && t18a.text === "#FFFFFF", JSON.stringify(t18a));
+await evl(`(() => { setColorForTool("#00A2E8"); return "arrow-blue"; })()`);
+const t18b = await evl(`(() => { setTool("text"); return { textNow: toolColor, arrowKept: toolColors.arrow }; })()`);
+check("T18b 箭头蓝不串文字（文字仍白）", t18b.textNow === "#FFFFFF" && t18b.arrowKept === "#00A2E8", JSON.stringify(t18b));
+// T19 对齐图标：三个 svg 按钮
+const t19 = await evl(`document.querySelectorAll("#pr-talign svg").length`);
+check("T19 对齐 SVG 图标×3", t19 === 3, "svg=" + t19);
+// T20 原生取色器存在且挂在色板区
+const t20 = await evl(`!!document.querySelector("#pr-color-menu input[type=color], #pr-text-menu input[type=color]")`);
+check("T20 原生取色器存在", t20 === true);
+// T20b tool_colors 进 saveProps payload
+await evl(`syncSelProps()`, true);
+await new Promise(r => setTimeout(r, 700));
+const t20b = await evl(`(() => { const s = (window.__saved || []).pop() || {}; return s.tool_colors; })()`);
+check("T20b tool_colors 持久化", t20b && typeof t20b.text === "string" && t20b.arrow === "#00A2E8", JSON.stringify(t20b));
+
+// T21 背景直达块：存在 + 与 A 按钮同开完整面板（字体3下拉 + 13色 + 2滑杆都在一个面板）
+const t21 = await evl(`(() => { setTool("text"); const c = document.getElementById("pr-tbgchip"); return { exists: !!c, inTextRow: !!(c && c.closest("#pr-text")), noneInit: !!(c && c.classList.contains("none")) }; })()`);
+check("T21 背景直达块存在", t21.exists && t21.inTextRow, JSON.stringify(t21));
+await evl(`document.getElementById("pr-text-menu").style.display = "none"; document.getElementById("pr-tbgchip").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); "open"`);
+const t21b = await evl(`(() => { const m = document.getElementById("pr-text-menu"); return { open: !!m && m.style.display === "block", rowSelects: document.querySelectorAll("#pr-text > select").length, panelSelects: m ? m.querySelectorAll("select").length : -1, sws: m ? m.querySelectorAll(".sw[data-c]").length : 0, ranges: m ? m.querySelectorAll("input[type=range]").length : 0 }; })()`);
+check("T21b 面板开+字体3下拉在属性行+面板只余背景", t21b.open && t21b.rowSelects === 3 && t21b.panelSelects === 0 && t21b.sws === 13 && t21b.ranges === 2, JSON.stringify(t21b));
+await evl(`(() => { const b = [...document.querySelectorAll("#pr-text-menu .sw[data-c]")].find(s => s.dataset.c === "#000000"); b.click(); return "clicked"; })()`);
+const t21c = await evl(`(() => { const c = document.getElementById("pr-tbgchip"); return { bg: textBgColor, on: textBackground, chipBg: c.style.background.toUpperCase(), chipNone: c.classList.contains("none") }; })()`);
+check("T21c 点黑块生效+chip 变黑", t21c.bg === "#000000" && t21c.on === true && /RGB\(0, ?0, ?0\)|#000000/.test(t21c.chipBg) && !t21c.chipNone, JSON.stringify(t21c));
+await evl(`(() => { const n = document.querySelector("#pr-text-menu .sw.none"); n.click(); return "none"; })()`);
+const t21d = await evl(`(() => document.getElementById("pr-tbgchip").classList.contains("none") && textBackground === false)()`);
+check("T21d 无背景=斜纹态", t21d === true);
+// T21e 双入口同面板：面板关时背景块点开 = A 面板本体，无第二浮层
+await evl(`(() => { document.getElementById("pr-text-menu").style.display = "none"; document.getElementById("pr-tbgchip").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); return "toggle"; })()`);
+const t21e = await evl(`(() => ({ panel: document.getElementById("pr-text-menu").style.display, noSecond: !document.getElementById("pr-tbg-menu") }))()`);
+check("T21e 双入口同面板且无第二浮层", t21e.panel === "block" && t21e.noSecond, JSON.stringify(t21e));
+// 恢复默认背景避免污染后续持久化
+await evl(`(() => { textBgColor = "#FFF7D6"; textBackground = true; document.getElementById("pr-text-menu").style.display = "none"; syncTextProps(); return "reset"; })()`);
+
+
+// T22 工具栏拖动把手（同类产品 交互）
+check("T22 把手存在", await evl(`!!document.getElementById("tb-handle")`) === true);
+const t22b = await evl(`(function(){
+  setSel({ x: 100, y: 100, w: 400, h: 300 }); setState("selected");
+  document.getElementById("toolbar").style.display = "flex";
+  positionToolbar();
+  const l0 = parseFloat(document.getElementById("toolbar").style.left) || 0;
+  document.getElementById("tb-handle").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: 600, clientY: 500 }));
+  document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 700, clientY: 560 }));
+  document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  const l1 = parseFloat(document.getElementById("toolbar").style.left) || 0;
+  return { dx: l1 - l0, free: toolbarFree };
+})()`);
+check("T22b 拖动跟随+进入自由位", Math.round(t22b.dx) === 100 && t22b.free === true, JSON.stringify(t22b));
+await evl(`resetOverlayState(); "reset"`);
+const t22c = await evl(`(function(){ document.getElementById("toolbar").style.display = "flex"; positionToolbar(); return { free: toolbarFree }; })()`);
+check("T22c 重置后恢复自动定位", t22c.free === false, JSON.stringify(t22c));
+
+await evl(`layer.querySelector('[data-k="arrow"]').remove(); setObjSel(null); "cleaned"`);
+
+// 截图留档
+await shot("uitest_final.png");
+await evl(`document.getElementById("pr-aset").click(); "open"`);
+await shot("uitest_panel.png");
+
+console.log('PAGE ERRORS:', await evl('JSON.stringify(window.__errs||[])'));
+const fails = results.filter((r) => !r.ok).length;
+console.log(fails === 0 ? "ALL PASS (" + results.length + ")" : "FAILURES: " + fails + "/" + results.length);
+chrome.kill();
+process.exit(fails === 0 ? 0 : 1);

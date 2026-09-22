@@ -4,3 +4,10 @@ src-tauri/target/
 src-tauri/gen/schemas/
 *.log
 .DS_Store
+
+# 测试产物与浏览器调试缓存不入库
+tools/uitest/.p*/
+tools/out/
+probe_*.png
+uitest_*.png
+*.pyc

@@ -65,13 +65,13 @@ function resetOverlayState() {
   document.getElementById("escdlg").classList.remove("open");
   document.getElementById("pr-text-menu").style.display = "none";
   document.getElementById("pr-color-menu").style.display = "none";
-  const tbm = document.getElementById("pr-tbg-menu"); if (tbm) tbm.style.display = "none";
   document.getElementById("ctxmenu").classList.remove("open");
   hideTxtAnchors(); setObjSel(null); setHover(null);
   selectedObj = null; editing = null; objDrag = null; draft = null; drag = null;
   objStack = { undo: [], redo: [] };
   cropMode = false; cropSaved = null; numNext = numStart;
   tool = null; setSel({ x: 0, y: 0, w: 0, h: 0 }); setState("idle");
+  toolbarFree = false; // 工具栏恢复自动定位（拖动把手是本次会话内的临时摆放）
   magImg.removeAttribute("src"); // 清冻结图：驻留/复用瞬间不显示上一轮画面
   document.body.classList.remove("frozen", "obj-selected");
   stage.classList.remove("dim-idle");
@@ -207,7 +207,15 @@ function syncPropsUI() {
   seg("#pr-round", "r", shapeRadius ? 1 : 0);
   seg("#pr-dash", "dash", shapeDash ? 1 : 0);
   const f0 = document.getElementById("pr-font"); if (f0) f0.value = textFont;
-  const s0 = document.getElementById("pr-tsize"); if (s0) s0.value = String(textSize);
+  const s0 = document.getElementById("pr-tsize");
+  if (s0) {
+    // 四角锚点等比缩放会产生非标准字号：动态补 option 再回填
+    if (![...s0.options].some((o) => +o.value === textSize)) {
+      const o = document.createElement("option"); o.value = String(textSize); o.textContent = String(textSize);
+      s0.appendChild(o);
+    }
+    s0.value = String(textSize);
+  }
   document.getElementById("pr-opacity").value = String(shapeOpacity);
   const l0 = document.getElementById("pr-tlh"); if (l0) l0.value = String(textLineHeight);
   document.getElementById("pr-num-size").value = String(numDiameter);
@@ -443,8 +451,18 @@ window.addEventListener("mouseup", (e) => {
 });
 
 /* ================= 两行工具栏 ================= */
+let toolbarFree = false; // 拖动把手后=自由位置，positionToolbar 不再自动重定位（本次截图会话内有效）
+function clampToolbar() {
+  const w = Math.max(toolbar.offsetWidth, toolbar.scrollWidth, 560);
+  const h = toolbar.offsetHeight || 76;
+  const l = parseFloat(toolbar.style.left) || 0;
+  const t = parseFloat(toolbar.style.top) || 0;
+  toolbar.style.left = Math.max(4, Math.min(l, innerWidth - w - 4)) + "px";
+  toolbar.style.top = Math.max(4, Math.min(t, innerHeight - h - 4)) + "px";
+}
 function positionToolbar() {
   if (toolbar.style.display === "none") return;
+  if (toolbarFree) { clampToolbar(); return; } // 自由位：仅屏幕钳制（切工具致宽度变化时防出屏）
   const th = toolbar.offsetHeight || 76;
   const below = innerHeight - (sel.y + sel.h);
   const top = below >= th + 14 ? sel.y + sel.h + 10 : Math.max(6, sel.y - th - 10);
@@ -459,13 +477,42 @@ function positionToolbar() {
   });
 }
 // 弹层面板屏幕钳制：贴右缘时向左收（业界：面板永不超出屏幕）
-function clampPanelToScreen(el) {
+function clampPanelToScreen(el, anchor) {
   const w = el.offsetWidth || 226;
+  const h = el.offsetHeight || 200;
   const l = parseFloat(el.style.left) || 0;
   if (l + w > innerWidth - 8) el.style.left = Math.max(8, innerWidth - w - 8) + "px";
+  // 下方放不下时翻转到触发按钮（anchor.top）上方；无锚点则整体压入屏幕（贴底 8px）
+  const t = parseFloat(el.style.top) || 0;
+  if (t + h > innerHeight - 8) {
+    const upTop = anchor && anchor.top ? anchor.top - h - 8 : innerHeight - h - 8;
+    el.style.top = Math.max(8, upTop) + "px";
+  }
 }
 
 function wireToolbar() {
+  // 工具栏拖动把手（同类产品 交互）：自由摆放，本次截图会话内有效（下次拉起恢复自动贴选区）
+  const tbHandle = document.getElementById("tb-handle");
+  tbHandle.addEventListener("mousedown", (e) => {
+    e.preventDefault(); e.stopPropagation(); // 不触发画布/工具逻辑，不夺焦点
+    toolbarFree = true;
+    tbHandle.classList.add("dragging");
+    const sx = e.clientX, sy = e.clientY;
+    const sl = parseFloat(toolbar.style.left) || 0;
+    const st = parseFloat(toolbar.style.top) || 0;
+    const onMove = (ev) => {
+      toolbar.style.left = (sl + ev.clientX - sx) + "px";
+      toolbar.style.top = (st + ev.clientY - sy) + "px";
+      clampToolbar();
+    };
+    const onUp = () => {
+      tbHandle.classList.remove("dragging");
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
   document.querySelectorAll("[data-tool]").forEach((b) => {
     b.addEventListener("click", () => setTool(tool === b.dataset.tool ? null : b.dataset.tool));
   });
@@ -533,12 +580,12 @@ function wireToolbar() {
   chip.style.cssText = "width:22px;height:22px;border-radius:5px;border:1px solid rgba(255,255,255,.4);cursor:pointer;padding:0;";
   chip.addEventListener("click", (e) => {
     e.stopPropagation();
-    tbgMenu.style.display = "none"; // 浮层互斥（点击时 wireToolbar 已完成，无 TDZ 风险）
+    bgMenu.style.display = "none"; // 浮层互斥（点击时 wireToolbar 已完成，无 TDZ 风险）
     const r = chip.getBoundingClientRect();
     colorMenu.style.left = Math.round(r.left) + "px";
     colorMenu.style.top = Math.round(r.bottom + 6) + "px";
     colorMenu.style.display = colorMenu.style.display === "block" ? "none" : "block";
-    clampPanelToScreen(colorMenu);
+    clampPanelToScreen(colorMenu, r);
   });
   pc.appendChild(chip);
   chip.style.background = toolColor;
@@ -625,40 +672,15 @@ function wireToolbar() {
       syncTextProps();
     });
   });
-  document.querySelectorAll("#pr-tlh button").forEach((b) => {
-    b.addEventListener("click", () => {
-      textLineHeight = Number(b.dataset.lh);
-      document.querySelectorAll("#pr-tlh button").forEach((x) => x.classList.toggle("on", x === b));
-      syncTextProps();
-    });
-  });
   // 背景面板：按钮=开关；▾=弹完整面板（黑白+色板+自由选色+透明度+圆角）
-  // ===== A 文字设置面板：字体/字号/行距 + 背景色/透明/圆角 + 描边（图标化收纳） =====
+  // ===== A 文字设置面板：背景色/透明/圆角 + 描边（字体/字号/行距在属性行直接可调） =====
   const bgMenu = document.getElementById("pr-text-menu");
   bgMenu.className = "flymenu";
   bgMenu.style.width = "264px";
-  // —— 文字段：字体/字号/行距（从属性行收纳进面板）——
-  const fRow = document.createElement("div"); fRow.className = "row";
-  fRow.innerHTML = '<span class="lbl">文字</span>';
-  const fontSel = document.createElement("select"); fontSel.id = "pr-font";
-  [["default","微软雅黑"],["simsun","宋体"],["simhei","黑体"],["kaiti","楷体"],["segoe","Segoe UI"]].forEach(([v, n]) => {
-    const o = document.createElement("option"); o.value = v; o.textContent = n; fontSel.appendChild(o);
-  });
-  fontSel.addEventListener("change", (e) => { textFont = e.target.value; syncTextProps(); });
-  fRow.appendChild(fontSel);
-  const sizeSel = document.createElement("select"); sizeSel.id = "pr-tsize";
-  [16,18,20,22,24,28,32,36,42,48,56,64,72,96].forEach((n) => {
-    const o = document.createElement("option"); o.value = String(n); o.textContent = String(n); sizeSel.appendChild(o);
-  });
-  sizeSel.addEventListener("change", (e) => { textSize = Number(e.target.value); syncTextProps(); });
-  fRow.appendChild(sizeSel);
-  const lhSel = document.createElement("select"); lhSel.id = "pr-tlh";
-  [["1","行距 1.0"],["1.4","行距 1.4"],["1.8","行距 1.8"]].forEach(([v, n]) => {
-    const o = document.createElement("option"); o.value = v; o.textContent = n; lhSel.appendChild(o);
-  });
-  lhSel.addEventListener("change", (e) => { textLineHeight = Number(e.target.value); syncTextProps(); });
-  fRow.appendChild(lhSel);
-  bgMenu.appendChild(fRow);
+  // 字体/字号/行距：属性行静态 select 直接可调（用户要求回迁；此前收进面板致"不见了"）
+  document.getElementById("pr-font").addEventListener("change", (e) => { textFont = e.target.value; syncTextProps(); });
+  document.getElementById("pr-tsize").addEventListener("change", (e) => { textSize = Number(e.target.value); syncTextProps(); });
+  document.getElementById("pr-tlh").addEventListener("change", (e) => { textLineHeight = Number(e.target.value); syncTextProps(); });
   // —— 分隔线 + 背景段 ——
   const sect = document.createElement("div"); sect.className = "sect"; bgMenu.appendChild(sect);
   const BG_PALETTE = ["#FFFFFF", "#000000", "#FFF7D6", "#FFE0E0", "#E0F0FF", "#DFFFE0", "#F0E4FF", "#FFF0F5", "#FFD8A8", "#C8E8FF", "#C8F8D0", "#F8E8C8", "#E8E8E8"];
@@ -731,98 +753,36 @@ function wireToolbar() {
   bgMenu.appendChild(row4);
   function refreshBgMenu() {
     opRange.value = String(Math.round(textBgOpacity * 100)); opVal.textContent = opRange.value + "%";
-    rdRange.value = String(textBgRadius); rdVal.textContent = textBgRadius + "px";
+    rdRange.value = String(textBgRadius); rdVal.textContent = rdRange.value + "px";
     colorIn.value = textBgColor.toLowerCase();
     swsWrap.querySelectorAll(".sw[data-c]").forEach((s) => s.classList.toggle("on", s.dataset.c.toUpperCase() === textBgColor.toUpperCase()));
-    fontSel.value = textFont;
-    if (![...sizeSel.options].some((o) => +o.value === textSize)) {
-      const o = document.createElement("option"); o.value = String(textSize); o.textContent = String(textSize);
-      sizeSel.appendChild(o);
-    }
-    sizeSel.value = String(textSize);
-    lhSel.value = String(textLineHeight);
     strokeBtn.classList.toggle("on", textStroke);
-    // 反向同步背景直达板的滑杆（执行时 wireToolbar 已完成，无 TDZ 风险）
-    tOp.value = String(Math.round(textBgOpacity * 100)); tOpVal.textContent = tOp.value + "%";
-    tRd.value = String(textBgRadius); tRdVal.textContent = tRd.value + "px";
+    // 字体/字号/行距的回填在属性行（syncPropsUI），面板不再持有
   }
   // 入口：属性行 A 按钮 toggle 面板
   document.getElementById("pr-aset").addEventListener("click", (e) => {
     e.stopPropagation();
-    tbgMenu.style.display = "none"; // 三浮层互斥
+    colorMenu.style.display = "none"; // 与字色浮层互斥
     refreshBgMenu();
     const r = e.target.getBoundingClientRect();
     bgMenu.style.left = Math.round(r.left) + "px";
     bgMenu.style.top = Math.round(r.bottom + 6) + "px";
     bgMenu.style.display = bgMenu.style.display === "block" ? "none" : "block";
-    clampPanelToScreen(bgMenu);
+    clampPanelToScreen(bgMenu, r);
   });
-  // ===== 背景色直达块（B/I/U/S/A 左侧）：点击弹背景色板，与字色 chip 对称 =====
-  // （用户两次在行首找背景设置——背景入口必须和字色一样是一块可见的色块）
+  // ===== 背景色直达块（B/I/U/S/A 左侧）：与 A 按钮同开一个完整文字设置面板 =====
+  // （入口合一：背景/字体/字号/行距/描边全在一面板——背景板与 A 面板分裂曾致用户两次迷路）
   const tbgChip = document.getElementById("pr-tbgchip");
-  const tbgMenu = document.createElement("div");
-  tbgMenu.id = "pr-tbg-menu"; tbgMenu.className = "flymenu";
-  const tbgWrap = document.createElement("div"); tbgWrap.className = "sws";
-  BG_PALETTE.forEach((c) => {
-    const s = document.createElement("button");
-    s.className = "sw"; s.style.background = c; s.dataset.c = c; s.title = c;
-    s.addEventListener("click", () => {
-      textBgColor = c; textBackground = true; syncTextProps();
-      if (!editing && !selectedObj) showToast("背景已设置：接下来输入的文字将生效");
-    });
-    tbgWrap.appendChild(s);
-  });
-  const tbgNone = document.createElement("button");
-  tbgNone.className = "sw none"; tbgNone.title = "无背景";
-  tbgNone.addEventListener("click", () => { textBackground = false; syncTextProps(); });
-  tbgWrap.appendChild(tbgNone);
-  const tbgPick = document.createElement("input");
-  tbgPick.type = "color"; tbgPick.title = "自定义背景色";
-  tbgPick.addEventListener("input", () => {
-    textBgColor = tbgPick.value.toUpperCase(); textBackground = true; syncTextProps();
-  });
-  tbgWrap.appendChild(tbgPick);
-  const tbgRow = document.createElement("div"); tbgRow.className = "row";
-  tbgRow.innerHTML = '<span class="lbl">背景</span>';
-  tbgRow.appendChild(tbgWrap);
-  tbgMenu.appendChild(tbgRow);
-  // 透明度 + 圆角滑杆（用户需求：背景相关设置都在一个面板内；与 A 面板同源同步）
-  const tOp = document.createElement("input"); tOp.type = "range"; tOp.min = 10; tOp.max = 100; tOp.step = 5;
-  const tOpVal = document.createElement("span"); tOpVal.className = "val";
-  tOp.addEventListener("input", () => {
-    textBgOpacity = Number(tOp.value) / 100; tOpVal.textContent = tOp.value + "%";
-    if (!textBackground) textBackground = true; // 拖透明度自动开背景
-    syncTextProps();
-  });
-  const tRow2 = document.createElement("div"); tRow2.className = "row";
-  tRow2.innerHTML = '<span class="lbl">透明</span>';
-  tRow2.appendChild(tOp); tRow2.appendChild(tOpVal);
-  tbgMenu.appendChild(tRow2);
-  const tRd = document.createElement("input"); tRd.type = "range"; tRd.min = 0; tRd.max = 40; tRd.step = 1;
-  const tRdVal = document.createElement("span"); tRdVal.className = "val";
-  tRd.addEventListener("input", () => {
-    textBgRadius = Number(tRd.value); tRdVal.textContent = tRd.value + "px";
-    if (!textBackground) textBackground = true;
-    syncTextProps();
-  });
-  const tRow3 = document.createElement("div"); tRow3.className = "row";
-  tRow3.innerHTML = '<span class="lbl">圆角</span>';
-  tRow3.appendChild(tRd); tRow3.appendChild(tRdVal);
-  tbgMenu.appendChild(tRow3);
-  document.body.appendChild(tbgMenu);
   tbgChip.addEventListener("mousedown", (e) => {
-    // mousedown 即开（同类产品 手感）：preventDefault 阻止焦点转移（编辑框光标保持），
-    // 也不再依赖 click 合成（真机物理点击的 focusout/click 链存在竞态，曾表现为"点了没反应"）
+    // mousedown 即开（同类产品 手感）：preventDefault 阻止焦点转移（编辑框光标保持）
     e.preventDefault(); e.stopPropagation();
-    bgMenu.style.display = "none"; colorMenu.style.display = "none"; // 三浮层互斥
-    tbgMenu.querySelectorAll(".sw[data-c]").forEach((s) => s.classList.toggle("on", s.dataset.c.toUpperCase() === textBgColor.toUpperCase()));
-    tOp.value = String(Math.round(textBgOpacity * 100)); tOpVal.textContent = tOp.value + "%";
-    tRd.value = String(textBgRadius); tRdVal.textContent = tRd.value + "px";
+    colorMenu.style.display = "none"; // 与字色浮层互斥
+    refreshBgMenu();
     const r = tbgChip.getBoundingClientRect();
-    tbgMenu.style.left = Math.round(r.left) + "px";
-    tbgMenu.style.top = Math.round(r.bottom + 6) + "px";
-    tbgMenu.style.display = tbgMenu.style.display === "block" ? "none" : "block";
-    clampPanelToScreen(tbgMenu);
+    bgMenu.style.left = Math.round(r.left) + "px";
+    bgMenu.style.top = Math.round(r.bottom + 6) + "px";
+    bgMenu.style.display = bgMenu.style.display === "block" ? "none" : "block";
+    clampPanelToScreen(bgMenu, r);
   });
   tbgChip.addEventListener("click", (e) => e.stopPropagation()); // 吞掉 click，防双触发/冒泡
   bgRefresh();
@@ -1323,7 +1283,7 @@ function startText(p) {
   el.addEventListener("focusout", (ev) => {
     // 失焦分流：焦点去工具栏/面板/锚点 = 属性操作，保编辑态并存光标；其余（点画布等）才确认文字
     const to = ev.relatedTarget;
-    if (to && to.closest && (to.closest("#toolbar") || to.closest("#pr-text-menu") || to.closest("#pr-color-menu") || to.closest("#pr-tbg-menu") || to.closest(".t-anc") || to.closest("#rotanc") || to.closest("#objsel"))) {
+    if (to && to.closest && (to.closest("#toolbar") || to.closest("#pr-text-menu") || to.closest("#pr-color-menu") || to.closest(".t-anc") || to.closest("#rotanc") || to.closest("#objsel"))) {
       const s0 = window.getSelection();
       if (s0 && s0.rangeCount && el.contains(s0.anchorNode)) savedRange = s0.getRangeAt(0).cloneRange();
       return;
@@ -1936,35 +1896,38 @@ function serializeOps() {
 async function output(action) {
   if (state !== "selected" && state !== "drawing") return;
   const screen = 1;
+  const rect = { screen, x: toPhys(sel.x), y: toPhys(sel.y), w: toPhys(sel.w), h: toPhys(sel.h) };
   const hasOps = layer.querySelectorAll(".obj").length > 0;
   const hasOutputFx = outShadow.on || outBorder.on;
   saveProps(); // SET-7 记住上次：输出时写回工具属性
-  if (hasOps || hasOutputFx) {
+  if (action === "saveas") {
+    // 业界语义（同类产品 同款）：另存为只写用户选择的路径——不进默认目录、不进历史、
+    // 不占剪贴板；取消对话框不算错误（saved=false 时保持覆盖层可继续编辑）
+    const r = (hasOps || hasOutputFx)
+      ? await invoke("freeze_annotate_saveas", { ...rect, script: serializeOps() })
+      : await invoke("freeze_deliver", { ...rect, action: "saveas" });
+    if (r && r.saved === false) return; // 用户取消
+  } else if (hasOps || hasOutputFx) {
     // 有标注或输出特效：取底图帧（引擎渲染衍生图 -ann，原图不动），剪贴板写渲染结果
     // 注意 freeze_take_region 自身会落一张正式图（作为原图），只在需要底图时调用——
     // 无标注路径若也预取帧，会与 freeze_deliver 各落一张 → 同秒双输出（2026-09-22 用户实测报障）
-    const base = await invoke("freeze_take_region", {
-      screen, x: toPhys(sel.x), y: toPhys(sel.y), w: toPhys(sel.w), h: toPhys(sel.h),
-    });
+    const base = await invoke("freeze_take_region", rect);
     try {
-      const r = await invoke("annotate_save", { basePath: base.path, script: serializeOps() });
-      if (action === "saveas") await invoke("save_as_dialog", { path: (r && r.path) || base.path });
+      await invoke("annotate_save", { basePath: base.path, script: serializeOps(), action });
     } catch (err) {
       showToast("标注渲染失败：" + (typeof err === "string" ? err : (err && err.message) || JSON.stringify(err)));
       return; // 渲染失败不关覆盖层，避免看起来像输出成功
     }
-  } else if (action === "copy" || action === "save" || action === "saveas") {
-    const r = await invoke("freeze_deliver", { screen, x: toPhys(sel.x), y: toPhys(sel.y), w: toPhys(sel.w), h: toPhys(sel.h), action: "copy" });
-    if (action === "saveas") await invoke("save_as_dialog", { path: (r && r.path) || "" });
   } else if (action === "ocr") {
-    await invoke("freeze_deliver", { screen, x: toPhys(sel.x), y: toPhys(sel.y), w: toPhys(sel.w), h: toPhys(sel.h), action: "ocr" });
+    await invoke("freeze_deliver", { ...rect, action: "ocr" });
   } else if (action === "pin") {
-    const base = await invoke("freeze_take_region", {
-      screen, x: toPhys(sel.x), y: toPhys(sel.y), w: toPhys(sel.w), h: toPhys(sel.h),
-    });
-    await invoke("pin_create", { path: base.path, x: toPhys(sel.x), y: toPhys(sel.y), scale: 1 / dprV });
+    const base = await invoke("freeze_take_region", rect);
+    await invoke("pin_create", { path: base.path, x: rect.x, y: rect.y, scale: 1 / dprV });
+  } else {
+    // copy | save：save 不占剪贴板（Rust 侧按 action 区分）
+    await invoke("freeze_deliver", { ...rect, action });
   }
-  if (action !== "pin" && action !== "saveas") await closeOverlay();
+  if (action !== "pin") await closeOverlay();
 }
 
 async function closeOverlay() {
@@ -2106,7 +2069,7 @@ document.addEventListener("mousedown", (e) => {
   if (state === "selected" || state === "drawing") {
     // 背景面板：板内点击不触发分发；点板外自动收起
     // 弹层面板（A 设置/色板）：板内点击不触发分发；点外自动收起
-    for (const pid of ["pr-text-menu", "pr-color-menu", "pr-tbg-menu"]) {
+    for (const pid of ["pr-text-menu", "pr-color-menu"]) {
       const pm = document.getElementById(pid);
       if (!e.target.closest("#" + pid) && !e.target.closest("#pr-aset") && !e.target.closest("#pr-chip") && !e.target.closest("#pr-tbgchip") && pm.style.display === "block") pm.style.display = "none";
       if (e.target.closest("#" + pid)) return;

@@ -741,6 +741,7 @@ pub fn run() {
             scrollcmd::freeze_pixel,
             scrollcmd::freeze_take_region,
             scrollcmd::freeze_deliver,
+            scrollcmd::freeze_annotate_saveas,
             pin::pin_create,
             pin::pin_meta,
             pin::pin_scale,
