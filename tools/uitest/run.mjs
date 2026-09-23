@@ -433,6 +433,52 @@ await evl(`(function(){ textItalic = false; document.querySelectorAll("#layer .o
 await goto();
 await evl(`(function(){ sel = { x: 100, y: 100, w: 800, h: 600 }; setState("selected"); return "fresh"; })()`);
 
+// T33（新增）编辑残留根治：编辑文字时点选区内空白——layer 非 focusable，focusout 不触发，
+// editing 曾残留 → 此后单击/双击全被守卫拦（用户报"双击进不了编辑"）。分发器现在主动落定。
+const t33a = await evl(`(function(){
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null);
+  setTool("text");
+  const el = document.createElement("div");
+  el.className = "obj"; el.dataset.k = "text";
+  el.dataset.text = "双击我";
+  el.dataset.params = JSON.stringify({ family:"default", size:20, color:"#FF3B30", bold:false, italic:false, underline:false, shadow:false, stroke:false, align:"left", line_height:1.0, background:null, bg_opacity:null, bg_radius:null });
+  el.style.cssText = "position:absolute;left:150px;top:120px;font-size:20px;color:#FF3B30;";
+  el.textContent = "双击我";
+  layer.appendChild(el);
+  // 模拟"单击后进入编辑"的用户状态
+  editing = el; el.classList.add("txtedit"); el.contentEditable = "true";
+  return { editing: !!editing, objsel: document.getElementById("objsel").style.display === "block" };
+})()`);
+check("T33a 构造编辑态", t33a.editing === true, JSON.stringify(t33a));
+// 点选区内空白（合成 mousedown 到 layer——target 非 focusable，focusout 不触发、editing 曾残留）
+const t33b = await evl(`(function(){
+  const lay = document.getElementById("layer");
+  const mk = (t, x, y) => new MouseEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, buttons: t === "mouseup" ? 0 : 1 });
+  let capReached = false, editingAtCapture = null;
+  const cap = (e) => { capReached = true; editingAtCapture = (typeof editing !== "undefined") ? !!editing : "undef"; };
+  document.addEventListener("mousedown", cap, true);
+  lay.dispatchEvent(mk("mousedown", 620, 460));
+  document.removeEventListener("mousedown", cap, true);
+  const el = document.querySelector('#layer .obj[data-k=text]');
+  return { capReached, editingAtCapture, editing: !!editing, txtedit: !!document.querySelector(".txtedit"), selObj: selectedObj ? selectedObj.dataset.k : null, elAlive: !!el, tool: typeof tool !== "undefined" ? tool : "?" };
+})()`);
+// 产品语义（同类产品 同款）：文字工具下点空白=落定原文字并新建空编辑框。断言核心=原文字
+// 确实落定（contentEditable 回 false、不再残留 editing 引用），而非残留被守卫拦死
+const t33b2 = await evl(`(function(){ const el = document.querySelector('#layer .obj[data-k=text]'); return { elAlive: !!el, ce: el ? el.contentEditable : null, cls: el ? el.className : null }; })()`);
+check("T33b 点空白后原编辑落定（contentEditable 回 false）", t33b.elAlive === true && t33b2.ce === "false" && /(^| )obj( |$)/.test(t33b2.cls), JSON.stringify({ t33b, t33b2 }));
+// 双击文字 → 应进入编辑（合成双击事件链）
+const t33c = await evl(`(function(){
+  const el = document.querySelector('#layer .obj[data-k=text]');
+  const cx = parseFloat(el.style.left) + el.offsetWidth / 2, cy = parseFloat(el.style.top) + el.offsetHeight / 2;
+  const mk = (t, x, y, cc) => new MouseEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, buttons: t === "mouseup" ? 0 : 1, detail: cc });
+  el.dispatchEvent(mk("mousedown", cx, cy, 1));
+  document.body.dispatchEvent(mk("mouseup", cx, cy, 1));
+  el.dispatchEvent(mk("mousedown", cx, cy, 2));
+  document.body.dispatchEvent(mk("mouseup", cx, cy, 2));
+  el.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0, detail: 2 }));
+  return { editing: !!editing, txtedit: !!document.querySelector(".txtedit") };
+})()`);
+check("T33c 退出编辑后双击可再进编辑", t33c.editing === true && t33c.txtedit === true, JSON.stringify(t33c));
 // T29-T32：业界最佳实践对齐（非破坏编辑/标准操纵模型，全部验行为结果）
 
 // T29 属性修改可撤销：选中矩形改色 → Ctrl+Z 撤销恢复旧色 → 重做再变新色
@@ -532,8 +578,52 @@ const t32 = await evl(`(function(){
 })()`);
 check("T32 选中序号回填颜色与样式", t32.color === "#00FF00" && t32.style === "outline", JSON.stringify(t32));
 
+
+// T34（新增）编辑中 Esc=退出编辑保留内容（业界标准；此前编辑框 keydown 只处理 Ctrl+Enter，Esc 无响应）
+const t34 = await evl(`(function(){
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null);
+  setTool("text");
+  const el = document.createElement("div");
+  el.className = "obj"; el.dataset.k = "text";
+  el.dataset.text = "原文内容";
+  el.dataset.params = JSON.stringify({ family:"default", size:20, color:"#FF3B30", bold:false, italic:false, underline:false, shadow:false, stroke:false, align:"left", line_height:1.0, background:null, bg_opacity:null, bg_radius:null });
+  el.style.cssText = "position:absolute;left:150px;top:120px;font-size:20px;color:#FF3B30;";
+  el.textContent = "原文内容";
+  layer.appendChild(el);
+  setObjSel(el); reEditText(el);
+  el.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Escape" }));
+  return { editing: !!editing, ce: el.contentEditable, txt: el.dataset.text, selObj: selectedObj === el };
+})()`);
+check("T34 编辑中 Esc=退出编辑保留内容并保持选中", t34.editing === false && t34.ce === "false" && t34.txt === "原文内容" && t34.selObj === true, JSON.stringify(t34));
+
+// T35（新增）编辑中右键=确认退出（同类产品：右键结束输入；此前编辑中右键弹输出菜单且无法粘贴）
+const t35b = await evl(`(function(){
+  const el = document.querySelector('#layer .obj[data-k=text]');
+  if (!el) return { err: "no el" };
+  setObjSel(el); reEditText(el);
+  el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 200, clientY: 140, button: 2 }));
+  return { editing: !!editing, ce: el.contentEditable, txt: el.dataset.text };
+})()`);
+check("T35 编辑中右键=确认退出", t35b.editing === false && t35b.ce === "false" && t35b.txt === "原文内容", JSON.stringify(t35b));
+
+// T36（新增）二次编辑落定可撤销：改内容 → Ctrl+Z 恢复旧内容 → 重做恢复新内容
+const t36 = await evl(`(function(){
+  const el = document.querySelector('#layer .obj[data-k=text]');
+  if (!el) return { err: "no el" };
+  setObjSel(el); reEditText(el);
+  el.textContent = "改过的话";
+  finishText(el);
+  const after = el.dataset.text;
+  undoOp();
+  const undone = el.dataset.text;
+  redoOp();
+  const redone = el.dataset.text;
+  return { after, undone, redone };
+})()`);
+check("T36 二次编辑改内容可撤销可重做", t36.after === "改过的话" && t36.undone === "原文内容" && t36.redone === "改过的话", JSON.stringify(t36));
+
 // 收尾清场
-await evl(`(function(){ document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null); return "clean"; })()`);
+await evl(`(function(){ document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null); editing = null; return "clean"; })()`);
 
 console.log('PAGE ERRORS:', await evl('JSON.stringify(window.__errs||[])'));
 const fails = results.filter((r) => !r.ok).length;
