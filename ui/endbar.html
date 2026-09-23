@@ -5,64 +5,48 @@
 <title>长截图</title>
 <link rel="stylesheet" href="css/tokens.css">
 <style>
-  html, body { background: transparent; overflow: hidden; }
+  html, body { background: var(--ov-surface, #1e1e1e); overflow: hidden; height: 100vh; display: flex; }
   .bar {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 8px;
+    flex: 1;
     background: var(--ov-surface);
     border: 1px solid var(--ov-border);
     border-radius: var(--r-tool);
     color: var(--ov-fg);
-    font-size: 12px;
-    padding: 10px 12px;
+    padding: 0 12px;
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
     white-space: nowrap;
     animation: fadein 0.15s ease-out;
   }
   @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-  #preview {
-    width: 176px; height: 132px;
-    display: flex; align-items: center; justify-content: center;
-    background: repeating-conic-gradient(#3a3a3c 0 25%, #2c2c2e 0 50%) 0 0/16px 16px;
-    border-radius: 8px; overflow: hidden;
+  #dim {
+    font-size: 14px; font-weight: 600; color: #fff;
+    font-variant-numeric: tabular-nums;
   }
-  #preview img { max-width: 100%; max-height: 100%; display: block; }
-  #preview .empty { color: #999; font-size: 11px; }
-  .col { display: flex; flex-direction: column; gap: 8px; min-width: 210px; }
-  #stat { color: var(--ov-fg); }
-  #stat b { color: #fff; }
-  #rollback { color: var(--stitch-low); display: none; }
-  .row { display: flex; align-items: center; gap: 8px; }
+  .sep { width: 1px; height: 20px; background: var(--ov-border); }
   .btn {
     border: none; background: var(--ov-surface-2, #2c2c2e); color: var(--ov-fg);
-    font-size: 12px; padding: 6px 12px; border-radius: 7px; cursor: pointer;
-    display: flex; align-items: center; gap: 5px;
+    padding: 6px 8px; border-radius: 7px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
   }
   .btn:hover { background: #3a3a3c; }
   .btn.primary { background: var(--accent); color: #fff; font-weight: 500; }
   .btn.primary:hover { background: var(--accent-hover); }
   .btn-x {
     border: none; background: transparent; color: var(--ov-fg-dim);
-    padding: 6px 8px; border-radius: 7px; cursor: pointer;
+    padding: 6px 8px; border-radius: 7px; cursor: pointer; font-size: 13px;
   }
   .btn-x:hover { color: var(--ov-fg); background: var(--ov-surface-2, #2c2c2e); }
-  .kbd { font-family: var(--mono); font-size: 11px; opacity: 0.72; }
-  .sep { width: 1px; height: 18px; background: var(--ov-border); }
 </style>
 </head>
 <body role="status" aria-live="polite">
   <div class="bar">
-    <div id="preview"><span class="empty">滚动页面开始拼接…</span><img id="pv" alt="" style="display:none"></div>
-    <div class="col">
-      <span id="rollback">检测到重复画面 · 已跳过</span>
-      <span id="stat">已 1 段 · -- px</span>
-      <div class="row">
-        <button class="btn primary" id="save" title="保存为 PNG 文件（Enter）">保存 <span class="kbd">↵</span></button>
-        <button class="btn" id="pin" title="钉到桌面，原位贴出（长图自动适配屏高）">贴图</button>
-        <button class="btn" id="copy" title="复制长图到剪贴板">复制</button>
-        <span class="sep"></span>
-        <button class="btn-x" id="x" title="取消（不保存）">✕</button>
-      </div>
-    </div>
+    <span id="dim">-- x --</span>
+    <span class="sep"></span>
+    <button class="btn primary" id="save" title="保存为 PNG 文件（Enter）"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v13M7 3v5h8"/></svg></button>
+    <button class="btn" id="pin" title="贴图：钉到桌面，原位贴出（长图自动适配屏高）"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="17" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg></button>
+    <button class="btn" id="copy" title="复制长图到剪贴板"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+    <button class="btn-x" id="x" title="取消（Esc）">✕</button>
   </div>
   <script src="js/endbar.js"></script>
 </body>

@@ -79,13 +79,7 @@ pub async fn scroll_start(
                     eprintln!("[scroll-worker] {}", v);
                 }
                 use tauri::Emitter;
-                let _ = app2.emit("scroll-progress", v.clone());
-                // 业界同款实时预览：每拼入一段，把全图尾部（最近内容）等比缩略推给结束条
-                if v.get("status").and_then(|x| x.as_str()) == Some("appended") {
-                    if let Some(pv) = scroll_preview_thumb(id) {
-                        let _ = app2.emit("scroll-preview", pv);
-                    }
-                }
+                let _ = app2.emit("scroll-progress", v);
             }
             Err(e) => {
                 eprintln!("[scroll-worker] grab error: {e}");
@@ -115,10 +109,10 @@ fn create_endbar_window(
         .find(|m| abs_x >= m.rect.0 && abs_x < m.rect.0 + m.rect.2 && abs_y >= m.rect.1 && abs_y < m.rect.1 + m.rect.3)
         .or_else(|| mons.first())
         .ok_or("显示器不存在".to_string())?;
-    // 业界同款工具条：左预览图(176×132) + 右状态/按钮列 —— 物理像素按 DPI 缩放
+    // 业界同款紧凑单条（尺寸+四按钮）—— 物理像素按 DPI 缩放
     let k = mon.dpi_scale as f32;
-    let bar_w = (460.0 * k).round() as i32;
-    let bar_h = (168.0 * k).round() as i32;
+    let bar_w = (252.0 * k).round() as i32;
+    let bar_h = (44.0 * k).round() as i32;
     // 贴选区下沿外 8px；下方空间不足翻到上方（说明书 §4.4 结束条行为）
     let sel_bottom = abs_y + h as i32;
     let bx = abs_x.min(mon.rect.0 + mon.rect.2 - bar_w - 8).max(mon.rect.0 + 8);
@@ -369,6 +363,7 @@ fn scroll_push_frame(id: u64, pixels: &[u8]) -> Result<serde_json::Value, String
     Ok(serde_json::json!({
         "session": id,
         "status": status,
+        "width": st.session.width,
         "height": st.session.content_height(),
         "segments": st.session.seam_count() + 1,
         "failed_frames": st.session.failed_frame_count(),
@@ -629,37 +624,6 @@ fn scroll_teardown(app: &AppHandle) {
         crate::park_overlay_offscreen(&w);
     }
     restore_overlay_passthrough(app);
-}
-
-/// 实时预览缩略：全图尾部（最近拼入的内容，无接缝时=首段）等比缩到 ≤176×260 盒内，
-/// JPEG q60 data URL。每轮拼接成功才生成（120ms 轮询里 moving 帧不重复编码）。
-fn scroll_preview_thumb(id: u64) -> Option<serde_json::Value> {
-    let map = scrolls();
-    let st = map.get(&id)?;
-    let (w, h, rgba) = st.session.export();
-    if w == 0 || h == 0 {
-        return None;
-    }
-    let seams = st.session.seams();
-    let tail_y = seams.last().map(|s| s.y as u32).unwrap_or(0).min(h.saturating_sub(1));
-    let stride = w as usize * 4;
-    let rows = (h - tail_y) as usize;
-    let tail = &rgba[tail_y as usize * stride..];
-    // 等比缩略（box 内）
-    let k = (176.0 / w as f32).min(260.0 / rows as f32);
-    let (tw, th) = (((w as f32) * k).round().max(1.0) as u32, ((rows as f32) * k).round().max(1.0) as u32);
-    let src = image::RgbaImage::from_raw(w, rows as u32, tail.to_vec())?;
-    let thumb = image::DynamicImage::ImageRgba8(src).resize_exact(tw, th, image::imageops::FilterType::Triangle);
-    let mut jout = std::io::Cursor::new(Vec::new());
-    let enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jout, 60);
-    thumb.to_rgb8().write_with_encoder(enc).ok()?;
-    let url = format!("data:image/jpeg;base64,{}", crate::base64_encode(&jout.into_inner()));
-    Some(serde_json::json!({
-        "dataUrl": url,
-        "width": w,
-        "height": h,
-        "segments": st.session.seam_count() + 1,
-    }))
 }
 
 /// 长截图复制：全图 PNG 进剪贴板（不落盘、不进历史）

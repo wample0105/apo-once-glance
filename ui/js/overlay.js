@@ -162,10 +162,8 @@ async function activate(payload) {
     if (a.arrow_heads) arrowHeads = a.arrow_heads;
     if (a.arrow_line_style) arrowLineStyle = a.arrow_line_style;
     else if (a.arrow_dash) arrowLineStyle = "dashed";
-    if (a.shape_dash != null) shapeDash = !!a.shape_dash;
     if (a.shape_radius != null) shapeRadius = !!a.shape_radius;
     if (a.shape_opacity) shapeOpacity = a.shape_opacity;
-    if (a.shape_fill) fillMode = a.shape_fill;
     if (a.text_size) textSize = Math.round(a.text_size);
     if (a.text_family) textFont = a.text_family;
     textBold = !!a.text_bold; textItalic = !!a.text_italic; textUnderline = !!a.text_underline;
