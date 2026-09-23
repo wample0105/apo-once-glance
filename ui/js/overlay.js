@@ -38,6 +38,7 @@ let shapeDash = false, shapeRadius = false, shapeOpacity = 1.0;
 let textFont = "default", textSize = 20, textBold = false, textItalic = false, textUnderline = false, textAlign = "left", textLineHeight = 1.0, textBackground = false, textBgColor = "#FFF7D6", textBgOpacity = 1.0, textBgRadius = 4, textShadow = false, textStroke = false;
 let numStyle = "solid", numDiameter = 32, numStart = 1;
 let mosMode = "mosaic";
+let hlOpacity = 0.4; // 高亮不透明度（本层无控件；读入原样带回，避免整包写回清掉编辑器记忆值）
 let rememberProps = true;
 // 同类产品 像素级对齐：形状槽位（矩形/椭圆合并按钮）与输出选项
 let shapeSlot = "rect"; // 槽位当前形状：rect | ellipse
@@ -179,6 +180,7 @@ async function activate(payload) {
     if (a.step_style) numStyle = a.step_style;
     if (a.step_diameter) numDiameter = Math.round(a.step_diameter);
     if (a.mosaic_strength) mosStrength = a.mosaic_strength;
+    if (a.highlight_opacity >= 0.1 && a.highlight_opacity <= 0.9) hlOpacity = a.highlight_opacity;
     if (a.mosaic_mode) mosMode = a.mosaic_mode;
     if (a.num_start != null) { numStart = a.num_start; numNext = numStart; }
     if (a.output_shadow) { outShadow = { on: !!a.output_shadow.on, blur: a.output_shadow.blur || 24, color: a.output_shadow.color || "#000000" }; }
@@ -242,7 +244,7 @@ function saveProps() {
     text_shadow: textShadow, text_align: textAlign, text_family: textFont, text_line_height: textLineHeight,
     text_background: textBackground, text_bg_color: textBgColor, text_bg_opacity: textBgOpacity, text_bg_radius: textBgRadius, text_stroke: textStroke,
     step_diameter: numDiameter, step_style: numStyle,
-    mosaic_strength: mosStrength, highlight_opacity: 0.4,
+    mosaic_strength: mosStrength, highlight_opacity: hlOpacity,
     arrow_dash: arrowLineStyle === "dashed", arrow_double_head: arrowHeads === "both",
     arrow_heads: arrowHeads, arrow_line_style: arrowLineStyle,
     shape_dash: shapeDash, shape_radius: shapeRadius, shape_opacity: shapeOpacity, shape_fill: fillMode,

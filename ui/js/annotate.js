@@ -252,16 +252,40 @@ function outName() {
 }
 
 /* ============ 主题记忆（settings.annotation ↔ 编辑器） ============ */
+// 编辑器字体选项 ↔ 契约字体键（与取景层 FONT_CSS 同词表；未知归 default）
+const ED_FONT_KEY = {
+  "Microsoft YaHei UI": "default", "Microsoft YaHei": "default", "SimSun": "simsun",
+  "SimHei": "simhei", "KaiTi": "kaiti", "Segoe UI": "segoe", "Arial": "segoe", "Consolas": "default", "Georgia": "default",
+};
+const ED_FONT_FROM_KEY = { default: "Microsoft YaHei", simsun: "SimSun", simhei: "SimHei", kaiti: "KaiTi", segoe: "Segoe UI" };
+// 编辑器填充三态 ↔ 契约词表（与 serializeOps 同映射）
+const ED_FILL_OUT = { stroke: "outline", fill: "fill", both: "outline_fill" };
+const ED_FILL_IN = { outline: "stroke", fill: "fill", outline_fill: "both" };
+
+// 读-改-写：先取当前主题合并再整包写回。set_setting 对 annotation 是整包替换，
+// 只写编辑器认识的字段会把取景层记住的扩展字段（箭头样式/每工具色/输出选项等）清成出厂值。
+// 串行链保证并发触发时读-改-写不交错。
+let edSaveChain = Promise.resolve();
 function edRemember() {
   if (!ann || !rememberOn) return;
-  annInvoke("set_setting", {
-    key: "annotation",
-    value: {
-      color: ED.color, arrow_width: ED.lw, shape_width: ED.lw, text_size: ED.fs,
+  edSaveChain = edSaveChain.then(async () => {
+    const s = await annInvoke("get_settings");
+    const merged = {
+      ...(s.annotation || {}),
+      color: ED.color,
+      arrow_width: ED.lw, shape_width: ED.lw,
+      text_size: ED.fs,
       text_bold: ED.tb, text_italic: ED.ti, text_underline: ED.tu, text_shadow: ED.tshadow,
-      text_align: ED.talign, step_diameter: 56, step_style: ED.numStyle === "outline" ? "outline" : "solid",
-      mosaic_strength: ED.mos, highlight_opacity: ED.hlop / 100,
-    },
+      text_align: ED.talign,
+      text_family: ED_FONT_KEY[ED.font] || "default",
+      text_line_height: Number(ED.tline) || 1.0,
+      shape_fill: ED_FILL_OUT[ED.fill] || "outline",
+      step_style: ED.numStyle,
+      mosaic_strength: ED.mos,
+      highlight_opacity: ED.hlop / 100,
+      num_start: ED.start,
+    };
+    await annInvoke("set_setting", { key: "annotation", value: merged });
   }).catch(() => {});
 }
 async function edRestoreTheme() {
@@ -274,7 +298,11 @@ async function edRestoreTheme() {
     if (a.text_size >= 16 && a.text_size <= 96) ED.fs = Math.round(a.text_size);
     if (a.mosaic_strength >= 8 && a.mosaic_strength <= 16) ED.mos = a.mosaic_strength;
     if (a.highlight_opacity >= 0.1 && a.highlight_opacity <= 0.9) ED.hlop = Math.round(a.highlight_opacity * 100);
-    if (a.step_style === "outline" || a.step_style === "solid") ED.numStyle = a.step_style;
+    if (a.step_style === "outline" || a.step_style === "solid" || a.step_style === "plain") ED.numStyle = a.step_style;
+    if ([1.2, 1.5, 1.8].includes(Number(a.text_line_height))) ED.tline = String(Number(a.text_line_height));
+    if (ED_FILL_IN[a.shape_fill]) ED.fill = ED_FILL_IN[a.shape_fill];
+    if (a.num_start >= 1) ED.start = a.num_start;
+    if (ED_FONT_FROM_KEY[a.text_family]) ED.font = ED_FONT_FROM_KEY[a.text_family];
     ED.nextNum = ED.start;
     edShowProps();
     edSyncControls();
@@ -288,6 +316,20 @@ function edSyncControls() {
   if (hl) { hl.value = ED.hlop; q("#ed-hlopv").textContent = ED.hlop; }
   document.querySelectorAll("#ed-colors .ed-sw").forEach((x) => x.classList.toggle("on", x.dataset.c === ED.color));
   document.querySelectorAll(".ns-prev").forEach((p) => p.style.setProperty("--ed-c", ED.color));
+  // 主题回填：样式段/下拉与 ED 同步（恢复路径不再残留旧高亮）
+  document.querySelectorAll("#ed-fill button").forEach((b) => b.classList.toggle("on", b.dataset.f === ED.fill));
+  document.querySelectorAll("#ed-ns button").forEach((b) => b.classList.toggle("on", b.dataset.ns === ED.numStyle));
+  document.querySelectorAll("#ed-tstyle button").forEach((b) => {
+    const k = { b: "tb", i: "ti", u: "tu", shadow: "tshadow" }[b.dataset.ts];
+    b.classList.toggle("on", ED[k]);
+  });
+  document.querySelectorAll("#ed-talign button").forEach((b) => b.classList.toggle("on", b.dataset.ta === ED.talign));
+  const font = q("#ed-font");
+  if (font && [...font.options].some((o) => o.value === ED.font)) font.value = ED.font;
+  const lh = q("#ed-lh");
+  if (lh && [...lh.options].some((o) => o.value === ED.tline)) lh.value = ED.tline;
+  const start = q("#ed-start");
+  if (start) start.value = ED.start;
 }
 
 /* ============ 工具与属性行 ============ */

@@ -22,6 +22,7 @@ JSON envelope：`{ "ok": bool, "data": {...}, "error": {code, exit_code, message
 - **坐标是第一公民**：OCR 的每个 block 都带 `bbox:[x,y,w,h]`（原图物理像素）。标注时用这些坐标画箭头/序号，无需读图。
 - **两种坐标系**：脚本默认 `unit:"px"`（物理像素）；视觉模型可传 `unit:"rel"`（0–1 相对坐标，引擎按图片尺寸换算，推荐没有精确像素时使用）。
 - **衍生图永不覆盖原图**：`annotate` 输出 `-ann.png`（已存在则 `-ann2` 递增）。原图是不可变的素材底账。
+- **样式继承标注主题**：脚本未显式指定的属性（颜色/线宽/箭头头型线型/形状填充/字体与文字样式/序号样式/马赛克模式/整图阴影边框）一律继承用户在主面板「标注主题」页看到的默认值，显式传参优先。颜色按工具回落每工具独立色（arrow/pen/marker/rect/ellipse/text/num），未单独记忆的工具用全局主题色。想固定输出样式就在脚本里显式写全。
 - **确定性路径**：默认落盘 `%USERPROFILE%\Pictures\Onceglance\<yyyy-MM-dd>\HHmmss-<kind>-<shortid>.png`，同名 `.json` 为 manifest（尺寸、来源窗口、DPI、lineage）。
 - **`last` 语义**：当前用户最近一次成功捕获（含 Agent 触发的），跨进程共享。三命令链里用它串联。
 - **黑名单**：目标窗口命中用户隐私黑名单时返回退出码 6，**没有"本次放行"**。收到 6 就换目标或告知用户，不要重试。
@@ -49,7 +50,7 @@ JSON envelope：`{ "ok": bool, "data": {...}, "error": {code, exit_code, message
    ```
 
    - 操作类型：`arrow / rect / ellipse / step_number / text / highlight / mosaic(pixelate|blur) / crop`。
-   - `step_number` 不写 `label` 会按出现顺序自动编号（1、2、3…）。
+   - `step_number` 不写 `label` 会按出现顺序自动编号（从用户设置的起始编号起，默认 1、2、3…）。
    - 敏感信息（邮箱/Token）用 `mosaic` 打码。
    - 坐标从 OCR bbox 推导：例如给「导出报表」按钮画箭头 = 该 block bbox 左侧偏移 20px 处为 `from`，bbox 中心为 `to`。
 4. **批量渲染**：`once annotate <path> --script stepN.json --out stepN-ann.png`。同一脚本重复渲染输出一致（可复现）。

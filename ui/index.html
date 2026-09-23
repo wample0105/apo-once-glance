@@ -333,7 +333,7 @@
             <!-- ===== 标注主题（只读管理视图，§4.8）===== -->
       <section class="page" id="page-theme">
         <div class="ptitle">标注主题</div>
-        <div class="psub">调参入口在标注编辑器——这里展示的是编辑器自动记忆的"上次使用值"。本页不做第二套参数，也不需要保存。</div>
+        <div class="psub">调参入口在标注编辑器——这里展示的是编辑器自动记忆的"上次使用值"。本页不做第二套参数，也不需要保存。Agent（CLI/MCP）标注时未显式传参的属性，继承本页全部默认值。</div>
         <div class="group">
           <div class="row">
             <div class="label"><div class="t">记住标注设置</div><div class="d">关闭后，编辑器里的改动仅本次生效，默认值不再更新</div></div>
@@ -344,8 +344,8 @@
             <div class="ctl"><button class="btn" id="btn-theme-reset">恢复默认值</button></div>
           </div>
         </div>
-        <div class="group" id="theme-values"></div>
-        <div class="psub">本页没有"保存"按钮——默认值由编辑器自动记忆，这里看到的永远是最新的一份。</div>
+        <div id="theme-values"></div>
+        <div class="psub">本页没有"保存"按钮——默认值由编辑器自动记忆，这里看到的永远是最新的一份，也是 Agent 标注的继承来源。</div>
       </section>
 
       <!-- ===== Agent 与隐私（§4.9）===== -->

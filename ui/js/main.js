@@ -44,6 +44,7 @@ $$(".nav-item").forEach((btn) => {
     $$(".page").forEach((p) => p.classList.remove("on"));
     $("#page-" + btn.dataset.page).classList.add("on");
     if (btn.dataset.page === "history") refreshCurrentView();
+    if (btn.dataset.page === "theme") loadThemeValues().catch(reportErr);
     if (btn.dataset.page === "privacy") refreshAudit();
     if (btn.dataset.page === "doctor") runDoctor();
     if (btn.dataset.page === "agent") refreshBridgeStatus();
@@ -297,16 +298,8 @@ async function loadSettingsUI() {
     chip.addEventListener("click", () => startHotkeyCapture(chip));
   });
 
-  // 标注主题只读值
-  const a = s.annotation;
-  $("#theme-values").innerHTML = [
-    ["主题色", `<span class="pathchip" style="color:${a.color}">■ ${a.color}</span>`],
-    ["箭头宽度", `<span class="ro-value">${a.arrow_width}px</span>`],
-    ["文字字号", `<span class="ro-value">${a.text_size}px</span>`],
-    ["序号样式", `<span class="ro-value">${a.step_style === "solid" ? "实心圆" : a.step_style} · 直径 ${a.step_diameter}px</span>`],
-    ["马赛克默认强度", `<span class="ro-value">块 ${a.mosaic_strength}px</span>`],
-    ["高亮不透明度", `<span class="ro-value">${Math.round(a.highlight_opacity * 100)}%</span>`],
-  ].map(([t, v]) => `<div class="row disabled"><div class="label"><div class="t">${t}</div></div><div class="ctl">${v}</div></div>`).join("");
+  // 标注主题只读值（独立刷新：切页/窗口重新聚焦时也会重拉，保证与编辑器改动实时同步）
+  await loadThemeValues();
 
   // 黑名单
   renderBlacklist(s.blacklist);
@@ -337,6 +330,76 @@ async function loadSettingsUI() {
       },
     },
   }, null, 2);
+}
+
+// 标注主题只读值：与 settings.annotation 逐字段对齐的全量镜像（§4.8）。
+// Agent（CLI/MCP）标注未显式传参的属性继承以下值——本页即继承契约的可见形态。
+// 刷新时机：loadSettingsUI / 切到主题页 / 主面板重新聚焦（截图标注回来即是最新一份）。
+async function loadThemeValues() {
+  const s = await invoke("get_settings");
+  const a = s.annotation || {};
+  const rv = (v) => `<span class="ro-value">${v}</span>`;
+  const sw = (c) => `<span class="pathchip" style="color:${c}">■ ${c}</span>`;
+  const yn = (b) => (b ? "开" : "关");
+  const HEADS = { end: "单箭头", both: "双箭头", start: "起点箭头", none: "无箭头" };
+  const LINE = { solid: "实线", dashed: "虚线", dotted: "点线" };
+  const FILL = { outline: "描边", fill: "填充", outline_fill: "描边+浅填充" };
+  const NUMS = { solid: "实心圆", outline: "描边圆", plain: "纯数字" };
+  const MOSM = { mosaic: "像素化", pixelate: "像素化", blur: "模糊" };
+  const FONTS = { default: "微软雅黑", simsun: "宋体", simhei: "黑体", kaiti: "楷体", segoe: "Segoe UI" };
+  const ALIGNS = { left: "左对齐", center: "居中", right: "右对齐" };
+  const tc = (a.tool_colors && typeof a.tool_colors === "object") ? a.tool_colors : null;
+  const TOOLN = [["arrow", "箭头"], ["pen", "画笔"], ["marker", "高亮"], ["rect", "矩形"], ["ellipse", "椭圆"], ["text", "文字"], ["num", "序号"]];
+  const tstyle = [a.text_bold && "粗体", a.text_italic && "斜体", a.text_underline && "下划线", a.text_shadow && "阴影"]
+    .filter(Boolean).join(" · ") || "无";
+  const tbg = a.text_background
+    ? `开 · ${a.text_bg_color} · ${Math.round((a.text_bg_opacity ?? 1) * 100)}% · 圆角 ${a.text_bg_radius ?? 4}px`
+    : "关";
+  const fxShadow = a.output_shadow && a.output_shadow.on
+    ? `开 · 模糊 ${a.output_shadow.blur ?? 24}px · ${a.output_shadow.color ?? "#000000"}` : "关";
+  const fxBorder = a.output_border && a.output_border.on
+    ? `开 · 宽 ${a.output_border.width ?? 6}px · ${a.output_border.color ?? "#FFFFFF"}` : "关";
+  const roRow = (t, v) => `<div class="row disabled"><div class="label"><div class="t">${t}</div></div><div class="ctl">${v}</div></div>`;
+  const roGroup = (title, rows) => `<div class="ptitle" style="font-size:13px">${title}</div><div class="group">${rows.join("")}</div>`;
+  $("#theme-values").innerHTML =
+    roGroup("全局", [roRow("主题色", sw(a.color ?? "#FF3B30"))])
+    + (tc ? roGroup("每工具独立色（未单独记忆的工具回落全局主题色）", TOOLN.map(([k, n]) =>
+        roRow(n, tc[k] ? sw(tc[k]) : rv("跟随主题色")))) : "")
+    + roGroup("箭头", [
+        roRow("宽度", rv(`${a.arrow_width ?? 8}px`)),
+        roRow("头型", rv(HEADS[a.arrow_heads] ?? a.arrow_heads ?? "单箭头")),
+        roRow("线型", rv(LINE[a.arrow_line_style] ?? a.arrow_line_style ?? "实线")),
+      ])
+    + roGroup("形状（矩形 / 椭圆）", [
+        roRow("线宽", rv(`${a.shape_width ?? 6}px`)),
+        roRow("填充", rv(FILL[a.shape_fill] ?? a.shape_fill ?? "描边")),
+        roRow("圆角", rv(yn(!!a.shape_radius))),
+        roRow("不透明度", rv(`${Math.round((a.shape_opacity ?? 1) * 100)}%`)),
+        roRow("虚线描边", rv(yn(!!a.shape_dash))),
+      ])
+    + roGroup("文字", [
+        roRow("字号", rv(`${a.text_size ?? 44}px`)),
+        roRow("字体", rv(FONTS[a.text_family] ?? a.text_family ?? "微软雅黑")),
+        roRow("样式", rv(tstyle)),
+        roRow("对齐", rv(ALIGNS[a.text_align] ?? a.text_align ?? "左对齐")),
+        roRow("行距", rv(a.text_line_height ?? 1.0)),
+        roRow("背景", rv(tbg)),
+        roRow("描边", rv(yn(!!a.text_stroke))),
+      ])
+    + roGroup("序号", [
+        roRow("样式", rv(NUMS[a.step_style] ?? a.step_style ?? "实心圆")),
+        roRow("直径", rv(`${a.step_diameter ?? 56}px`)),
+        roRow("起始编号", rv(a.num_start ?? 1)),
+      ])
+    + roGroup("高亮 / 马赛克", [
+        roRow("高亮不透明度", rv(`${Math.round((a.highlight_opacity ?? 0.4) * 100)}%`)),
+        roRow("马赛克强度", rv(`块 ${a.mosaic_strength ?? 12}px`)),
+        roRow("马赛克模式", rv(MOSM[a.mosaic_mode] ?? a.mosaic_mode ?? "像素化")),
+      ])
+    + roGroup("输出选项（整图特效）", [
+        roRow("外阴影", rv(fxShadow)),
+        roRow("边框", rv(fxBorder)),
+      ]);
 }
 
 function renderBlacklist(list) {
@@ -489,6 +552,10 @@ event.listen("nav-to", (e) => {
   if (btn) btn.click();
 });
 event.listen("toast-shown", () => refreshHistory());
+// 主面板从托盘/后台回到前台：标注主题页重拉一次（截图时改了工具属性，回来即见最新值）
+event.listen("tauri://focus", () => {
+  if ($("#page-theme") && $("#page-theme").classList.contains("on")) loadThemeValues().catch(reportErr);
+});
 
 
 // ===== 资产详情（§4.6：文字块与图片联动、版本时间线）=====

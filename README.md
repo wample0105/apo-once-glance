@@ -76,7 +76,7 @@ JSON envelope：`{ok, data, error, meta:{version, elapsed_ms}}`。
 ## 功能清单（v0.1.0，Windows 11 / Win10 19045+）
 
 - **捕获**：区域框选（30%/55% 两档遮罩、物理像素尺寸提示、动作条）、窗口（PrintWindow+回退）、全屏、多显示器（物理像素坐标、逐屏 DPI）、捕获前自动隐藏自身
-- **标注**：覆盖层直接画（箭头/矩形/椭圆/序号/文字/高亮/马赛克/裁剪 + 8 键盘快捷键 + 撤销），保存走确定性渲染引擎生成衍生图（-ann 命名、lineage manifest、永不覆盖原图）
+- **标注**：覆盖层直接画（箭头/矩形/椭圆/序号/文字/高亮/马赛克/裁剪 + 8 键盘快捷键 + 撤销），保存走确定性渲染引擎生成衍生图（-ann 命名、lineage manifest、永不覆盖原图）。标注主题单源（SET-7）：GUI 记忆的属性默认值，Agent（CLI/MCP）未显式传参时全量继承（含每工具独立色与整图输出选项），主面板「标注主题」页只读可见；显式传参优先
 - **OCR**：本地 Windows.Media.Ocr，blocks[]（type/text/bbox/confidence/lines）+ full_text + 语言，无文字返回 empty_reason 不报错
 - **长截图**：框选松手即采、滚轮穿透采集（帧稳定检测消除动画重影）、固定区消除、到底提示且永不自动完成、接缝质检页（±1/±10 修正、全部接受、分段导出）
 - **CLI `once`**：status / capture / ocr / annotate / history / open / config / doctor / mcp，全命令 --json envelope，退出码 0~6 冻结
