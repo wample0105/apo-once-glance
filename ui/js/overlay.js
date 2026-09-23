@@ -67,7 +67,7 @@ function resetOverlayState() {
   document.getElementById("pr-color-menu").style.display = "none";
   document.getElementById("ctxmenu").classList.remove("open");
   hideTxtAnchors(); setObjSel(null); setHover(null);
-  selectedObj = null; editing = null; objDrag = null; draft = null; drag = null; propsUndo = null;
+  selectedObj = null; editing = null; objDrag = null; draft = null; drag = null; propsUndo = null; editBeforeSnap = null;
   objStack = { undo: [], redo: [] };
   cropMode = false; cropSaved = null; numNext = numStart;
   tool = null; setSel({ x: 0, y: 0, w: 0, h: 0 }); setState("idle");
@@ -1433,7 +1433,11 @@ function startText(p) {
   requestAnimationFrame(() => el.focus()); // 下一帧再聚焦，避免与其他焦点操作竞态
   el.addEventListener("input", updateTxtAnchors); // 输入即跟随：四角手柄与 ◎ 贴住文字框
   updateTxtAnchors();
-  el.addEventListener("keydown", (ev) => { ev.stopPropagation(); if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); finishText(el); } });
+  el.addEventListener("keydown", (ev) => {
+    ev.stopPropagation();
+    if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); finishText(el); }
+    else if (ev.key === "Escape") { ev.preventDefault(); finishText(el); } // 编辑中 Esc=退出编辑保留内容（业界标准）
+  });
   el.addEventListener("focusout", (ev) => {
     // 失焦分流：焦点去工具栏/面板/锚点 = 属性操作，保编辑态并存光标；其余（点画布等）才确认文字
     const to = ev.relatedTarget;
@@ -1461,8 +1465,16 @@ function finishText(el) {
   savedRange = null;
   el.dataset.text = txt;
   if (reedit) {
-    // 二次编辑结束：样式沿用原参数（只改文本），不重复入撤销栈；保持选中可继续调属性
     setObjSel(el);
+    // 二次编辑落定：内容/样式与编辑前不同则入撤销栈（反复修改场景：Ctrl+Z 可回改前）
+    if (editBeforeSnap) {
+      const after = { text: el.textContent, geom: null, params: el.dataset.params || null, style: el.getAttribute("style") || "", points: null, spanStyle: null };
+      const b = editBeforeSnap;
+      if (b.text !== after.text || b.params !== after.params || b.style !== after.style) {
+        pushUndo({ t: "props", el, before: b, after });
+      }
+      editBeforeSnap = null;
+    }
   } else {
     // 排版快照（所见即所得：序列化必须与预览一致）
     el.dataset.params = JSON.stringify({
@@ -1526,6 +1538,15 @@ function reEditText(el) {
   el.contentEditable = "true";
   el.spellcheck = false;
   el.dataset.reedit = "1";
+  editBeforeSnap = { text: el.textContent, geom: null, params: el.dataset.params || null, style: el.getAttribute("style") || "", points: null, spanStyle: null };
+  if (!el.dataset.kbBound) {
+    el.dataset.kbBound = "1";
+    el.addEventListener("keydown", (ev) => {
+      ev.stopPropagation();
+      if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); finishText(el); }
+      else if (ev.key === "Escape") { ev.preventDefault(); finishText(el); }
+    });
+  }
   el.addEventListener("input", updateTxtAnchors);
   updateTxtAnchors(); // 编辑态手柄即刻出现
   requestAnimationFrame(() => {
@@ -1577,7 +1598,7 @@ function pushUndo(u) {
 function undoOp() {
   flushPropsUndo();
   const u = objStack.undo.pop(); if (!u) return;
-  if (u.t === "props") { applyPropsSnap(u.el, u.before); objStack.redo.push(u); updateStatusbar(); return; }
+  if (u.t === "props") { applyPropsSnap(u.el, u.before); if (u.el.isConnected) { setObjSel(u.el); placeObjsel(objBBox(u.el)); } objStack.redo.push(u); updateStatusbar(); return; }
   if (u.t === "add") u.el.remove();
   else if (u.t === "del") layer.appendChild(u.el); // 橡皮擦撤销：对象放回
   else if (u.t === "move") moveObj(u.el, -u.dx, -u.dy);
@@ -1590,7 +1611,7 @@ function undoOp() {
 function redoOp() {
   flushPropsUndo();
   const u = objStack.redo.pop(); if (!u) return;
-  if (u.t === "props") { applyPropsSnap(u.el, u.after); objStack.undo.push(u); updateStatusbar(); return; }
+  if (u.t === "props") { applyPropsSnap(u.el, u.after); if (u.el.isConnected) { setObjSel(u.el); placeObjsel(objBBox(u.el)); } objStack.undo.push(u); updateStatusbar(); return; }
   if (u.t === "add") layer.appendChild(u.el);
   else if (u.t === "del") u.el.remove(); // 橡皮擦重做：再删一次
   else if (u.t === "move") moveObj(u.el, u.dx, u.dy);
@@ -1632,6 +1653,7 @@ function objBBox(el) {
   return { l, t, w, h };
 }
 let propsUndo = null;
+let editBeforeSnap = null; // 二次编辑前的内容/样式快照（落定时 diff 入撤销栈）
 function p_int(v) { const n = parseInt(v, 10); return isNaN(n) ? 14 : n; }
 function snapProps(el) {
   const sp = el.querySelector("span");
@@ -1641,6 +1663,7 @@ function snapProps(el) {
     style: el.getAttribute("style") || "",
     points: pl ? pl.getAttribute("points") : null,
     spanStyle: el.dataset.k === "num" && sp ? sp.getAttribute("style") : null,
+    text: el.dataset.k === "text" ? el.textContent : null,
   };
 }
 function applyPropsSnap(el, sn) {
@@ -1650,6 +1673,7 @@ function applyPropsSnap(el, sn) {
   if (sn.style !== null && sn.style !== undefined) el.setAttribute("style", sn.style);
   if (sn.points) { const pl = el.querySelector("polyline"); if (pl) pl.setAttribute("points", sn.points); }
   if (sn.spanStyle) { const sp = el.querySelector("span"); if (sp) sp.setAttribute("style", sn.spanStyle); }
+  if (sn.text !== null && sn.text !== undefined) { el.textContent = sn.text; el.dataset.text = sn.text; }
   const k = el.dataset.k;
   try {
     if (k === "arrow" && sn.geom) drawArrowGeom(el, JSON.parse(sn.geom));
@@ -1660,7 +1684,7 @@ function applyPropsSnap(el, sn) {
 function flushPropsUndo() {
   if (propsUndo && propsUndo.after) {
     const b = propsUndo.before, a = propsUndo.after;
-    if (b.geom !== a.geom || b.params !== a.params || b.style !== a.style || b.points !== a.points || b.spanStyle !== a.spanStyle) pushUndo(propsUndo);
+    if (b.geom !== a.geom || b.params !== a.params || b.style !== a.style || b.points !== a.points || b.spanStyle !== a.spanStyle || b.text !== a.text) pushUndo(propsUndo);
   }
   propsUndo = null;
 }
@@ -2305,6 +2329,10 @@ document.addEventListener("mousedown", () => { magnifier.style.display = "none";
 document.addEventListener("mousedown", (e) => {
   if (ann || e.button !== 0) return;
   if (e.target.closest("#toolbar") || e.target.closest(".txtedit")) return;
+  // 编辑文字时点击编辑框外：先确认落定再分发。只靠 focusout 会漏——点击 layer/蒙版等
+  // 非 focusable 目标时焦点不转移，editing 残留，此后单击/双击全被各处守卫拦
+  //（用户报"单击过后再双击进不了编辑"，实况 editing 残留为 true）
+  if (editing && !e.target.closest(".txtedit")) finishText(editing);
   // 右键菜单/三键弹窗内的点击不得触发框选分发
   if (e.target.closest("#ctxmenu") || e.target.closest("#escdlg")) return;
   if (state === "selected" || state === "drawing") {
@@ -2435,6 +2463,7 @@ const ctxmenuEl = document.getElementById("ctxmenu");
 window.addEventListener("contextmenu", (e) => {
   e.preventDefault();
   if (ann) return;
+  if (editing) { finishText(editing); return; } // 编辑中右键=结束输入（确认落定），而非弹输出菜单
   if (state === "idle" && !cropMode) { cancelAll(); return; }
   if (state === "selected" || state === "drawing") {
     syncCtxUI();
