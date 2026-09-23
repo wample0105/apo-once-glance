@@ -869,6 +869,20 @@ function wireToolbar() {
   document.getElementById("tb-redo").addEventListener("click", redoOp);
 }
 
+// 属性面板显隐：el=选中对象时按对象类型显示（上下文感知面板，业界主流：点谁编辑谁），
+// el=null 时按当前画图工具显示（setTool 与取消选中共用）
+function syncPanelFor(el) {
+  const t = el ? el.dataset.k : tool;
+  const show = (id, on) => document.getElementById(id).classList.toggle("on", on);
+  show("pr-color", !!t && t !== "eraser" && t !== "mosaic");
+  show("pr-width", ["arrow", "pen", "marker", "rect", "ellipse"].includes(t));
+  show("pr-arrow", t === "arrow");
+  show("pr-shape", t === "rect" || t === "ellipse");
+  document.getElementById("pr-round").style.display = t === "rect" ? "" : "none";
+  show("pr-text", t === "text");
+  show("pr-num", t === "num");
+  show("pr-mos", t === "mosaic");
+}
 function setTool(t) {
   if (t === "select") t = null; // 选择=退出画图模式（点选标注在分发器处理）
   if (t === "shape") t = shapeSlot; // 形状槽位：用当前槽位形状画
@@ -890,15 +904,7 @@ function setTool(t) {
   layer.className = t === "eraser" ? "tool-eraser" : "";
   layer.style.cursor = t ? "crosshair" : "default";
   selEl.classList.toggle("moveable", !t); // 无工具：选区内整体手型可平移
-  const show = (id, on) => document.getElementById(id).classList.toggle("on", on);
-  show("pr-color", !!t && t !== "eraser" && t !== "mosaic"); // 马赛克/模糊无颜色语义，不显示色板入口（业界同款）
-  show("pr-width", ["arrow", "pen", "marker", "rect", "ellipse"].includes(t)); // 马赛克无线宽语义（块大小=强度），不显示
-  show("pr-arrow", t === "arrow");
-  show("pr-shape", t === "rect" || t === "ellipse");
-  document.getElementById("pr-round").style.display = t === "rect" ? "" : "none";
-  show("pr-text", t === "text");
-  show("pr-num", t === "num");
-  show("pr-mos", t === "mosaic");
+  syncPanelFor(null); // 无选中：面板跟随当前画图工具
   const tips = {
     select: "点选标注 · 拖动移动 · 方向键微调 · Delete 删除",
     arrow: "拖出箭头 · Shift 锁 45°", pen: "自由画笔", marker: "荧光笔 · 正片叠底",
@@ -1071,8 +1077,11 @@ function shapeStyle(el) {
 layer.addEventListener("mousemove", (e) => {
   if (!tool || draft || editing) return;
   const r = layerPt(e);
-  // 悬浮已有标注：光标变移动（同类产品：随时可编辑）
-  if (tool !== "eraser" && pickObj(r.x, r.y)) { layer.style.cursor = "move"; return; }
+  // 悬浮已有标注：文字=文本光标（点字即改）、其他对象=移动光标（同类产品：随时可编辑）
+  if (tool !== "eraser") {
+    const hov = pickObj(r.x, r.y);
+    if (hov) { layer.style.cursor = hov.dataset.k === "text" ? "text" : "move"; return; }
+  }
   const corners = [[0, 0, "nwse-resize"], [1, 0, "nesw-resize"], [0, 1, "nesw-resize"], [1, 1, "nwse-resize"]];
   let cur = "crosshair";
   for (const [fx, fy, cur2] of corners) {
@@ -1321,9 +1330,9 @@ window.addEventListener("mouseup", () => {
     const dx = b2.l - b1.l, dy = b2.t - b1.t;
     if (dx || dy) pushUndo({ t: "move", el: d.el, dx, dy });
     mosaicPreview(d.el); // 马赛克/模糊=动态遮罩语义：移动后对新区域重新采样（曾漏：移动后仍是旧位置快照）
-    // 文字工具下单击（无位移）已有文字 = 直接进编辑（同款语义）：分发器 mousedown 已把
-    // 点击接管为 objDrag，layer 的 reEditText 分支到不了——在此补齐；拖动（有位移）仍是移动
-    if (!dx && !dy && tool === "text" && d.el.dataset.k === "text" && !editing) { reEditText(d.el); return; }
+    // 任何工具下单击（无位移）已有文字 = 直接进编辑（用户心智：点字即改，无需先切文字工具）；
+    // 拖动（有位移）仍是移动。分发器 mousedown 已把点击接管为 objDrag，layer 的 reEditText 分支到不了
+    if (!dx && !dy && d.el.dataset.k === "text") { reEditText(d.el); return; }
     setObjSel(d.el);
   } else if (d.type === "objend") {
     const after = JSON.parse(d.el.dataset.geom);
@@ -1529,7 +1538,10 @@ function refreshTextToolbar() {
   if (pc) pc.style.background = toolColor;
 }
 function reEditText(el) {
-  if (editing || el.dataset.k !== "text") return;
+  // 入口不变量：任何残留的编辑态先收掉（反复来回修改场景，编辑目标可任意切换）
+  if (editing === el) return; // 已在编辑本对象：无操作
+  if (editing) finishText(editing);
+  if (el.dataset.k !== "text") return;
   objDrag = null; // 双击后不残留拖拽，避免编辑中移动
   setObjSel(null); setHover(null);
   loadTextPropsFrom(el); // 回填：编辑中属性操作基于对象当前值，不重置其他项
@@ -1572,13 +1584,17 @@ window.addEventListener("mousemove", (e) => {
   if (tool === "eraser") return; // 橡皮擦有自己的删除高亮
   if (state !== "selected" && state !== "drawing") return;
   const r = layerPt(e);
-  setHover(pickObj(r.x, r.y));
+  const hov = pickObj(r.x, r.y);
+  setHover(hov);
+  // 选择模式（layer 不接收指针事件）下同样给可编辑暗示：文字=文本光标、其他=移动光标
+  if (!tool) stage.style.cursor = hov ? (hov.dataset.k === "text" ? "text" : "move") : "default";
 });
 window.addEventListener("dblclick", (e) => {
   // 双击文字进编辑：不再要求 !tool（画完文字 tool 仍为 text）也不看 objDrag
   //（单击选中的拖拽在 mouseup 已清；此处 reEditText 内部再清一次兜底）
   if (editing || ann || draft) return;
-  if (tool && tool !== "text") return; // 无工具/文字工具下双击=编辑；其他工具保持单击选中语义
+  // 任何工具状态下双击文字=进编辑（业界直接操纵惯例；画图起始已被分发器 obj 命中接管，
+  // 双击不会误画图形；橡皮擦下第一击已删除对象，此处 pickObj 不中自然无事）
   if (state !== "selected" && state !== "drawing") return;
   const r = layerPt(e);
   const hit = pickObj(r.x, r.y);
@@ -1732,7 +1748,7 @@ function setObjSel(el) {
   document.body.classList.toggle("obj-selected", !!el);
   // 清掉同对象的悬浮轮廓（否则选中后轮廓残留成多余虚线框）
   if (el && hoverEl === el) setHover(null);
-  if (!el) { objselEl.style.display = "none"; clearArrowAnchors(); clearRotAnchor(); return; }
+  if (!el) { objselEl.style.display = "none"; clearArrowAnchors(); clearRotAnchor(); syncPanelFor(null); return; }
   const k = el.dataset.k;
   if (k === "text") loadTextPropsFrom(el); // 选中即回填：属性栏显示对象值，单点修改不重置其他项
   else if (k === "arrow" || k === "pen" || k === "rect" || k === "ellipse" || k === "marker") {
@@ -1785,6 +1801,7 @@ function setObjSel(el) {
     clearArrowAnchors();
     clearRotAnchor(); // mosaic/num：引擎暂不支持旋转，不提供锚（保证所见即所得）
   }
+  syncPanelFor(el); // 上下文感知面板：属性区切换为该对象类型的可编辑项
   const b = objBBox(el);
   placeObjsel(b);
   // 选中框随对象旋转（同类产品：手柄框跟着转，锚点钉在框角）
@@ -2181,8 +2198,13 @@ async function output(action) {
   } else if (action === "ocr") {
     await invoke("freeze_deliver", { ...rect, action: "ocr" });
   } else if (action === "pin") {
+    // 业界同款贴图：选区图是物理像素，scale=1 → 贴图原位原大覆盖选区；
+    // pad=24 逻辑像素的物理值，给四边阴影留绘制区（窗口比图像大一圈）
     const base = await invoke("freeze_take_region", rect);
-    await invoke("pin_create", { path: base.path, x: rect.x, y: rect.y, scale: 1 / dprV });
+    await invoke("pin_create", { path: base.path, x: rect.x, y: rect.y, scale: 1, pad: Math.round(24 * dprV) });
+    // 贴图即终截图：贴图在选区原位浮出的同时覆盖层退场（同类产品 同款无缝衔接）
+    await closeOverlay();
+    return;
   } else {
     // copy | save：save 不占剪贴板（Rust 侧按 action 区分）
     await invoke("freeze_deliver", { ...rect, action });
@@ -2306,6 +2328,7 @@ window.addEventListener("keydown", (e) => {
     }
     return;
   }
+  if (k === "d") { e.preventDefault(); output("pin"); return; } // 贴图（D=钉）。曾也绑 F3（同款语义），因常被驻留的 同类产品/同类产品 全局热键抢占、且会误触它们的贴图，用户裁定去除
   if (k === "enter") { e.preventDefault(); if (!e.repeat && (state === "selected" || state === "drawing")) output("copy"); return; } // preventDefault：焦点在工具栏按钮时 Enter 会再触发一次 click；e.repeat：按住/键盘重复会在 ~58ms 内连发（用户实测同秒双输出）
   if (k === "tab") {
     e.preventDefault();

@@ -15,10 +15,14 @@ static PIN_SEQ: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new
 pub struct PinMeta {
     pub id: u32,
     pub path: String,
+    /// 窗口位置（物理，含阴影边距外扩）
     pub x: i32,
     pub y: i32,
+    /// 图像内容尺寸（物理像素，不含阴影边距）
     pub w: u32,
     pub h: u32,
+    /// 阴影边距（物理像素，窗口 = 图像 + 2*pad；0 = 无边距）
+    pub pad: u32,
     pub scale: f32,
     pub opacity: f32,
     pub clickthrough: bool,
@@ -41,6 +45,8 @@ fn pin_window(app: &AppHandle, id: u32) -> Option<tauri::WebviewWindow> {
 }
 
 /// 创建贴图：把 png 钉在桌面 (x,y)（物理坐标），尺寸=图像像素×scale。
+/// pad：四边阴影边距（物理像素）——窗口比图像大一圈，阴影画在边距区（业界同款
+/// 贴图即选区原位原大浮出）；pad=0 时窗口=图像（老语义）。
 #[tauri::command]
 pub async fn pin_create(
     app: AppHandle,
@@ -48,15 +54,20 @@ pub async fn pin_create(
     x: Option<i32>,
     y: Option<i32>,
     scale: Option<f32>,
+    pad: Option<u32>,
 ) -> Result<u32, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("读取失败：{e}"))?;
     let (w, h, _) = once_core::capture::decode_png(&bytes).map_err(|e| e.to_string())?;
     let id = PIN_SEQ.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     let scale = scale.unwrap_or(1.0);
-    let px = x.unwrap_or(120);
-    let py = y.unwrap_or(120);
-    let pw = ((w as f32) * scale).round() as u32;
-    let ph = ((h as f32) * scale).round() as u32;
+    let pad = pad.unwrap_or(0);
+    // 图像内容尺寸（物理）；窗口整体再向外扩 pad 一圈承载阴影
+    let iw = ((w as f32) * scale).round() as u32;
+    let ih = ((h as f32) * scale).round() as u32;
+    let px = x.unwrap_or(120) - pad as i32;
+    let py = y.unwrap_or(120) - pad as i32;
+    let pw = iw + 2 * pad;
+    let ph = ih + 2 * pad;
 
     let label = format!("pin-{id}");
     let url = WebviewUrl::App("pin.html".into());
@@ -95,8 +106,9 @@ pub async fn pin_create(
             path: path.clone(),
             x: px,
             y: py,
-            w: pw,
-            h: ph,
+            w: iw,
+            h: ih,
+            pad,
             scale,
             opacity: 1.0,
             clickthrough: false,
@@ -111,7 +123,7 @@ pub fn pin_meta(id: u32) -> Result<PinMeta, String> {
     pins().get(&id).cloned().ok_or_else(|| "贴图不存在".into())
 }
 
-/// 贴图缩放（滚轮 / 管理面板）
+/// 贴图缩放（滚轮 / 管理面板）——按图像内容尺寸缩放，窗口同步补上阴影边距
 #[tauri::command]
 pub fn pin_scale(app: AppHandle, id: u32, factor: f32) -> Result<(), String> {
     let mut m = pins();
@@ -120,7 +132,7 @@ pub fn pin_scale(app: AppHandle, id: u32, factor: f32) -> Result<(), String> {
         let nw = ((meta.w as f32) * factor).round() as u32;
         let nh = ((meta.h as f32) * factor).round() as u32;
         if (32..=8000).contains(&nw) && (32..=8000).contains(&nh) {
-            let _ = win.set_size(tauri::PhysicalSize::new(nw, nh));
+            let _ = win.set_size(tauri::PhysicalSize::new(nw + 2 * meta.pad, nh + 2 * meta.pad));
             meta.w = nw;
             meta.h = nh;
             meta.scale *= factor;
@@ -137,6 +149,20 @@ pub fn pin_opacity(app: AppHandle, id: u32, opacity: f32) -> Result<(), String> 
     let Some(meta) = m.get_mut(&id) else { return Err("贴图不存在".into()) };
     meta.opacity = opacity.clamp(0.1, 1.0);
     let _ = app.emit_to(format!("pin-{id}"), "pin-opacity", meta.opacity);
+    Ok(())
+}
+
+/// 不透明度相对步进（Ctrl+滚轮）：以当前值为基准 ±delta（10 档语义）——
+/// 曾用前端"1±0.05"绝对式，基准恒为 1，连续滚动只到 0.95（用户报"变化不明显"的真根因）
+#[tauri::command]
+pub fn pin_opacity_step(app: AppHandle, id: u32, delta: f32) -> Result<(), String> {
+    use tauri::Emitter;
+    let mut m = pins();
+    let Some(meta) = m.get_mut(&id) else { return Err("贴图不存在".into()) };
+    meta.opacity = (meta.opacity + delta).clamp(0.1, 1.0);
+    let v = meta.opacity;
+    drop(m);
+    let _ = app.emit_to(format!("pin-{id}"), "pin-opacity", v);
     Ok(())
 }
 

@@ -622,8 +622,168 @@ const t36 = await evl(`(function(){
 })()`);
 check("T36 二次编辑改内容可撤销可重做", t36.after === "改过的话" && t36.undone === "原文内容" && t36.redone === "改过的话", JSON.stringify(t36));
 
-// 收尾清场
+// T37（新增）画图工具激活下双击文字=进编辑且不误画图形（用户：画一堆形状后回头改文字，双击无反应）
+const t37 = await evl(`(function(){
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null);
+  setTool("rect");
+  const el = document.createElement("div");
+  el.className = "obj"; el.dataset.k = "text";
+  el.dataset.text = "形状后编辑";
+  el.dataset.params = JSON.stringify({ family:"default", size:20, color:"#FF3B30", bold:false, italic:false, underline:false, shadow:false, stroke:false, align:"left", line_height:1.0, background:null, bg_opacity:null, bg_radius:null });
+  el.style.cssText = "position:absolute;left:150px;top:120px;font-size:20px;color:#FF3B30;";
+  el.textContent = "形状后编辑";
+  layer.appendChild(el);
+  const cx = parseFloat(el.style.left) + el.offsetWidth / 2, cy = parseFloat(el.style.top) + el.offsetHeight / 2;
+  const mk = (t, x, y, cc) => new MouseEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, buttons: t === "mouseup" ? 0 : 1, detail: cc });
+  el.dispatchEvent(mk("mousedown", cx, cy, 1));
+  document.body.dispatchEvent(mk("mouseup", cx, cy, 1));
+  el.dispatchEvent(mk("mousedown", cx, cy, 2));
+  document.body.dispatchEvent(mk("mouseup", cx, cy, 2));
+  el.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0, detail: 2 }));
+  const rects = [...document.querySelectorAll("#layer .obj")].filter(o => o.dataset.k === "rect").length;
+  return { editing: !!editing, txtedit: !!document.querySelector(".txtedit"), rects, tool: tool };
+})()`);
+check("T37 rect 工具下双击文字=进编辑且不误画", t37.editing === true && t37.rects === 0, JSON.stringify(t37));
+
+// T38（新增）任意工具下单击文字=直接进编辑（用户心智：点字即改；此前仅文字工具有效）
+const t38 = await evl(`(function(){
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null); editing = null;
+  setTool("arrow");
+  const el = document.createElement("div");
+  el.className = "obj"; el.dataset.k = "text";
+  el.dataset.text = "箭头工具下点我";
+  el.dataset.params = JSON.stringify({ family:"default", size:20, color:"#FF3B30", bold:false, italic:false, underline:false, shadow:false, stroke:false, align:"left", line_height:1.0, background:null, bg_opacity:null, bg_radius:null });
+  el.style.cssText = "position:absolute;left:150px;top:120px;font-size:20px;color:#FF3B30;";
+  el.textContent = "箭头工具下点我";
+  layer.appendChild(el);
+  const cx = parseFloat(el.style.left) + el.offsetWidth / 2, cy = parseFloat(el.style.top) + el.offsetHeight / 2;
+  const mk = (t, x, y) => new MouseEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, buttons: t === "mouseup" ? 0 : 1 });
+  el.dispatchEvent(mk("mousedown", cx, cy));
+  document.body.dispatchEvent(mk("mouseup", cx, cy));
+  return { editing: !!editing, txtedit: !!document.querySelector(".txtedit"), tool: tool };
+})()`);
+check("T38 箭头工具下单击文字=直接进编辑", t38.editing === true && t38.txtedit === true, JSON.stringify(t38));
+// T38b 编辑态拖动保护：editing 残留场景（点文字外空白退出）后再单击=进编辑
 await evl(`(function(){ document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null); editing = null; return "clean"; })()`);
+
+// T39-T41（新增）上下文感知面板：选中对象时属性区切换为该对象类型的可编辑项（业界主流），
+// 且不打断当前画图工具——取消选中后面板回落为当前工具的
+const t39 = await evl(`(function(){
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null); editing = null;
+  setTool("arrow"); // 画图工具=箭头
+  const el = document.createElement("div");
+  el.className = "obj"; el.dataset.k = "mosaic";
+  el.dataset.params = JSON.stringify({ lw: 4, color: "#000000", fill: "none", mos: 22, mode: "blur", dash: false, radius: 0, opacity: 1 });
+  el.style.cssText = "position:absolute;left:400px;top:150px;width:100px;height:60px;";
+  layer.appendChild(el);
+  setObjSel(el);
+  const rng = document.getElementById("pr-mos-range");
+  return { tool, mosPanel: document.getElementById("pr-mos").classList.contains("on"), mos: mosStrength, mode: mosMode, rangeVal: rng ? rng.value : null };
+})()`);
+check("T39 箭头工具下选中马赛克=强度面板出现并回填", t39.mosPanel === true && t39.mos === 22 && t39.mode === "blur" && t39.rangeVal === "22", JSON.stringify(t39));
+
+const t40 = await evl(`(function(){
+  setObjSel(null);
+  const el = document.createElement("div");
+  el.className = "obj"; el.dataset.k = "ellipse";
+  el.dataset.params = JSON.stringify({ lw: 3, color: "#00A2E8", fill: "solid", dash: true, radius: 12, opacity: 0.7 });
+  el.style.cssText = "position:absolute;left:100px;top:150px;width:120px;height:80px;";
+  layer.appendChild(el);
+  setObjSel(el);
+  const shapePanel = document.getElementById("pr-shape").classList.contains("on");
+  const round = [...document.querySelectorAll("#pr-round button")].findIndex((b) => b.classList.contains("on"));
+  const opr = document.getElementById("pr-opacity-range");
+  return { tool, shapePanel, roundIs12: round === 1, opacity: shapeOpacity, opVal: opr ? opr.value : null, fill: fillMode, dash: shapeDash };
+})()`);
+check("T40 箭头工具下选中椭圆=形状面板+fill/圆角/透明度回填", t40.shapePanel === true && t40.roundIs12 === true && t40.opacity === 0.7 && t40.opVal === "70" && t40.fill === "solid" && t40.dash === true, JSON.stringify(t40));
+
+const t41 = await evl(`(function(){
+  setObjSel(null); // 点空白取消选中
+  return { mosPanel: document.getElementById("pr-mos").classList.contains("on"), shapePanel: document.getElementById("pr-shape").classList.contains("on"), arrowPanel: document.getElementById("pr-arrow").classList.contains("on"), tool };
+})()`);
+check("T41 取消选中后面板回落为当前画图工具（箭头）", t41.mosPanel === false && t41.shapePanel === false && t41.arrowPanel === true, JSON.stringify(t41));
+
+// T42（新增）悬停可编辑暗示（B1/C1）：任意工具下悬停文字=text 光标、其他对象=move、空白=恢复
+const t42 = await evl(`(function(){
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null); editing = null;
+  setTool("arrow");
+  const txt = document.createElement("div");
+  txt.className = "obj"; txt.dataset.k = "text";
+  txt.dataset.text = "悬停文字"; txt.dataset.params = JSON.stringify({ family:"default", size:20, color:"#FF3B30", bold:false, italic:false, underline:false, shadow:false, stroke:false, align:"left", line_height:1.0, background:null, bg_opacity:null, bg_radius:null });
+  txt.style.cssText = "position:absolute;left:150px;top:120px;font-size:20px;color:#FF3B30;";
+  txt.textContent = "悬停文字";
+  layer.appendChild(txt);
+  const box = document.createElement("div");
+  box.className = "obj"; box.dataset.k = "rect";
+  box.dataset.params = JSON.stringify({ lw: 4, color: "#FF3B30", fill: "none", dash: false, radius: 0, opacity: 1 });
+  box.style.cssText = "position:absolute;left:400px;top:150px;width:120px;height:80px;";
+  layer.appendChild(box);
+  const mk = (x, y) => new MouseEvent("mousemove", { bubbles: true, cancelable: true, clientX: x, clientY: y });
+  const lay = layer;
+  // 悬停文字（事件从文字元素进入，layer 收集光标）
+  txt.dispatchEvent(mk(230, 140));
+  const overText = layer.style.cursor;
+  // 悬停矩形
+  box.dispatchEvent(mk(460, 190));
+  const overRect = layer.style.cursor;
+  // 悬停空白（layer 覆盖全选区，空白也由 layer 接收）
+  lay.dispatchEvent(mk(700, 500));
+  const overBlank = layer.style.cursor;
+  // 选择模式（无工具）：window 级 hover + stage 光标
+  setTool(null);
+  document.body.dispatchEvent(mk(230, 140));
+  const selModeText = stage.style.cursor;
+  const selModeHover = hoverEl ? hoverEl.dataset.k : null;
+  setTool("arrow");
+  stage.style.cursor = "";
+  document.querySelectorAll("#layer .obj").forEach(e => e.remove()); setObjSel(null);
+  return { overText, overRect, overBlank, selModeText, selModeHover };
+})()`);
+check("T42 悬停暗示：文字=text/其他=move/空白=crosshair/选择模式=文字暗示", t42.overText === "text" && t42.overRect === "move" && t42.overBlank === "crosshair" && t42.selModeText === "text" && t42.selModeHover === "text", JSON.stringify(t42));
+
+// ===== T43/T44（新增）业界同款贴图三语义：原位原大（scale=1+pad>0）、贴图即终截图（overlay_close）、F3 快捷键 =====
+// 独立会话段：goto 复位规避长链路事件污染（合成事件失效坑）
+await goto();
+await evl(`window.__errs = []; window.addEventListener("error", e => window.__errs.push(e.message + " @ " + (e.filename||"") + ":" + e.lineno)); "hooked"`);
+
+// T43 点贴图按钮：pin_create 收到 scale=1（物理图 1:1）、pad>0（四边阴影边距）、坐标=选区物理原点；随后 overlay_close（终截图）
+let t43 = await evl(`(async () => {
+  window.__invokes = [];
+  sel = { x: 100, y: 80, w: 400, h: 300 };
+  setState("selected");
+  document.getElementById("tb-pin").click();
+  await new Promise(r => setTimeout(r, 400));
+  const pc = (window.__invokes || []).find(i => i.cmd === "pin_create");
+  const closed = (window.__invokes || []).some(i => i.cmd === "overlay_close");
+  return { pc: pc ? pc.args : null, closed, dpr: dprV, ex: toPhys(100), ey: toPhys(80), ew: toPhys(400), eh: toPhys(300) };
+})()`, true);check("T43 贴图=原位原大+四边阴影边距+贴图即终截图", !!t43.pc && t43.pc.scale === 1 && t43.pc.pad > 0 && t43.pc.x === t43.ex && t43.pc.y === t43.ey && t43.closed, JSON.stringify(t43));
+
+// T44（用户裁定反转）：F3 不再触发贴图——F3 常被驻留的 同类产品/同类产品 全局热键抢占（按下会误触它们的贴图），
+// 用户裁定去除 F3 只留 D；此用例守护"F3 不触发"，防止将来误加回
+let t44 = await evl(`(async () => {
+  window.__invokes = [];
+  sel = { x: 50, y: 60, w: 200, h: 150 };
+  setState("selected");
+  window.dispatchEvent(new KeyboardEvent("keydown", { key: "F3", bubbles: true }));
+  await new Promise(r => setTimeout(r, 400));
+  const pc = (window.__invokes || []).find(i => i.cmd === "pin_create");
+  const closed = (window.__invokes || []).some(i => i.cmd === "overlay_close");
+  return { hasPc: !!pc, closed };
+})()`, true);
+check("T44 F3 不触发贴图（用户裁定去除，D 为唯一快捷键）", !t44.hasPc && !t44.closed, JSON.stringify(t44));
+
+// T45（新增）D 键触发贴图：D（钉）为贴图唯一快捷键（F3 已按用户裁定去除）
+let t45 = await evl(`(async () => {
+  window.__invokes = [];
+  sel = { x: 40, y: 50, w: 220, h: 160 };
+  setState("selected");
+  window.dispatchEvent(new KeyboardEvent("keydown", { key: "d", bubbles: true }));
+  await new Promise(r => setTimeout(r, 400));
+  const pc = (window.__invokes || []).find(i => i.cmd === "pin_create");
+  const closed = (window.__invokes || []).some(i => i.cmd === "overlay_close");
+  return { hasPc: !!pc, pc: pc ? pc.args : null, closed };
+})()`, true);
+check("T45 D 键触发贴图（原位+终截图）", t45.hasPc && t45.pc.scale === 1 && t45.pc.pad > 0 && t45.closed, JSON.stringify(t45));
 
 console.log('PAGE ERRORS:', await evl('JSON.stringify(window.__errs||[])'));
 const fails = results.filter((r) => !r.ok).length;

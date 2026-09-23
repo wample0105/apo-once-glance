@@ -196,6 +196,7 @@ fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
     // 先冻结再移回：窗口恒可见（屏外驻留），若先移回，屏上立刻显示上一轮旧画面，
     // freeze 会把它拍进新背景，造成逐轮叠加残留。必须趁窗口仍在屏外时截屏。
     let frozen = scrollcmd::freeze_begin_inner_ok();
+    eprintln!("[ov-t] freeze {:?}", t0.elapsed());
     win.set_size(PhysicalSize::new(m.rect.2 as u32, m.rect.3 as u32))?;
     win.set_position(PhysicalPosition::new(m.rect.0, m.rect.1))?;
     // 无边框窗口在 Windows 仍有不可见命中测试边框：外框对齐显示器 ≠ 客户区对齐。
@@ -207,6 +208,7 @@ fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
             win.set_position(PhysicalPosition::new(m.rect.0 - dx, m.rect.1 - dy))?;
         }
     }
+    eprintln!("[ov-t] move-back {:?}", t0.elapsed());
     // 热键路径：冻结图已在移回前截好（纯净画面），随后推送激活事件（JS 已驻留，收事件即渲染蒙版）
     let mut payload = serde_json::json!({ "kind": kind });
     if let Some(f) = frozen {
@@ -215,10 +217,13 @@ fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
         payload["height"] = serde_json::Value::from(f.2);
     }
     // 窗口恒可见（屏外驻留），移回即显示；emit 前等页面就绪（监听已挂），杜绝冷启动事件丢失
+    let mut ready_polls = 0usize;
     for _ in 0..40 {
         if OVERLAY_READY.load(Ordering::SeqCst) { break; }
+        ready_polls += 1;
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
+    eprintln!("[ov-t] ready-wait polls={} {:?}", ready_polls, t0.elapsed());
     OVERLAY_ACTIVE.store(true, Ordering::SeqCst);
     // 自愈：长截图路径可能残留 WS_EX_LAYERED|WS_EX_TRANSPARENT（未恢复时窗口全透明
     // 且蒙版收不到点击）——每次激活强制回归可点击态
@@ -228,6 +233,7 @@ fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
     // 必须用 RedrawWindow(RDW_UPDATENOW) 同步强制：仅异步 InvalidateRect 会被吞
     //（用户实测"激活了但全透明遮罩点不动"= 合成未恢复，窗口隐形挡住全屏）
     kick_repaint(&win);
+    eprintln!("[ov-t] kick1 {:?}", t0.elapsed());
     *OVERLAY_PENDING.lock().unwrap() = Some(payload.clone());
     let _ = win.emit("overlay-activate", &payload);
     // JS 收到事件渲染蒙版是另一帧：再 kick 一次确保蒙版上屏
@@ -773,6 +779,7 @@ pub fn run() {
             pin::pin_meta,
             pin::pin_scale,
             pin::pin_opacity,
+            pin::pin_opacity_step,
             pin::pin_clickthrough,
             pin::pin_close,
             pin::pin_list,
