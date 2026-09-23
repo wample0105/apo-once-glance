@@ -96,6 +96,26 @@
   .ptitle { font-size: 15px; font-weight: 500; margin-bottom: 2px; }
   .psub { font-size: 12px; color: var(--text-tertiary); margin-bottom: 14px; line-height: 1.6; }
 
+  /* 首页动作卡片（业界同款动作导向）：主推卡横贯 + 次卡网格 */
+  .actiongrid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .hero-card {
+    position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+    padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: #fff;
+    cursor: pointer; text-align: left; transition: border-color .12s, box-shadow .12s, transform .12s;
+  }
+  .hero-card:hover { border-color: var(--accent); box-shadow: 0 4px 14px rgba(0,0,0,.08); transform: translateY(-1px); }
+  .hero-card svg { width: 24px; height: 24px; color: var(--accent); }
+  .hero-card .hc-name { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+  .hero-card .hc-desc { font-size: 11.5px; color: var(--text-tertiary); }
+  .hero-card .kbd { position: absolute; right: 10px; top: 12px; }
+  .hero-card.primary {
+    background: linear-gradient(135deg, #FFF3F0, #FFF9F8); border-color: #FFD2C9;
+  }
+  .hero-card.primary svg { width: 30px; height: 30px; }
+  .hero-card.primary .hc-name { font-size: 15px; }
+  .recenthead { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+  .recenthead .rh-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+
   /* 历史操作条 */
   .actionbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
   .searchrow { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
@@ -245,8 +265,8 @@
   <div id="winbody">
     <nav id="nav">
       <button class="nav-item active" data-page="history">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.5V8l2.5 1.8"/></svg>
-        历史
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+        首页
       </button>
       <button class="nav-item" data-page="theme">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10.8 2.6l2.6 2.6L6 12.6l-3.4.8.8-3.4z"/></svg>
@@ -268,28 +288,49 @@
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9h2l1.5-4 3 6.5L11 9h2"/></svg>
         诊断
       </button>
-      <div class="ver"><span class="statusdot" id="status-dot" title="诊断状态"></span><span id="ver-text">v0.1.0</span></div>
+      <div class="ver"><span class="statusdot" id="status-dot" title="诊断状态"></span><span id="ver-text">v0.1.1</span></div>
     </nav>
 
     <main id="content">
-      <!-- ===== 历史 ===== -->
+      <!-- ===== 首页：动作卡片 + 最近截图（业界同款动作导向 + 记录速达）===== -->
       <section class="page on" id="page-history">
-        <div class="actionbar">
-          <button class="btn primary" id="act-region">区域截图 <span class="kbd">Alt+Shift+A</span></button>
-          <button class="btn" id="act-window">窗口 <span class="kbd">Alt+Shift+W</span></button>
-          <button class="btn" id="act-fullscreen">全屏 <span class="kbd">Alt+Shift+F</span></button>
-          <button class="btn" id="act-ocr">取字 <span class="kbd">Alt+Shift+T</span></button>
-          <button class="btn" id="act-scroll">长截图 <span class="kbd">Alt+Shift+L</span></button>
+        <div id="home-view">
+          <div class="actiongrid">
+            <button class="hero-card primary" id="act-region">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V4h3M17 4h3v3M21 17v3h-3M7 20H4v-3"/><rect x="8" y="8" width="8" height="8" rx="1" stroke-dasharray="2 2"/></svg>
+              <span class="hc-name">截图</span>
+              <span class="hc-desc">框选任意区域，标注后保存（窗口吸附规划中）</span>
+              <span class="kbd">Alt+Shift+A</span>
+            </button>
+            <button class="hero-card" id="card-agent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 7V4M9 4h6"/><circle cx="9" cy="13" r="1" fill="currentColor"/><circle cx="15" cy="13" r="1" fill="currentColor"/></svg>
+          <span class="hc-name">AI Agent 接入</span>
+          <span class="hc-desc">让 Claude/Codex 等 Agent 调用截图、OCR 与标注</span>
+          <span class="kbd">MCP</span>
+        </button>
+          </div>
+          <div class="recenthead">
+            <span class="rh-title">最近截图</span>
+            <span style="flex:1"></span>
+            <button class="btn ghost" id="recent-all">查看全部 ↓</button>
+          </div>
+          <div id="recent-strip" class="grid"></div>
         </div>
-        <div class="searchrow">
-          <input id="search" type="text" placeholder='试试 kind:window 或 after:昨天（OCR 全文检索）'>
-          <span class="metaline" id="pathmeta"></span>
+        <div id="history-full" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <button class="btn ghost" id="back-home">↑ 返回首页</button>
+            <span style="font-size:12.5px;font-weight:500">全部截图</span>
+          </div>
+          <div class="searchrow">
+            <input id="search" type="text" placeholder='试试 kind:window 或 after:昨天（OCR 全文检索）'>
+            <span class="metaline" id="pathmeta"></span>
+          </div>
+          <div class="syntaxhint">搜索语法：<code>kind:window</code> <code>after:昨天</code> <code>has:annotated</code> <code>ocr:failed</code>，或直接输入文字</div>
+          <div id="history-list"></div>
         </div>
-        <div class="syntaxhint">搜索语法：<code>kind:window</code> <code>after:昨天</code> <code>has:annotated</code> <code>ocr:failed</code>，或直接输入文字</div>
-        <div id="history-list"></div>
       </section>
 
-      <!-- ===== 标注主题（只读管理视图，§4.8）===== -->
+            <!-- ===== 标注主题（只读管理视图，§4.8）===== -->
       <section class="page" id="page-theme">
         <div class="ptitle">标注主题</div>
         <div class="psub">调参入口在标注编辑器——这里展示的是编辑器自动记忆的"上次使用值"。本页不做第二套参数，也不需要保存。</div>
@@ -385,7 +426,7 @@ curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wampl
       <!-- ===== 资产详情（§4.6：文字块与图片联动）===== -->
       <section class="page" id="page-detail">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-          <button class="btn ghost" id="detail-back">← 返回历史</button>
+          <button class="btn ghost" id="detail-back">← 返回</button>
           <span style="font-size:12.5px;font-weight:500" id="detail-name"></span>
           <span class="tagok" id="detail-kind" style="display:none"></span>
         </div>
@@ -472,7 +513,7 @@ curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wampl
         </div>
         <div class="ptitle" style="font-size:13px">关于</div>
         <div class="group">
-          <div class="row"><div class="label"><div class="t">版本</div></div><div class="ctl ro-value">v0.1.0 · MIT</div></div>
+          <div class="row"><div class="label"><div class="t">版本</div></div><div class="ctl ro-value">v0.1.1 · MIT</div></div>
           <div class="row"><div class="label"><div class="t">零云端承诺</div></div><div class="ctl ro-value">零 API Key · 零上传 · 零遥测</div></div>
         </div>
       </section>
