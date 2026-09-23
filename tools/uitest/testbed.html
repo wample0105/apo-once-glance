@@ -601,7 +601,7 @@
     }
     #cancel-x:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
   </style>
-  <script>window.__TAURI__ = { core: { invoke: async (cmd, args) => { if (cmd === "get_overlay_kind") return ""; if (cmd === "freeze_begin") return { dataUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" }; if (cmd === "get_settings") return { annotation: {} }; if (cmd === "set_setting") { window.__saved = window.__saved || []; window.__saved.push(args && args.value); return null; } return null; }, convertFileSrc: (p) => p } };</script><script src="../../ui/js/overlay.js"></script>
+  <script>window.__TAURI__ = { core: { invoke: async (cmd, args) => { (window.__invokes = window.__invokes || []).push({ cmd, args }); if (cmd === "get_overlay_kind") return ""; if (cmd === "freeze_begin") return { dataUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" }; if (cmd === "get_settings") return { annotation: {} }; if (cmd === "set_setting") { window.__saved = window.__saved || []; window.__saved.push(args && args.value); return null; } if (cmd === "freeze_take_region") return { path: "C:/__tb_base.png" }; if (cmd === "pin_create") return 7; return null; }, convertFileSrc: (p) => p } };</script><script src="../../ui/js/overlay.js"></script>
   <script src="../../ui/js/annotate.js"></script>
 </body>
 </html>

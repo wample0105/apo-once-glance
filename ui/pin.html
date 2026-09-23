@@ -6,14 +6,15 @@
 <style>
   html, body {
     width: 100%; height: 100%; margin: 0;
+    box-sizing: border-box; /* body 的 JS 动态 padding 需在 100% 内扣除，否则 img 被视口裁掉 */
     overflow: hidden; background: transparent;
     user-select: none;
   }
   img {
     width: 100%; height: 100%;
     display: block;
-    /* 业界同款贴图默认带一圈细阴影，增强层次 */
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+    /* 业界同款柔和大阴影：窗口四边由 Rust 侧 pad 外扩出绘制区，阴影落在其内 */
+    box-shadow: 0 5px 16px rgba(0, 0, 0, 0.50), 0 1px 4px rgba(0, 0, 0, 0.38);
     cursor: move;
   }
   /* 悬停角标：关闭/穿透/缩小提示 */
@@ -25,11 +26,22 @@
     display: none;
   }
   body:hover #hint { display: block; }
+  /* 不透明度 HUD：调整时中央显示当前档位，淡出 */
+  #ophud {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.65); color: #fff;
+    font: 600 22px/1 -apple-system, "Segoe UI", sans-serif;
+    padding: 12px 18px; border-radius: 8px;
+    display: none; pointer-events: none;
+    transition: opacity 0.25s ease-out;
+  }
 </style>
 </head>
 <body>
   <img id="img" alt="">
   <div id="hint">双击关闭 · 滚轮缩放 · Ctrl+滚轮透明度</div>
+  <div id="ophud">100%</div>
   <script src="js/pin.js"></script>
 </body>
 </html>
