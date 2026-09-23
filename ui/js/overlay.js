@@ -58,6 +58,7 @@ function toPhys(v) { return Math.round(v * dpr()); }
 // 预驻留待命：页面加载后只挂激活监听；热键时 Rust 冻结+显示+推事件（秒开路径）
 // 每次激活前清上次会话（预驻留窗口复用，状态不残留）
 function resetOverlayState() {
+  document.body.classList.remove("ls-mode"); // 退出长截图采集模式（选区框/蒙版还原）
   layer.innerHTML = ""; layer.style.display = "none"; layer.className = "";
   selEl.style.display = "none"; sizechip.style.display = "none";
   toolbar.style.display = "none";
@@ -2219,12 +2220,14 @@ async function closeOverlay() {
 }
 
 async function startLongshot() {
-  // 先快照选区物理坐标：overlay_hide（屏外驻留）会 emit overlay-cleared →
-  // resetOverlayState 把 sel 清零，等它落地后再读 sel 拿到的是 {0,0,0,0}
+  // 快照选区物理坐标（滚动采集全程要用）
   const sx = toPhys(sel.x), sy = toPhys(sel.y), sw = toPhys(sel.w), sh = toPhys(sel.h);
-  // 快照后再隐藏覆盖层：否则选区红框/手柄会被烤进长截图首段
+  // 业界同款采集模式：webview overlay 彻底退场（滚轮 hover 路由命中其 WebView2 子窗口、
+  // 子窗口无法穿透=滚轮被吞的根治），选区框改由 4 条原生 Win32 细窗指示（ls_frame_show），
+  // 框线在采集矩形外沿，拼接段零污染；实时画面/尺寸在 endbar 工具条上
   await invoke("overlay_hide");
-  await new Promise((r) => setTimeout(r, 180)); // 等 DWM 合成一帧
+  await invoke("ls_frame_show", { x: sx, y: sy, w: sw, h: sh });
+  await new Promise((r) => setTimeout(r, 180)); // 等 overlay park 落地（overlay-cleared → JS 复位）
   await invoke("scroll_start", { screen: 1, x: sx, y: sy, w: sw, h: sh });
 }
 
@@ -2293,6 +2296,7 @@ window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
   }
   if (ann) return; // 完整编辑器模式由 annotate.js 接管
+  if (document.body.classList.contains("ls-mode")) return; // 长截图采集模式：全部按键交给键盘钩子（Esc/Enter 已被钩子吞掉，其余键不得污染工具/选区状态）
   if (document.getElementById("escdlg").classList.contains("open")) {
     if (e.key === "Escape") document.getElementById("escdlg").classList.remove("open");
     return;
@@ -2329,6 +2333,7 @@ window.addEventListener("keydown", (e) => {
     return;
   }
   if (k === "d") { e.preventDefault(); output("pin"); return; } // 贴图（D=钉）。曾也绑 F3（同款语义），因常被驻留的 同类产品/同类产品 全局热键抢占、且会误触它们的贴图，用户裁定去除
+  if (k === "l") { e.preventDefault(); startLongshot(); return; } // 长截图（L=Long）：滚动采集，业界同款
   if (k === "enter") { e.preventDefault(); if (!e.repeat && (state === "selected" || state === "drawing")) output("copy"); return; } // preventDefault：焦点在工具栏按钮时 Enter 会再触发一次 click；e.repeat：按住/键盘重复会在 ~58ms 内连发（用户实测同秒双输出）
   if (k === "tab") {
     e.preventDefault();
