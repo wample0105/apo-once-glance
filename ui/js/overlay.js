@@ -59,6 +59,7 @@ function toPhys(v) { return Math.round(v * dpr()); }
 // 每次激活前清上次会话（预驻留窗口复用，状态不残留）
 function resetOverlayState() {
   document.body.classList.remove("ls-mode"); // 退出长截图采集模式（选区框/蒙版还原）
+  numGhostHide();
   layer.innerHTML = ""; layer.style.display = "none"; layer.className = "";
   selEl.style.display = "none"; sizechip.style.display = "none";
   toolbar.style.display = "none";
@@ -902,6 +903,7 @@ function setTool(t) {
   document.querySelectorAll("[data-tool]").forEach((b) => b.classList.toggle("on", b.dataset.tool === t || (b.dataset.tool === "shape" && (t === "rect" || t === "ellipse"))));
   layer.className = t === "eraser" ? "tool-eraser" : "";
   layer.style.cursor = t ? "crosshair" : "default";
+  if (t !== "num") numGhostHide();
   selEl.classList.toggle("moveable", !t); // 无工具：选区内整体手型可平移
   syncPanelFor(null); // 无选中：面板跟随当前画图工具
   const tips = {
@@ -1913,8 +1915,8 @@ function objRot(el) { return Number(el.dataset.rotation || 0); }
 function placeArrowAnchors(el) {
   const g = JSON.parse(el.dataset.geom);
   const s = document.getElementById("eanc-s"), e2 = document.getElementById("eanc-e");
-  s.style.left = (sel.x + g.x1 - 6) + "px"; s.style.top = (sel.y + g.y1 - 6) + "px";
-  e2.style.left = (sel.x + g.x2 - 6) + "px"; e2.style.top = (sel.y + g.y2 - 6) + "px";
+  s.style.left = (sel.x + g.x1 - 5) + "px"; s.style.top = (sel.y + g.y1 - 5) + "px";
+  e2.style.left = (sel.x + g.x2 - 5) + "px"; e2.style.top = (sel.y + g.y2 - 5) + "px";
   s.style.display = "block"; e2.style.display = "block";
 }
 function clearArrowAnchors() {
@@ -2558,3 +2560,37 @@ wireToolbar();
 wireCtxMenu();
 wireEscDlg();
 init();
+
+// ===== 业界同款序号"盖章"光标：num 工具激活时，鼠标位置显示下一个序号的幽灵预览 =====
+let numGhostEl = null;
+function numGhostHide() {
+  if (numGhostEl) numGhostEl.style.display = "none";
+}
+function numGhostRefresh() {
+  if (!numGhostEl) {
+    numGhostEl = document.createElement("div");
+    numGhostEl.id = "num-ghost";
+    numGhostEl.style.cssText = "position:fixed;display:none;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);";
+    const sp = document.createElement("span");
+    numGhostEl.appendChild(sp);
+    document.body.appendChild(numGhostEl);
+  }
+  const sp = numGhostEl.firstElementChild;
+  let css = "display:flex;align-items:center;justify-content:center;width:" + numDiameter + "px;height:" + numDiameter + "px;border-radius:50%;font-size:" + Math.round(numDiameter * 0.52) + "px;font-weight:600;";
+  if (numStyle === "solid") css += "background:" + toolColor + ";color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35)";
+  else if (numStyle === "outline") css += "border:" + Math.max(2, numDiameter * 0.07) + "px solid " + toolColor + ";color:" + toolColor + ";background:rgba(255,255,255,.85)";
+  else css += "color:" + toolColor + ";";
+  sp.style.cssText = css;
+  sp.textContent = numNext;
+}
+window.addEventListener("mousemove", (e) => {
+  if (tool !== "num" || editing || ann) { numGhostHide(); return; }
+  if (state !== "selected" && state !== "drawing") { numGhostHide(); return; }
+  const inLayer = e.target && (e.target === layer ? true : !!(layer && layer.contains(e.target)));
+  if (!inLayer) { numGhostHide(); return; }
+  numGhostRefresh();
+  numGhostEl.style.left = e.clientX + "px";
+  numGhostEl.style.top = e.clientY + "px";
+  numGhostEl.style.display = "block";
+  layer.style.cursor = "none"; // 盖章预览替代系统光标（注册最晚，覆盖 hover 暗示）
+});

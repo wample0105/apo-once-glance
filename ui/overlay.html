@@ -274,27 +274,27 @@
     border: 1.5px dashed #4da3ff; pointer-events: none;
   }
   #objsel .h {
-    position: absolute; width: 9px; height: 9px;
-    background: #fff; border: 1.5px solid #4da3ff; border-radius: 50%;
+    position: absolute; width: 10px; height: 10px; box-sizing: border-box;
+    background: #fff; border: 1.5px solid #4da3ff; border-radius: 1px;
     pointer-events: auto; display: none;
   }
-  #objsel .h::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; }
+  #objsel .h::after { content: ""; position: absolute; inset: -5px; }
   #objsel.resizable .h { display: block; }
-  #objsel .h.nw { left: -6px; top: -6px; cursor: nwse-resize; }
-  #objsel .h.ne { right: -6px; top: -6px; cursor: nesw-resize; }
-  #objsel .h.sw { left: -6px; bottom: -6px; cursor: nesw-resize; }
-  #objsel .h.se { right: -6px; bottom: -6px; cursor: nwse-resize; }
-  #objsel .h.n { left: 50%; top: -6px; margin-left: -5px; cursor: ns-resize; }
-  #objsel .h.s { left: 50%; bottom: -6px; margin-left: -5px; cursor: ns-resize; }
-  #objsel .h.w { left: -6px; top: 50%; margin-top: -5px; cursor: ew-resize; }
-  #objsel .h.e { right: -6px; top: 50%; margin-top: -5px; cursor: ew-resize; }
+  #objsel .h.nw { left: -5px; top: -5px; cursor: nwse-resize; }
+  #objsel .h.ne { right: -5px; top: -5px; cursor: nesw-resize; }
+  #objsel .h.sw { left: -5px; bottom: -5px; cursor: nesw-resize; }
+  #objsel .h.se { right: -5px; bottom: -5px; cursor: nwse-resize; }
+  #objsel .h.n { left: 50%; top: -5px; margin-left: -5px; cursor: ns-resize; }
+  #objsel .h.s { left: 50%; bottom: -5px; margin-left: -5px; cursor: ns-resize; }
+  #objsel .h.w { left: -5px; top: 50%; margin-top: -5px; cursor: ew-resize; }
+  #objsel .h.e { right: -5px; top: 50%; margin-top: -5px; cursor: ew-resize; }
   /* 箭头端点锚点：挂 body、直接钉在端点视口坐标（拖动改方向和长度） */
   .e-dot {
-    position: absolute; width: 12px; height: 12px;
-    background: #fff; border: 2px solid #e5484d; border-radius: 3px;
+    position: absolute; width: 10px; height: 10px; box-sizing: border-box;
+    background: #fff; border: 1.5px solid #4da3ff; border-radius: 1px;
     pointer-events: auto; display: none; cursor: move; z-index: 7;
   }
-  .e-dot::after { content: ""; position: absolute; inset: -6px; }
+  .e-dot::after { content: ""; position: absolute; inset: -5px; }
   /* 旋转锚 ◎：形状类标注选中时显示在对象上方，拖动绕中心旋转 */
   .rot-anc {
     position: absolute; width: 14px; height: 14px; border-radius: 50%;
