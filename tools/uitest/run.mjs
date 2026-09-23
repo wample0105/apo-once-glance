@@ -6,12 +6,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 const CHROME = "C:/Program Files/Google/Chrome/Application/chrome.exe";
-const PORT = 9333;
+const PORT = 9445;
 const BED = "file:///" + path.resolve("tools/uitest/testbed.html").replace(/\\/g, "/");
 
 const chrome = spawn(CHROME, [
   "--headless=new", "--remote-debugging-port=" + PORT,
-  "--user-data-dir=" + path.resolve("tools/uitest/.profile"),
+  "--user-data-dir=" + path.resolve("tools/uitest/.profile2"),
   "--window-size=1600,1000", "--no-first-run", "--no-default-browser-check",
   "about:blank",
 ], { stdio: "ignore" });
@@ -784,6 +784,31 @@ let t45 = await evl(`(async () => {
   return { hasPc: !!pc, pc: pc ? pc.args : null, closed };
 })()`, true);
 check("T45 D 键触发贴图（原位+终截图）", t45.hasPc && t45.pc.scale === 1 && t45.pc.pad > 0 && t45.closed, JSON.stringify(t45));
+
+// ===== T46（新增）业界同款长截图采集模式（方案演进 v2）：webview overlay 的子窗口
+// 无法穿透（滚轮 hover 路由命中 WebView2 子窗被吞）→ 改为 overlay park + 原生 4 细条框
+// （ls_frame_show）。断言调用序列与参数（框线在采集矩形外沿=拼接段零污染） =====
+await goto();
+await evl(`window.__errs = []; window.addEventListener("error", e => window.__errs.push(e.message + " @ " + (e.filename||"") + ":" + e.lineno)); "hooked"`);
+
+let t46 = await evl(`(async () => {
+  window.__invokes = [];
+  sel = { x: 60, y: 70, w: 300, h: 240 };
+  setState("selected");
+  await startLongshot();
+  await new Promise(r => setTimeout(r, 250));
+  const inv = (window.__invokes || []);
+  const seq = inv.map(i => i.cmd);
+  const fr = inv.find(i => i.cmd === "ls_frame_show");
+  const st = inv.find(i => i.cmd === "scroll_start");
+  return {
+    order: seq.indexOf("ls_frame_show") > seq.indexOf("overlay_hide") && seq.indexOf("scroll_start") > seq.indexOf("ls_frame_show"),
+    hid: seq.includes("overlay_hide"),
+    frame: fr ? fr.args : null,
+    start: st ? st.args : null,
+  };
+})()`, true);
+check("T46 采集模式：park+原生框条(选区物理坐标)+scroll_start 序列正确", t46.order && t46.hid && t46.frame && t46.frame.x === 60 && t46.frame.w === 300 && t46.start && t46.start.w === 300, JSON.stringify(t46));
 
 console.log('PAGE ERRORS:', await evl('JSON.stringify(window.__errs||[])'));
 const fails = results.filter((r) => !r.ok).length;

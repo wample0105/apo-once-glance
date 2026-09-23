@@ -99,6 +99,13 @@ pub(crate) async fn launch_overlay(app: AppHandle, kind: String) -> Result<(), S
 #[tauri::command]
 async fn start_overlay(app: AppHandle, kind: String) -> Result<(), String> {
     eprintln!("start_overlay called kind={kind}");
+    // 记录激活前的前台窗口（= 用户正在操作的应用）：长截图采集模式让焦时切回。
+    // 必须在任何窗口操作之前记录，否则前台已是 overlay 自己
+    {
+        use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+        let prev = unsafe { GetForegroundWindow() };
+        scrollcmd::PREV_FOREGROUND.store(prev.0 as isize, Ordering::SeqCst);
+    }
     // 截图态再按一次热键 = 退出（同类产品 手感；保证遮罩永远有办法退出）
     if OVERLAY_ACTIVE.swap(false, Ordering::SeqCst) {
         if let Some(w) = app.get_webview_window("overlay") {
@@ -146,6 +153,14 @@ pub(crate) fn park_overlay_offscreen(win: &tauri::WebviewWindow) {
 
 fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
     let t0 = std::time::Instant::now();
+    // 记录激活前的前台窗口（= 用户正在操作的应用）：长截图采集模式让焦时切回。
+    // 必须放本函数开头——热键路径直接调 show_overlay（不经 start_overlay 命令），
+    // 且此刻 overlay 仍在屏外、前台必然是用户应用；移回屏幕后前台可能已变
+    {
+        use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+        let prev = unsafe { GetForegroundWindow() };
+        scrollcmd::PREV_FOREGROUND.store(prev.0 as isize, Ordering::SeqCst);
+    }
     *OVERLAY_KIND.lock().unwrap() = Some(kind.to_string());
     OVERLAY_KIND_SEQ.fetch_add(1, Ordering::SeqCst);
     // 光标所在显示器：一块覆盖层一个窗口（跨屏框选 M2 打通）
@@ -292,6 +307,28 @@ fn close_overlay(app: &AppHandle) {
 #[tauri::command]
 fn overlay_close(app: AppHandle) {
     close_overlay(&app);
+}
+
+/// 长截图采集模式穿透开关：JS 进入采集模式（选区框保持、滚轮直达下层应用）时调用；
+/// 结束由 scroll_* 收尾的 restore_overlay_passthrough 恢复。
+/// 开启时同时把焦点让还给下层应用：WM_MOUSEWHEEL 发给焦点窗口（非鼠标下窗口），
+/// overlay 持焦会吞掉用户滚动（EXSTYLE 穿透只管 hit-test）。
+#[tauri::command]
+fn overlay_passthrough(app: AppHandle, on: bool) {
+    scrollcmd::set_overlay_passthrough(&app, on);
+    if on {
+        scrollcmd::yield_focus_to_below();
+    }
+}
+
+/// 长截图采集期的选区边框条（4 条原生细窗，不接收输入、不挡滚轮）
+#[tauri::command]
+fn ls_frame_show(x: i32, y: i32, w: u32, h: u32) {
+    scrollcmd::show_ls_frame(x, y, w, h);
+}
+#[tauri::command]
+fn ls_frame_hide() {
+    scrollcmd::hide_ls_frame();
 }
 
 /// 按 label 关闭辅助窗口（引导页等；WebView2 拦截 JS window.close() 时的兜底）。
@@ -765,6 +802,8 @@ pub fn run() {
             scrollcmd::scroll_adjust,
             scrollcmd::scroll_accept_all,
             scrollcmd::scroll_save,
+            scrollcmd::scroll_copy,
+            scrollcmd::scroll_pin,
             scrollcmd::scroll_export_segments,
             scrollcmd::open_quality_window,
             scrollcmd::scroll_preview,
@@ -799,6 +838,9 @@ pub fn run() {
             autostart_set,
             open_onboarding,
             overlay_close,
+            overlay_passthrough,
+            ls_frame_show,
+            ls_frame_hide,
             overlay_ready,
             overlay_take_pending,
             overlay_hide,

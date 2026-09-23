@@ -7,46 +7,62 @@
 <style>
   html, body { background: transparent; overflow: hidden; }
   .bar {
-    display: flex; align-items: center; gap: 10px;
-    height: 100%;
+    display: flex; align-items: center; gap: 12px;
     background: var(--ov-surface);
     border: 1px solid var(--ov-border);
     border-radius: var(--r-tool);
     color: var(--ov-fg);
     font-size: 12px;
-    padding: 6px 10px;
+    padding: 10px 12px;
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
     white-space: nowrap;
     animation: fadein 0.15s ease-out;
   }
   @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  #preview {
+    width: 176px; height: 132px;
+    display: flex; align-items: center; justify-content: center;
+    background: repeating-conic-gradient(#3a3a3c 0 25%, #2c2c2e 0 50%) 0 0/16px 16px;
+    border-radius: 8px; overflow: hidden;
+  }
+  #preview img { max-width: 100%; max-height: 100%; display: block; }
+  #preview .empty { color: #999; font-size: 11px; }
+  .col { display: flex; flex-direction: column; gap: 8px; min-width: 210px; }
+  #stat { color: var(--ov-fg); }
   #stat b { color: #fff; }
-  #rollback {
-    color: var(--stitch-low);
-    display: none;
+  #rollback { color: var(--stitch-low); display: none; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .btn {
+    border: none; background: var(--ov-surface-2, #2c2c2e); color: var(--ov-fg);
+    font-size: 12px; padding: 6px 12px; border-radius: 7px; cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
   }
-  .btn-done {
-    border: none; background: var(--accent); color: #fff;
-    font-weight: 500; font-size: 12px;
-    padding: 5px 12px; border-radius: 7px; cursor: pointer;
-  }
-  .btn-done:hover { background: var(--accent-hover); }
-  .btn-done.bottom { animation: pulse 0.3s ease-out; }
-  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.14); } 100% { transform: scale(1); } }
+  .btn:hover { background: #3a3a3c; }
+  .btn.primary { background: var(--accent); color: #fff; font-weight: 500; }
+  .btn.primary:hover { background: var(--accent-hover); }
   .btn-x {
     border: none; background: transparent; color: var(--ov-fg-dim);
-    padding: 5px 8px; border-radius: 7px; cursor: pointer;
+    padding: 6px 8px; border-radius: 7px; cursor: pointer;
   }
-  .btn-x:hover { color: var(--ov-fg); background: var(--ov-surface-2); }
+  .btn-x:hover { color: var(--ov-fg); background: var(--ov-surface-2, #2c2c2e); }
   .kbd { font-family: var(--mono); font-size: 11px; opacity: 0.72; }
+  .sep { width: 1px; height: 18px; background: var(--ov-border); }
 </style>
 </head>
 <body role="status" aria-live="polite">
   <div class="bar">
-    <span id="rollback">回滚中 · 不记录</span>
-    <span id="stat">已 1 段 · -- px</span>
-    <button class="btn-done" id="done">完成 <span class="kbd">↵</span></button>
-    <button class="btn-x" id="x" title="取消（不落盘）">✕</button>
+    <div id="preview"><span class="empty">滚动页面开始拼接…</span><img id="pv" alt="" style="display:none"></div>
+    <div class="col">
+      <span id="rollback">检测到重复画面 · 已跳过</span>
+      <span id="stat">已 1 段 · -- px</span>
+      <div class="row">
+        <button class="btn primary" id="save" title="保存为 PNG 文件（Enter）">保存 <span class="kbd">↵</span></button>
+        <button class="btn" id="pin" title="钉到桌面，原位贴出（长图自动适配屏高）">贴图</button>
+        <button class="btn" id="copy" title="复制长图到剪贴板">复制</button>
+        <span class="sep"></span>
+        <button class="btn-x" id="x" title="取消（不保存）">✕</button>
+      </div>
+    </div>
   </div>
   <script src="js/endbar.js"></script>
 </body>

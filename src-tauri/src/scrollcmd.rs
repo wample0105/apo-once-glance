@@ -66,7 +66,7 @@ pub async fn scroll_start(
     // 会话被移除/进入质检后自动退出。
     let app2 = app.clone();
     std::thread::spawn(move || loop {
-        std::thread::sleep(std::time::Duration::from_millis(120));
+        std::thread::sleep(std::time::Duration::from_millis(70));
         if !scrolls().contains_key(&id) {
             break;
         }
@@ -79,7 +79,13 @@ pub async fn scroll_start(
                     eprintln!("[scroll-worker] {}", v);
                 }
                 use tauri::Emitter;
-                let _ = app2.emit("scroll-progress", v);
+                let _ = app2.emit("scroll-progress", v.clone());
+                // 业界同款实时预览：每拼入一段，把全图尾部（最近内容）等比缩略推给结束条
+                if v.get("status").and_then(|x| x.as_str()) == Some("appended") {
+                    if let Some(pv) = scroll_preview_thumb(id) {
+                        let _ = app2.emit("scroll-preview", pv);
+                    }
+                }
             }
             Err(e) => {
                 eprintln!("[scroll-worker] grab error: {e}");
@@ -109,8 +115,10 @@ fn create_endbar_window(
         .find(|m| abs_x >= m.rect.0 && abs_x < m.rect.0 + m.rect.2 && abs_y >= m.rect.1 && abs_y < m.rect.1 + m.rect.3)
         .or_else(|| mons.first())
         .ok_or("显示器不存在".to_string())?;
-    let bar_w = 340i32;
-    let bar_h = 44i32;
+    // 业界同款工具条：左预览图(176×132) + 右状态/按钮列 —— 物理像素按 DPI 缩放
+    let k = mon.dpi_scale as f32;
+    let bar_w = (460.0 * k).round() as i32;
+    let bar_h = (168.0 * k).round() as i32;
     // 贴选区下沿外 8px；下方空间不足翻到上方（说明书 §4.4 结束条行为）
     let sel_bottom = abs_y + h as i32;
     let bx = abs_x.min(mon.rect.0 + mon.rect.2 - bar_w - 8).max(mon.rect.0 + 8);
@@ -189,6 +197,130 @@ pub(crate) fn set_overlay_passthrough(app: &AppHandle, on: bool) {
     }
 }
 
+/// 长截图采集期的选区边框条（4 条原生细窗）：webview overlay 已 park、
+/// 中央无任何窗口 → 滚轮 hover 路由直达下层应用（webview 的子窗口无法穿透，
+/// 是此前滚轮被吞的根治点）。窗口仅做视觉指示，不接收输入。
+pub(crate) static LS_FRAMES: std::sync::Mutex<[isize; 4]> = std::sync::Mutex::new([0; 4]);
+
+unsafe extern "system" fn ls_frame_proc(hwnd: windows::Win32::Foundation::HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
+    windows::Win32::UI::WindowsAndMessaging::DefWindowProcW(hwnd, msg, wp, lp)
+}
+
+pub(crate) fn show_ls_frame(x: i32, y: i32, w: u32, h: u32) {
+    use windows::Win32::Foundation::COLORREF;
+    use windows::Win32::Graphics::Gdi::CreateSolidBrush;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        CreateWindowExW, DefWindowProcW, RegisterClassW, SetLayeredWindowAttributes, ShowWindow,
+        CS_HREDRAW, CS_VREDRAW, LWA_ALPHA, SW_SHOWNOACTIVATE, WNDCLASSW, WS_EX_LAYERED,
+        WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+    };
+    use windows::core::w;
+    unsafe {
+        static REGISTERED: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+        REGISTERED.get_or_init(|| {
+            let wc = WNDCLASSW {
+                lpfnWndProc: Some(ls_frame_proc),
+                hInstance: GetModuleHandleW(None).unwrap().into(),
+                lpszClassName: w!("ONCE_LS_FRAME"),
+                hbrBackground: CreateSolidBrush(COLORREF(0x0030_3BFF)), // accent #FF3B30（COLORREF=BBGGRR）
+                style: CS_HREDRAW | CS_VREDRAW,
+                ..Default::default()
+            };
+            RegisterClassW(&wc);
+        });
+        let ex = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
+        let style = WS_POPUP;
+        let t = 3i32; let g = 5i32; // 条厚 3px、外扩 5px（框线在采集矩形外沿，拼接段零污染）
+        let wi = w as i32; let hi = h as i32;
+        let frames: [(i32, i32, i32, i32); 4] = [
+            (x - g, y - g, wi + 2 * g, t),                       // 上
+            (x - g, y + hi + g - t, wi + 2 * g, t),              // 下
+            (x - g, y - g, t, hi + 2 * g),                       // 左
+            (x + wi + g - t, y - g, t, hi + 2 * g),              // 右
+        ];
+        let mut hs = [0isize; 4];
+        for (i, (rx, ry, rw, rh)) in frames.iter().enumerate() {
+            if let Ok(hwnd) = CreateWindowExW(
+                ex, w!("ONCE_LS_FRAME"), w!(""), style, *rx, *ry, *rw, *rh,
+                None, None, Some(windows::Win32::Foundation::HINSTANCE(GetModuleHandleW(None).unwrap().0)), None,
+            ) {
+                let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), 230, LWA_ALPHA);
+                let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+                hs[i] = hwnd.0 as isize;
+            }
+        }
+        *LS_FRAMES.lock().unwrap() = hs;
+        eprintln!("[ls-frame] shown at ({x},{y}) {w}x{h}");
+    }
+}
+
+/// 销毁选区边框条（PostMessage WM_CLOSE：跨线程安全，由窗口自身线程销毁）
+pub(crate) fn hide_ls_frame() {
+    let hs = { *LS_FRAMES.lock().unwrap() };
+    let mut n = 0;
+    unsafe {
+        for h in hs {
+            if h != 0 {
+                let _ = windows::Win32::UI::WindowsAndMessaging::PostMessageW(
+                    Some(windows::Win32::Foundation::HWND(h as *mut _)),
+                    windows::Win32::UI::WindowsAndMessaging::WM_CLOSE,
+                    WPARAM(0), LPARAM(0),
+                );
+                n += 1;
+            }
+        }
+    }
+    if n > 0 { eprintln!("[ls-frame] hidden x{n}"); }
+}
+
+/// 把键盘焦点/前台让还给下层应用（长截图采集模式专用）。
+/// WM_MOUSEWHEEL 发给焦点窗口而非鼠标下窗口——overlay 持焦时用户滚动会被 overlay
+/// 吃掉（EXSTYLE 穿透只影响 hit-test，不影响滚轮路由），必须让焦。
+/// 跨线程 SetFocus 需 AttachThreadInput 桥接（经典解法）。
+/// 截图激活前的前台窗口（= 用户正在操作的应用）：show_overlay 激活时记录，
+/// 长截图采集模式让焦时切回。存 isize 规避 HWND 的跨线程约束。
+pub(crate) static PREV_FOREGROUND: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
+
+/// 把键盘焦点/前台让还给下层应用（长截图采集模式专用）。
+/// WM_MOUSEWHEEL 发给焦点窗口而非鼠标下窗口——overlay 持焦时用户滚动会被 overlay
+/// 吃掉（EXSTYLE 穿透只影响 hit-test，不影响滚轮路由），必须让焦。
+/// 注意不能用 GW_HWNDNEXT 找目标：从 TOPMOST 的 overlay 出发只在置顶窗口链内遍历，
+/// 永远到不了普通应用窗口（实测 "no target below"）——必须用激活前记录的前台窗口。
+pub(crate) fn yield_focus_to_below() {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::UI::Input::KeyboardAndMouse::{keybd_event, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetForegroundWindow, IsIconic, IsWindow, IsWindowVisible, SetForegroundWindow,
+        SwitchToThisWindow,
+    };
+    unsafe {
+        let raw = PREV_FOREGROUND.load(std::sync::atomic::Ordering::SeqCst);
+        if raw == 0 {
+            eprintln!("[yield] no prev foreground recorded");
+            return;
+        }
+        let target = HWND(raw as *mut _);
+        if !IsWindow(Some(target)).as_bool() || !IsWindowVisible(target).as_bool() || IsIconic(target).as_bool() {
+            eprintln!("[yield] prev foreground no longer usable");
+            return;
+        }
+        // 前台锁（foreground lock）会静默拒绝非前台进程的 SetForegroundWindow/SwitchToThisWindow
+        //（实测切了等于没切）——经典 Alt hack：按下 Alt 的瞬间本进程获得设置前台的权利
+        const VK_MENU: u8 = 0x12;
+        keybd_event(VK_MENU, 0, KEYBD_EVENT_FLAGS(0), 0);
+        let ok = SetForegroundWindow(target).as_bool();
+        keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
+        if !ok {
+            SwitchToThisWindow(target, true);
+        }
+        let now = GetForegroundWindow();
+        eprintln!(
+            "[yield] focus {:#x} -> {:#x} ok={} now={:#x}",
+            raw, target.0 as usize, ok, now.0 as usize
+        );
+    }
+}
+
 #[tauri::command]
 pub async fn scroll_grab(_app: AppHandle, session: u64) -> Result<serde_json::Value, String> {
     scroll_grab_inner(session).map_err(|e| e.to_string())
@@ -205,7 +337,7 @@ fn scroll_grab_stable(id: u64) -> Result<serde_json::Value, String> {
         (st.abs_x, st.abs_y, st.session.width, st.session.height)
     };
     let first = capture::capture_region_px(abs_x, abs_y, w, h).map_err(|e| e.to_string())?;
-    std::thread::sleep(std::time::Duration::from_millis(80));
+    std::thread::sleep(std::time::Duration::from_millis(60));
     let second = capture::capture_region_px(abs_x, abs_y, w, h).map_err(|e| e.to_string())?;
     if first.pixels != second.pixels {
         // 画面仍在滚动/动画：丢弃，不拼接
@@ -273,7 +405,10 @@ fn scroll_grab_inner_old(id: u64) -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 pub async fn scroll_finish(app: AppHandle, session: u64) -> Result<serde_json::Value, String> {
-    scroll_finish_sync(app, session)
+    // 同步对话框（rfd 阻塞式）不能跑在 async runtime 线程上：挪到阻塞线程池
+    tauri::async_runtime::spawn_blocking(move || scroll_finish_sync(app, session))
+        .await
+        .map_err(|e| format!("任务失败：{e}"))?
 }
 
 fn scroll_finish_sync(app: AppHandle, session_in: u64) -> Result<serde_json::Value, String> {
@@ -290,45 +425,60 @@ fn scroll_finish_sync(app: AppHandle, session_in: u64) -> Result<serde_json::Val
         let mut map = scrolls();
         map.remove(&session).ok_or("会话不存在（可能已结束）")?
     };
-    eprintln!("[scroll-finish] session removed, suspicious={}", st.session.suspicious_seams().len());
-    let suspicious = st.session.suspicious_seams();
-    if !suspicious.is_empty() {
-        // 有可疑接缝：把会话放回去，打开质检页
-        let seams: Vec<serde_json::Value> = suspicious
-            .iter()
-            .map(|s| serde_json::json!({ "y": s.y, "confidence": s.confidence }))
-            .collect();
-        let global_idx: Vec<usize> = st
-            .session
-            .seams()
-            .iter()
-            .enumerate()
-            .filter(|(_, s)| s.confidence < once_core::longshot::CONFIDENCE_OK)
-            .map(|(i, _)| i)
-            .collect();
-        let (w, h, _) = st.session.export();
-        *REVIEW.lock().unwrap() = Some((session, global_idx.clone()));
-        scrolls().insert(session, st);
-        if let Err(e) = open_quality_sync(&app, session, w, h, global_idx.clone()) {
-            eprintln!("[scroll-finish] open quality FAILED: {e}");
-        }
-        return Ok(serde_json::json!({
-            "needs_review": true,
-            "seams": seams,
-            "seam_indexes": global_idx,
-            "width": w,
-            "height": h,
-        }));
+    // 用户裁定（2026-09-24）：可疑接缝自动采用最优位置（adjust_seam(_,0)），不再弹质检页——
+    // 丝滑优先；正确性由静止帧双帧比对评分保底
+    let idxs: Vec<usize> = st
+        .session
+        .seams()
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.confidence < once_core::longshot::CONFIDENCE_OK)
+        .map(|(i, _)| i)
+        .collect();
+    let auto_fixed = idxs.len();
+    for i in &idxs {
+        let _ = st.session.adjust_seam(*i, 0);
+    }
+    if auto_fixed > 0 {
+        eprintln!("[scroll-finish] auto-fixed seams={auto_fixed}");
     }
     eprintln!("[scroll-finish] saving...");
-    let outcome = save_scroll(&app, &mut st.session).map_err(|e| {
-        eprintln!("[scroll-finish] save FAILED: {e}");
-        e.to_string()
-    })?;
-    eprintln!("[scroll-finish] saved ok: {}", outcome["path"]);
-    destroy_endbar_window(&app);
-    restore_overlay_passthrough(&app);
-    Ok(serde_json::json!({ "needs_review": false, "saved": outcome }))
+    let (w, h, rgba) = st.session.export();
+    let bmp = capture::CapturedBitmap { width: w, height: h, pixels: rgba, origin: (0, 0) };
+    let png = capture::encode_png(&bmp).map_err(|e| oe(e))?;
+    // 用户裁定（2026-09-24）：保存=弹对话框选位置（与普通截图"保存"语义一致）
+    let root = settings::load().save_root();
+    let default_name = storage::new_asset_paths(&root, "scroll")
+        .ok()
+        .and_then(|p| p.png.file_name().map(|s| s.to_string_lossy().into_owned()))
+        .unwrap_or_else(|| "onceglance-scroll.png".into());
+    let app2 = app.clone();
+    // rfd 同步 API：阻塞当前线程（钩子 spawn 线程/spawn_blocking 线程）直到对话框关闭；
+    // 挂覆盖层为父窗口：对话框跟随 always_on_top 显示在最上层（曾沉在遮罩下用户看不见）
+    let dest = {
+        let mut dlg = rfd::FileDialog::new()
+            .set_title("保存长截图")
+            .set_file_name(&default_name)
+            .add_filter("PNG 图片", &["png"]);
+        if let Some(w) = app2.get_webview_window("overlay") {
+            dlg = dlg.set_parent(&w);
+        }
+        dlg.save_file()
+    };
+    let Some(dest) = dest else {
+        // 用户取消对话框：会话放回、结束条保留（可改选贴图/复制/再保存）
+        scrolls().insert(session, st);
+        ACTIVE_SESSION.store(session, std::sync::atomic::Ordering::SeqCst);
+        use tauri::Emitter;
+        if let Some(w) = app.get_webview_window("endbar") {
+            let _ = w.emit("scroll-save-cancelled", ());
+        }
+        return Ok(serde_json::json!({ "saved": false }));
+    };
+    std::fs::write(&dest, &png).map_err(|e| format!("保存失败：{e}"))?;
+    crate::deliver::toast(&app, "success", &format!("已保存到 {}", dest.display()));
+    scroll_teardown(&app);
+    Ok(serde_json::json!({ "needs_review": false, "saved": true, "path": dest.to_string_lossy(), "auto_fixed": auto_fixed }))
 }
 
 /// 保存长截图：kind=scroll，manifest 记录段数/人工修正次数（说明书 §4.4 阶段 3）。
@@ -407,6 +557,7 @@ fn scroll_cancel_sync(app: AppHandle, session: u64) -> Result<(), String> {
     };
     ACTIVE_SESSION.store(0, std::sync::atomic::Ordering::SeqCst);
     destroy_endbar_window(&app);
+    hide_ls_frame();
     // 覆盖层屏外驻留（不 destroy：预驻留窗口永不销毁，destroy 异步会让紧随的热键
     // 拍在濒死窗口上=没反应；park 屏外画面同样即时消失）
     if let Some(w) = app.get_webview_window("overlay") {
@@ -468,6 +619,109 @@ pub async fn scroll_save(app: AppHandle, session: u64) -> Result<serde_json::Val
     }
     restore_overlay_passthrough(&app);
     Ok(serde_json::json!({ "saved": outcome }))
+}
+
+/// 收尾共用：销毁结束条、park 覆盖层、恢复覆盖层可点击
+fn scroll_teardown(app: &AppHandle) {
+    destroy_endbar_window(app);
+    hide_ls_frame();
+    if let Some(w) = app.get_webview_window("overlay") {
+        crate::park_overlay_offscreen(&w);
+    }
+    restore_overlay_passthrough(app);
+}
+
+/// 实时预览缩略：全图尾部（最近拼入的内容，无接缝时=首段）等比缩到 ≤176×260 盒内，
+/// JPEG q60 data URL。每轮拼接成功才生成（120ms 轮询里 moving 帧不重复编码）。
+fn scroll_preview_thumb(id: u64) -> Option<serde_json::Value> {
+    let map = scrolls();
+    let st = map.get(&id)?;
+    let (w, h, rgba) = st.session.export();
+    if w == 0 || h == 0 {
+        return None;
+    }
+    let seams = st.session.seams();
+    let tail_y = seams.last().map(|s| s.y as u32).unwrap_or(0).min(h.saturating_sub(1));
+    let stride = w as usize * 4;
+    let rows = (h - tail_y) as usize;
+    let tail = &rgba[tail_y as usize * stride..];
+    // 等比缩略（box 内）
+    let k = (176.0 / w as f32).min(260.0 / rows as f32);
+    let (tw, th) = (((w as f32) * k).round().max(1.0) as u32, ((rows as f32) * k).round().max(1.0) as u32);
+    let src = image::RgbaImage::from_raw(w, rows as u32, tail.to_vec())?;
+    let thumb = image::DynamicImage::ImageRgba8(src).resize_exact(tw, th, image::imageops::FilterType::Triangle);
+    let mut jout = std::io::Cursor::new(Vec::new());
+    let enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jout, 60);
+    thumb.to_rgb8().write_with_encoder(enc).ok()?;
+    let url = format!("data:image/jpeg;base64,{}", crate::base64_encode(&jout.into_inner()));
+    Some(serde_json::json!({
+        "dataUrl": url,
+        "width": w,
+        "height": h,
+        "segments": st.session.seam_count() + 1,
+    }))
+}
+
+/// 长截图复制：全图 PNG 进剪贴板（不落盘、不进历史）
+#[tauri::command]
+pub async fn scroll_copy(app: AppHandle, session: u64) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        ACTIVE_SESSION.store(0, std::sync::atomic::Ordering::SeqCst);
+        let mut st = {
+            let mut map = scrolls();
+            map.remove(&session).ok_or("会话不存在（可能已结束）")?
+        };
+        let (w, h, rgba) = st.session.export();
+        let bmp = capture::CapturedBitmap { width: w, height: h, pixels: rgba, origin: (0, 0) };
+        let png = capture::encode_png(&bmp).map_err(|e| oe(e))?;
+        let clip = clipboard::ClipboardPayload {
+            png: Some(&png),
+            rgba: Some((&bmp.pixels, w, h)),
+            files: vec![],
+            text: None,
+        };
+        let ok = clipboard::write(&clip).is_ok();
+        let n = st.session.seam_count() + 1;
+        scroll_teardown(&app);
+        if ok {
+            crate::deliver::toast(&app, "success", &format!("长截图已复制 · {} 段 · {}px", n, h));
+        } else {
+            crate::deliver::toast(&app, "warn", "剪贴板写入失败");
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("任务失败：{e}"))?
+}
+
+/// 长截图贴图：全图钉到桌面选区原位，高度超屏自动等比适配（同类产品 长图贴图语义）
+#[tauri::command]
+pub async fn scroll_pin(app: AppHandle, session: u64) -> Result<u32, String> {
+    // 同步准备（export/编码/落临时文件——MutexGuard 不得跨 await）
+    let prepared = tauri::async_runtime::spawn_blocking(move || {
+        ACTIVE_SESSION.store(0, std::sync::atomic::Ordering::SeqCst);
+        let mut st = {
+            let mut map = scrolls();
+            map.remove(&session).ok_or("会话不存在（可能已结束）")?
+        };
+        let (w, h, rgba) = st.session.export();
+        let bmp = capture::CapturedBitmap { width: w, height: h, pixels: rgba, origin: (0, 0) };
+        let png = capture::encode_png(&bmp).map_err(|e| oe(e))?;
+        let tmp = std::env::temp_dir().join("onceglance-scroll-pin.png");
+        std::fs::write(&tmp, &png).map_err(|e| format!("写临时文件失败：{e}"))?;
+        Ok::<(i32, i32, u32), String>((st.abs_x, st.abs_y, h))
+    })
+    .await
+    .map_err(|e| format!("任务失败：{e}"))??;
+    let (px, py, _img_h) = prepared;
+    // 长图贴图：高度不超过工作区 90%（物理），超出等比缩小
+    let mon = capture::monitors().into_iter().next().ok_or("无显示器")?;
+    let max_h = (mon.rect.3 as f32 * 0.9) as u32;
+    let pad = (24.0 * mon.dpi_scale).round() as u32;
+    let id = crate::pin::pin_create(app.clone(), std::env::temp_dir().join("onceglance-scroll-pin.png").to_string_lossy().into_owned(), Some(px), Some(py), Some(1.0), Some(pad), Some(max_h)).await?;
+    crate::deliver::toast(&app, "success", "长截图已贴到桌面");
+    scroll_teardown(&app);
+    Ok(id)
 }
 
 /// 超长图分段导出（LONG-5）：默认段高 8000，导出为 xxx-partN。
@@ -618,8 +872,9 @@ pub async fn scroll_preview(session: u64, max_w: u32) -> Result<serde_json::Valu
 
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
-    GetMessageW, SetWindowsHookExW, UnhookWindowsHookEx, CallNextHookEx, KBDLLHOOKSTRUCT,
-    LLKHF_INJECTED, MSG, WH_KEYBOARD_LL, WM_QUIT,
+    GetMessageW, PostMessageW, SetWindowsHookExW, UnhookWindowsHookEx, CallNextHookEx,
+    KBDLLHOOKSTRUCT, LLKHF_INJECTED, MSLLHOOKSTRUCT, MSG, WH_KEYBOARD_LL, WH_MOUSE_LL,
+    WM_MOUSEWHEEL, WM_QUIT, WindowFromPoint,
 };
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use tauri::Emitter;
@@ -669,13 +924,11 @@ pub fn install_scroll_keyboard_hook(app: &AppHandle) {
     }
     std::thread::spawn(|| unsafe {
         let hmod = GetModuleHandleW(None).unwrap_or_default();
-        let hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(scroll_kbd_proc), Some(windows::Win32::Foundation::HINSTANCE(hmod.0)), 0);
-        match hook {
-            Ok(_) => eprintln!("[scroll-hook] installed"),
-            Err(e) => {
-                eprintln!("[scroll-hook] install FAILED: {e}");
-                return;
-            }
+        let kbd = SetWindowsHookExW(WH_KEYBOARD_LL, Some(scroll_kbd_proc), Some(windows::Win32::Foundation::HINSTANCE(hmod.0)), 0);
+        let mouse = SetWindowsHookExW(WH_MOUSE_LL, Some(scroll_mouse_proc), Some(windows::Win32::Foundation::HINSTANCE(hmod.0)), 0);
+        match (&kbd, &mouse) {
+            (Ok(_), Ok(_)) => eprintln!("[scroll-hook] installed (kbd+mouse)"),
+            (e, m) => eprintln!("[scroll-hook] install kbd={e:?} mouse={m:?}"),
         }
         // 线程 id 仅用于语义标记；卸载依赖进程退出
         HOOK_THREAD_ID.store(1, std::sync::atomic::Ordering::SeqCst);
@@ -685,8 +938,32 @@ pub fn install_scroll_keyboard_hook(app: &AppHandle) {
                 break;
             }
         }
-        let _ = UnhookWindowsHookEx(hook.unwrap());
+        if let Ok(h) = kbd { let _ = UnhookWindowsHookEx(h); }
+        if let Ok(h) = mouse { let _ = UnhookWindowsHookEx(h); }
     });
+}
+
+/// 采集期滚轮转发（同类产品 同款机制）：
+/// WM_MOUSEWHEEL 发给键盘焦点窗口而非鼠标下窗口——overlay 持焦时滚轮被吞。
+/// 此钩子在鼠标低级层拦下滚轮，按**鼠标坐标**找到下层真实窗口
+/// （overlay 已 WS_EX_TRANSPARENT，WindowFromPoint 会跳过它），PostMessage 转发后
+/// 吞掉原始事件——滚轮直达下层应用，与焦点归属无关。仅会话活跃时生效。
+unsafe extern "system" fn scroll_mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if code >= 0 && wparam.0 as u32 == WM_MOUSEWHEEL && !scrolls().is_empty() {
+        let ms = &*(lparam.0 as *const MSLLHOOKSTRUCT);
+        // 合成 WM_MOUSEWHEEL：高字=delta，低字=修饰键（读实时状态），坐标=鼠标屏幕位置
+        let delta = ((ms.mouseData >> 16) as u16) as i16;
+        let keys = windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState(
+            windows::Win32::UI::Input::KeyboardAndMouse::VK_CONTROL.0 as i32,
+        ) & i16::MIN != 0;
+        let wp = (((delta as u16 as u32) << 16) | if keys { 0x8 } else { 0 }) as usize;
+        let lp = (((ms.pt.y as u16 as u32) << 16) | (ms.pt.x as u16 as u32)) as isize;
+        let target = WindowFromPoint(windows::Win32::Foundation::POINT { x: ms.pt.x, y: ms.pt.y });
+        eprintln!("[wheel-fwd] -> hwnd {:#x} delta={}", target.0 as isize, delta);
+        let _ = PostMessageW(Some(target), WM_MOUSEWHEEL, WPARAM(wp), LPARAM(lp));
+        return LRESULT(1); // 吞掉原始滚轮，防止焦点窗口再滚
+    }
+    CallNextHookEx(None, code, wparam, lparam)
 }
 
 #[allow(dead_code)]

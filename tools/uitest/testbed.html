@@ -66,6 +66,17 @@
   .handle.e { right: -6px; top: 50%; margin-top: -5px; cursor: ew-resize; }
   #sel.hole { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55); }
   body.dragging #sel.hole { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55); }
+  /* ===== 长截图采集模式（与 overlay.html 同步）===== */
+  body.ls-mode #sel.hole { box-shadow: none; }
+  body.ls-mode #sel { border-color: transparent; }
+  body.ls-mode #sel::after {
+    content: ""; position: absolute; inset: -5px;
+    border: 2px solid var(--accent); border-radius: 6px; pointer-events: none;
+  }
+  body.ls-mode #sel .handle, body.ls-mode #det, body.ls-mode #sizechip,
+  body.ls-mode #magnifier, body.ls-mode #toolbar, body.ls-mode #statusbar,
+  body.ls-mode #objsel, body.ls-mode #layer, body.ls-mode #escdlg,
+  body.ls-mode #pr-text-menu { display: none !important; }
   /* 移动整框时的光标 */
   #sel.moveable { cursor: move; }
 

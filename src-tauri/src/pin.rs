@@ -47,6 +47,7 @@ fn pin_window(app: &AppHandle, id: u32) -> Option<tauri::WebviewWindow> {
 /// 创建贴图：把 png 钉在桌面 (x,y)（物理坐标），尺寸=图像像素×scale。
 /// pad：四边阴影边距（物理像素）——窗口比图像大一圈，阴影画在边距区（业界同款
 /// 贴图即选区原位原大浮出）；pad=0 时窗口=图像（老语义）。
+/// max_h：图像内容高度上限（物理像素），超出时整体等比缩小（长截图贴图适配屏高）。
 #[tauri::command]
 pub async fn pin_create(
     app: AppHandle,
@@ -55,15 +56,24 @@ pub async fn pin_create(
     y: Option<i32>,
     scale: Option<f32>,
     pad: Option<u32>,
+    max_h: Option<u32>,
 ) -> Result<u32, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("读取失败：{e}"))?;
     let (w, h, _) = once_core::capture::decode_png(&bytes).map_err(|e| e.to_string())?;
     let id = PIN_SEQ.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    let scale = scale.unwrap_or(1.0);
+    let mut scale = scale.unwrap_or(1.0);
     let pad = pad.unwrap_or(0);
     // 图像内容尺寸（物理）；窗口整体再向外扩 pad 一圈承载阴影
-    let iw = ((w as f32) * scale).round() as u32;
-    let ih = ((h as f32) * scale).round() as u32;
+    let mut iw = ((w as f32) * scale).round() as u32;
+    let mut ih = ((h as f32) * scale).round() as u32;
+    if let Some(mh) = max_h {
+        if mh > 0 && ih > mh {
+            let k = mh as f32 / ih as f32;
+            iw = ((iw as f32) * k).round().max(1.0) as u32;
+            ih = mh;
+            scale *= k;
+        }
+    }
     let px = x.unwrap_or(120) - pad as i32;
     let py = y.unwrap_or(120) - pad as i32;
     let pw = iw + 2 * pad;
