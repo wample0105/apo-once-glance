@@ -99,22 +99,6 @@ pub(crate) async fn launch_overlay(app: AppHandle, kind: String) -> Result<(), S
 #[tauri::command]
 async fn start_overlay(app: AppHandle, kind: String) -> Result<(), String> {
     eprintln!("start_overlay called kind={kind}");
-    // 记录激活前的前台窗口（= 用户正在操作的应用）：长截图采集模式让焦时切回。
-    // 必须在任何窗口操作之前记录，否则前台已是 overlay 自己
-    {
-        use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
-        let prev = unsafe { GetForegroundWindow() };
-        scrollcmd::PREV_FOREGROUND.store(prev.0 as isize, Ordering::SeqCst);
-    }
-    // 截图态再按一次热键 = 退出（同类产品 手感；保证遮罩永远有办法退出）
-    if OVERLAY_ACTIVE.swap(false, Ordering::SeqCst) {
-        if let Some(w) = app.get_webview_window("overlay") {
-            park_overlay_offscreen(&w);
-            unsafe { let _ = DwmFlush(); }
-        }
-        eprintln!("start_overlay: overlay active → toggle close");
-        return Ok(());
-    }
     let app2 = app.clone();
     let kind2 = kind.clone();
     // 窗口操作放到独立线程，避免主线程事件循环重入死锁
@@ -153,6 +137,18 @@ pub(crate) fn park_overlay_offscreen(win: &tauri::WebviewWindow) {
 
 fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
     let t0 = std::time::Instant::now();
+    eprintln!("show_overlay kind={kind}");
+    // 截图态再按一次热键/卡片 = 退出（同类产品 手感）。toggle 必须在本函数：
+    // 热键路径直调 show_overlay（不经 start_overlay 命令），此前两入口状态分裂——
+    // 热键激活的取景层 ACTIVE=false，卡片路径与热键路径互相打架（用户实测"无法退出"）
+    if OVERLAY_ACTIVE.swap(false, Ordering::SeqCst) {
+        if let Some(w) = app.get_webview_window("overlay") {
+            park_overlay_offscreen(&w);
+            unsafe { let _ = DwmFlush(); }
+        }
+        eprintln!("show_overlay: active → toggle close");
+        return Ok(());
+    }
     // 记录激活前的前台窗口（= 用户正在操作的应用）：长截图采集模式让焦时切回。
     // 必须放本函数开头——热键路径直接调 show_overlay（不经 start_overlay 命令），
     // 且此刻 overlay 仍在屏外、前台必然是用户应用；移回屏幕后前台可能已变
@@ -456,6 +452,7 @@ fn run_capture_blocking(
 #[tauri::command]
 fn list_history(query: String, limit: usize) -> Result<serde_json::Value, String> {
     let rows = history::search(&query, limit).map_err(|e| e.to_string())?;
+    eprintln!("[hist] query={:?} limit={} rows={}", query, limit, rows.len());
     serde_json::to_value(rows).map_err(|e| e.to_string())
 }
 
@@ -546,6 +543,20 @@ fn set_setting(key: String, value: serde_json::Value) -> Result<Settings, String
         };
     })
     .map_err(|e| e.to_string())
+}
+
+/// 用系统默认看图器直接打开图片（历史卡片“打开”语义：看图，而非进目录）
+#[tauri::command]
+fn open_image(path: String) -> Result<(), String> {
+    let p = std::path::PathBuf::from(&path);
+    if !p.exists() {
+        return Err(format!("文件不存在：{path}"));
+    }
+    std::process::Command::new("explorer")
+        .arg(p.display().to_string())
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -858,6 +869,7 @@ pub fn run() {
             get_settings,
             set_setting,
             open_in_explorer,
+            open_image,
             delete_to_recycle_bin,
             get_logo_path,
             get_logo_svg,

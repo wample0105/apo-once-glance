@@ -43,7 +43,7 @@ $$(".nav-item").forEach((btn) => {
     btn.classList.add("active");
     $$(".page").forEach((p) => p.classList.remove("on"));
     $("#page-" + btn.dataset.page).classList.add("on");
-    if (btn.dataset.page === "history") refreshHistory();
+    if (btn.dataset.page === "history") refreshCurrentView();
     if (btn.dataset.page === "privacy") refreshAudit();
     if (btn.dataset.page === "doctor") runDoctor();
     if (btn.dataset.page === "agent") refreshBridgeStatus();
@@ -56,10 +56,9 @@ function reportErr(e) {
   console.error(e);
 }
 $("#act-region").onclick = () => invoke("start_overlay", { kind: "region" }).catch(reportErr);
-$("#act-ocr").onclick = () => invoke("start_overlay", { kind: "ocr" }).catch(reportErr);
-$("#act-scroll").onclick = () => invoke("start_overlay", { kind: "scroll" }).catch(reportErr);
-$("#act-window").onclick = () => invoke("capture_window_now").catch(reportErr);
-$("#act-fullscreen").onclick = () => invoke("capture_fullscreen_now").catch(reportErr);
+$("#card-agent").onclick = () => document.querySelector('.nav-item[data-page="agent"]').click();
+// act-ocr/act-scroll/act-window/act-fullscreen 的卡片已删——顶层绑定必须同链清理，
+// 否则 $() 查到 null 赋值抛 TypeError、后半段 main.js 全部不执行（最近截图空白的根因）
 window.addEventListener("error", (ev) => reportErr(ev.error || ev.message));
 
 // ===== 历史工作台 =====
@@ -95,6 +94,77 @@ function fmtDate(iso) {
   } catch (e) { return ""; }
 }
 
+// 首页视图状态：home=动作卡片+最近 8 张；full=搜索+全量网格
+let homeView = "home";
+
+function refreshCurrentView() {
+  if (homeView === "home") loadRecent();
+  else refreshHistory();
+}
+
+// 首页“最近截图”横排（8 张，业界同款动作导向下的记录速达）
+async function loadRecent() {
+  try {
+    const rows = await invoke("list_history", { query: "", limit: 8 });
+    const list = $("#recent-strip");
+    if (!rows.length) {
+      list.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">还没有截图</div>按 Alt+Shift+A 试一次</div>`;
+      return;
+    }
+    list.innerHTML = rows.map(cardHtml).join("");
+    wireCards(list);
+  } catch (e) {
+    // 错误直出横排区（曾静默吞掉导致“最近截图”空白无诊断线索）
+    $("#recent-strip").innerHTML = `<div class="empty" style="grid-column:1/-1">加载失败：${e && e.message ? e.message : e}</div>`;
+    reportErr(e);
+  }
+}
+
+// 抽出单卡 HTML（首页横排与全量网格共用）
+function cardHtml(r) {
+  const name = r.path.split(/[\/]/).pop();
+  return `
+        <div class="card" data-path="${r.path}" data-name="${name}">
+          <div class="thumb">
+            <img data-thumb="${r.path}" alt="">
+            <span class="kindbadge">${KIND_LABEL[r.kind] || r.kind}</span>
+            <div class="cardacts">
+              <button data-act="open">打开</button>
+              <button data-act="copypath">复制路径</button>
+            </div>
+          </div>
+          <div class="cardinfo">
+            <div class="cardname" title="${name}">${name}</div>
+            <div class="cardmeta">${fmtTime(r.created_at)} · ${r.width}×${r.height}</div>
+            <div class="cardocr">${r.ocr_status === "none" ? "未识别" : r.ocr_status === "empty" ? "未发现文字" : "「" + escapeHtml(r.ocr_preview) + "」"}</div>
+          </div>
+        </div>`;
+}
+
+function wireCards(list) {
+  list.querySelectorAll("img[data-thumb]").forEach(async (img) => {
+    try {
+      img.src = await invoke("thumbnail", { path: img.dataset.thumb, maxW: 320 });
+    } catch (e) { /* 图片可能被移动 */ }
+  });
+  list.querySelectorAll(".cardacts button").forEach((b) => {
+    b.onclick = async (ev) => {
+      ev.stopPropagation();
+      const card = b.closest(".card");
+      if (b.dataset.act === "open") {
+        await invoke("open_image", { path: card.dataset.path });
+      } else if (b.dataset.act === "copypath") {
+        await navigator.clipboard.writeText(card.dataset.path);
+      }
+    };
+  });
+  // 卡片单击打开详情（§4.6）
+  list.querySelectorAll(".card").forEach((card) => {
+    card.addEventListener("click", () => openDetail(card.dataset.path).catch(console.error));
+  });
+}
+
+// 全量历史（搜索+日期分组网格）——"查看全部"视图
 async function refreshHistory() {
   const q = $("#search").value.trim();
   try {
@@ -545,7 +615,11 @@ function closeDetail() {
   } catch (e) { console.error(e); }
   $$(".page").forEach((p) => p.classList.remove("on"));
   $("#page-history").classList.add("on");
-  refreshHistory();
+  refreshCurrentView();
+  // 详情页可能改过视图显示状态，按 homeView 恢复
+  $("#home-view").style.display = homeView === "home" ? "" : "none";
+  $("#history-full").style.display = homeView === "home" ? "none" : "";
+  $("#recent-all").textContent = homeView === "home" ? "查看全部 ↓" : "↑ 收起";
 }
 
 // 详情页事件
@@ -676,8 +750,26 @@ async function refreshBridgeStatus() {
   }
 }
 
+// ===== 首页/全量历史视图切换 =====
+function showHomeView() {
+  homeView = "home";
+  $("#home-view").style.display = "";
+  $("#history-full").style.display = "none";
+  $("#recent-all").textContent = "查看全部 ↓";
+  loadRecent();
+}
+function showFullView() {
+  homeView = "full";
+  $("#home-view").style.display = "none";
+  $("#history-full").style.display = "";
+  $("#recent-all").textContent = "↑ 收起";
+  refreshHistory();
+}
+$("#recent-all").onclick = () => (homeView === "home" ? showFullView() : showHomeView());
+$("#back-home").onclick = showHomeView;
+
 // 初始化
 refreshBridgeStatus();
-refreshHistory();
+showHomeView();
 loadSettingsUI();
 runDoctor();
