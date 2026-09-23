@@ -1,7 +1,10 @@
 //! 指令驱动标注渲染引擎（ANN-1~5）。
-//! 确定性：同图同脚本重复渲染输出逐字节一致（tiny-skia 自带光栅化 + 内嵌参数化字体布局，无系统 AA 差异源）。
+//! 确定性：同图同脚本同 defaults 重复渲染输出逐字节一致（tiny-skia 自带光栅化 + 内嵌参数化字体布局，无系统 AA 差异源）。
 //! 坐标：默认物理像素 `px`；`unit: "rel"` 为 0–1 相对坐标；`anchor: "block:N"` 引用 OCR 块锚点 + 偏移。
 //! 整单拒绝：任何一条非法（越界/未知类型/超 200 操作）都不产出半成品，返回逐条错误。
+//! 主题继承（SET-7 单源）：脚本未显式指定的属性一律回落 `defaults`（用户标注主题记忆值）——
+//! 颜色按 `tool_colors.{工具键}`（arrow/pen/marker/rect/ellipse/text/num）→ 全局主题色；
+//! 箭头/形状/文字样式、序号起始、马赛克模式、整图输出特效同规则。显式传参永远优先。
 
 use crate::error::{OnceError, Result};
 use serde::{Deserialize, Serialize};
@@ -362,7 +365,8 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
             let sw = size[0] as i64;
             let sh = size[1] as i64;
             let strength = strength.unwrap_or(input.defaults.mosaic_strength).max(2) as i64;
-            let is_blur = mode.as_deref().unwrap_or("pixelate") == "blur";
+            // 模式继承：显式 mode > 主题记忆 mosaic_mode（"mosaic"/"pixelate" 归一为像素化）
+            let is_blur = mode.as_deref().unwrap_or(&input.defaults.mosaic_mode) == "blur";
             let cw = pixmap.width() as i64;
             let ch = pixmap.height() as i64;
             let x0 = x.clamp(0, cw);
@@ -381,7 +385,8 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
         }
     }
 
-    let mut step_counter: u32 = 0;
+    // 自动编号计数器：从主题记忆 num_start-1 起（首个自动序号 = num_start，GUI 序号起始语义一致）
+    let mut step_counter: i32 = (input.defaults.num_start - 1).max(0);
     for op in ops {
         match op {
             Operation::Arrow { from, to, color, width, dash, double_head, heads, line_style, rotation } => {
@@ -391,15 +396,28 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
                 let fy = fy - crop_off.1 as f32;
                 let tx = tx - crop_off.0 as f32;
                 let ty = ty - crop_off.1 as f32;
-                let color = parse_color(color.as_deref()).unwrap_or(accent());
+                let color = parse_color(color.as_deref())
+                    .unwrap_or_else(|| theme_color(input.defaults, "arrow").unwrap_or_else(accent));
                 let lw = width.unwrap_or(input.defaults.arrow_width);
-                let heads_v = heads.as_deref().unwrap_or(if double_head.unwrap_or(false) { "both" } else { "end" });
-                let ls = line_style.as_deref().unwrap_or(if dash.unwrap_or(false) { "dashed" } else { "solid" });
+                // 头型：显式 heads > 旧兼容 double_head > 主题记忆 arrow_heads
+                let heads_v = heads
+                    .as_deref()
+                    .map(|s| s.to_string())
+                    .or_else(|| double_head.map(|d| if d { "both".to_string() } else { "end".to_string() }))
+                    .unwrap_or_else(|| input.defaults.arrow_heads.clone());
+                // 线型：显式 line_style > 旧兼容 dash=true > 主题记忆 arrow_line_style
+                let ls = line_style
+                    .as_deref()
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| {
+                        if dash.unwrap_or(false) { "dashed".into() } else { input.defaults.arrow_line_style.clone() }
+                    });
                 let xf = center_xform(*rotation, (fx + tx) / 2.0, (fy + ty) / 2.0);
-                draw_arrow(&mut pixmap, fx, fy, tx, ty, lw, color, ls, heads_v, xf);
+                draw_arrow(&mut pixmap, fx, fy, tx, ty, lw, color, &ls, &heads_v, xf);
             }
             Operation::Pen { points, color, width, mode, rotation } => {
-                let col = parse_color(color.as_deref()).unwrap_or(accent());
+                let col = parse_color(color.as_deref())
+                    .unwrap_or_else(|| theme_color(input.defaults, "pen").unwrap_or_else(accent));
                 let mut pts: Vec<(f32, f32)> = Vec::with_capacity(points.len());
                 for p in points {
                     let (x, y) = resolve(unit, w, h, p);
@@ -435,12 +453,13 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
                 draw_rect(
                     &mut pixmap, x, y,
                     size[0] as f32, size[1] as f32,
-                    style.as_deref(),
-                    parse_color(color.as_deref()).unwrap_or(accent()),
+                    Some(style.as_deref().unwrap_or(&input.defaults.shape_fill)),
+                    parse_color(color.as_deref())
+                        .unwrap_or_else(|| theme_color(input.defaults, "rect").unwrap_or_else(accent)),
                     width.unwrap_or(input.defaults.shape_width),
-                    radius.unwrap_or(0.0),
-                    dash.unwrap_or(false),
-                    *opacity,
+                    radius.unwrap_or(if input.defaults.shape_radius { 12.0 } else { 0.0 }),
+                    dash.unwrap_or(input.defaults.shape_dash),
+                    Some(opacity.unwrap_or(input.defaults.shape_opacity).clamp(0.05, 1.0)),
                     xf,
                 );
             }
@@ -452,21 +471,24 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
                 draw_ellipse(
                     &mut pixmap, x, y,
                     size[0] as f32, size[1] as f32,
-                    style.as_deref(),
-                    parse_color(color.as_deref()).unwrap_or(accent()),
+                    Some(style.as_deref().unwrap_or(&input.defaults.shape_fill)),
+                    parse_color(color.as_deref())
+                        .unwrap_or_else(|| theme_color(input.defaults, "ellipse").unwrap_or_else(accent)),
                     width.unwrap_or(input.defaults.shape_width),
-                    dash.unwrap_or(false),
-                    *opacity,
+                    dash.unwrap_or(input.defaults.shape_dash),
+                    Some(opacity.unwrap_or(input.defaults.shape_opacity).clamp(0.05, 1.0)),
                     xf,
                 );
             }
             Operation::StepNumber { at, label, color, diameter, style, rotation } => {
                 step_counter += 1;
-                let n = label.unwrap_or(step_counter);
+                // 自动编号从主题记忆 num_start 起（ANN-7）；显式 label 优先
+                let n = label.unwrap_or(step_counter as u32);
                 let (x, y) = resolve(unit, w, h, at);
                 let x = x - crop_off.0 as f32;
                 let y = y - crop_off.1 as f32;
-                let col = parse_color(color.as_deref()).unwrap_or(accent());
+                let col = parse_color(color.as_deref())
+                    .unwrap_or_else(|| theme_color(input.defaults, "num").unwrap_or_else(accent));
                 draw_step_number(
                     &mut pixmap, x, y,
                     diameter.unwrap_or(input.defaults.step_diameter),
@@ -495,19 +517,33 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
                 rotation,
             } => {
                 let (x, y) = resolve(unit, w, h, at);
-                let style = TextStyle {
-                    family: family.clone().unwrap_or_else(|| "default".into()),
-                    bold: bold.unwrap_or(false),
-                    italic: italic.unwrap_or(false),
-                    underline: underline.unwrap_or(false),
-                    shadow: shadow.unwrap_or(false), // 默认关闭：CLI/MCP 旧脚本渲染不变，GUI 显式传值
-                    align: align.as_deref().unwrap_or("left").to_string(),
-                    line_height: line_height.unwrap_or(1.0),
-                    background: background.as_deref().and_then(|s| parse_color(Some(s))),
-                    bg_opacity: background_opacity.map(|v| v.clamp(0.05, 1.0)),
-                    bg_radius: background_radius.map(|v| v.max(0.0)),
-                    stroke_color: stroke_color.as_deref().and_then(|s| parse_color(Some(s))),
-                    stroke_width: stroke_width.map(|v| v.max(1.0)),
+                // 主题继承：显式字段优先，缺省回落标注主题记忆值（标注主题页只读可见）
+                let eff_color = parse_color(color.as_deref())
+                    .unwrap_or_else(|| theme_color(input.defaults, "text").unwrap_or_else(accent));
+                let style = {
+                    let d = input.defaults;
+                    let bg_from_theme = background.is_none() && d.text_background;
+                    // 描边继承：GUI 语义 = 开关 text_stroke → 对比色 + 字号 8% 宽
+                    let stroke_from_theme = stroke_color.is_none() && stroke_width.is_none() && d.text_stroke;
+                    TextStyle {
+                        family: family.clone().unwrap_or_else(|| d.text_family.clone()),
+                        bold: bold.unwrap_or(d.text_bold),
+                        italic: italic.unwrap_or(d.text_italic),
+                        underline: underline.unwrap_or(d.text_underline),
+                        shadow: shadow.unwrap_or(d.text_shadow),
+                        align: align.as_deref().unwrap_or(&d.text_align).to_string(),
+                        line_height: line_height.unwrap_or(d.text_line_height),
+                        background: background.as_deref().and_then(|s| parse_color(Some(s)))
+                            .or_else(|| bg_from_theme.then(|| parse_color(Some(&d.text_bg_color))).flatten()),
+                        bg_opacity: background_opacity.map(|v| v.clamp(0.05, 1.0))
+                            .or_else(|| bg_from_theme.then(|| d.text_bg_opacity.clamp(0.05, 1.0))),
+                        bg_radius: background_radius.map(|v| v.max(0.0))
+                            .or_else(|| bg_from_theme.then(|| d.text_bg_radius.max(0.0))),
+                        stroke_color: stroke_color.as_deref().and_then(|s| parse_color(Some(s)))
+                            .or_else(|| stroke_from_theme.then(|| stroke_contrast(eff_color))),
+                        stroke_width: stroke_width.map(|v| v.max(1.0))
+                            .or_else(|| stroke_from_theme.then(|| (size.unwrap_or(d.text_size) * 0.08).max(1.5))),
+                    }
                 };
                 let xf = center_xform(*rotation, 0.0, 0.0); // 中心在排版后才知道：draw_text 内部处理
                 draw_text_rot(
@@ -516,8 +552,7 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
                     y - crop_off.1 as f32,
                     text,
                     size.unwrap_or(input.defaults.text_size),
-                    parse_color(color.as_deref())
-                        .unwrap_or(parse_color(Some(&input.defaults.color)).unwrap_or(accent())),
+                    eff_color,
                     &style,
                     rotation.unwrap_or(0.0),
                 )?;
@@ -526,7 +561,10 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
                 let (x, y) = resolve(unit, w, h, at);
                 let x = x - crop_off.0 as f32;
                 let y = y - crop_off.1 as f32;
-                let col = parse_color(color.as_deref()).unwrap_or(Color::from_rgba8(255, 214, 0, 255));
+                // 高亮色继承：tool_colors.marker → #FFB020（与 GUI 高亮工具同色）
+                let col = parse_color(color.as_deref()).unwrap_or_else(|| {
+                    theme_color(input.defaults, "marker").unwrap_or(Color::from_rgba8(255, 176, 32, 255))
+                });
                 let opa = opacity.unwrap_or(input.defaults.highlight_opacity).clamp(0.05, 1.0);
                 let mut p = Paint::default();
                 p.set_color(Color::from_rgba8((col.red() * 255.0) as u8, (col.green() * 255.0) as u8, (col.blue() * 255.0) as u8, (opa * 255.0) as u8));
@@ -564,8 +602,9 @@ pub fn render(input: &RenderInput) -> Result<RenderOutput> {
         None => pixmap,
     };
 
-    // 整图输出特效（阴影/边框）：最后应用，画布向外扩展
-    let final_pixmap = apply_output_fx(final_pixmap, input.script.output.as_ref())?;
+    // 整图输出特效（阴影/边框）：脚本显式 output 优先，缺省继承主题记忆的输出选项
+    let owned_fx = input.script.output.clone().or_else(|| theme_output_fx(input.defaults));
+    let final_pixmap = apply_output_fx(final_pixmap, owned_fx.as_ref())?;
 
     let out_png = final_pixmap
         .encode_png()
@@ -775,6 +814,61 @@ fn box_blur_region(pixmap: &mut Pixmap, r: Region, radius: f32) {
 
 pub fn accent() -> Color {
     Color::from_rgba8(0xFF, 0x3B, 0x30, 0xFF)
+}
+
+/// 主题继承色：`tool_colors.{tool_key}`（每工具独立色，同款语义）→ 全局主题色。
+/// 返回 None 表示 defaults 里没有任何可用色（调用方再兜底 accent）。
+fn theme_color(defaults: &crate::settings::AnnotationDefaults, tool_key: &str) -> Option<Color> {
+    if let Some(tc) = &defaults.tool_colors {
+        if let Some(c) = tc.get(tool_key).and_then(|v| v.as_str()) {
+            if let Some(col) = parse_color(Some(c)) {
+                return Some(col);
+            }
+        }
+    }
+    parse_color(Some(&defaults.color))
+}
+
+/// 描边对比色（与 GUI overlay.js strokeContrast 同规则：亮度 > 140 用黑，否则白）。
+fn stroke_contrast(c: Color) -> Color {
+    let lum = c.red() * 255.0 * 0.299 + c.green() * 255.0 * 0.587 + c.blue() * 255.0 * 0.114;
+    if lum > 140.0 {
+        Color::from_rgba8(0, 0, 0, 255)
+    } else {
+        Color::from_rgba8(255, 255, 255, 255)
+    }
+}
+
+/// settings.output_shadow / output_border（GUI 记忆值，含 on 开关）→ 引擎 OutputFx。
+/// 全关或字段非法返回 None（脚本未传且主题未开 = 纯叠加输出）。
+fn theme_output_fx(defaults: &crate::settings::AnnotationDefaults) -> Option<OutputFx> {
+    #[derive(serde::Deserialize)]
+    struct SavedFx {
+        #[serde(default)]
+        on: bool,
+        #[serde(default)]
+        blur: Option<f32>,
+        #[serde(default)]
+        width: Option<f32>,
+        #[serde(default)]
+        color: Option<String>,
+    }
+    let shadow = defaults
+        .output_shadow
+        .as_ref()
+        .and_then(|v| serde_json::from_value::<SavedFx>(v.clone()).ok())
+        .filter(|s| s.on)
+        .map(|s| OutputShadow { blur: s.blur, color: s.color });
+    let border = defaults
+        .output_border
+        .as_ref()
+        .and_then(|v| serde_json::from_value::<SavedFx>(v.clone()).ok())
+        .filter(|b| b.on)
+        .map(|b| OutputBorder { width: b.width, color: b.color });
+    if shadow.is_none() && border.is_none() {
+        return None;
+    }
+    Some(OutputFx { shadow, border })
 }
 
 pub fn parse_color(s: Option<&str>) -> Option<Color> {
@@ -1555,6 +1649,278 @@ mod tests {
         // 基图中心像素应保持原色 128
         let center = img.get_pixel((w / 2 + 14) as u32, (h / 2 + 14) as u32);
         assert_eq!(center[0], 128);
+    }
+
+    // ===== 主题继承（SET-7 单源）：脚本未显式指定的属性回落 defaults =====
+
+    fn png_of(w: u32, h: u32, fill_px: impl Fn(u32, u32) -> [u8; 3]) -> Vec<u8> {
+        let mut rgba = vec![255u8; (w * h * 4) as usize];
+        for (i, px) in rgba.chunks_exact_mut(4).enumerate() {
+            let c = fill_px((i as u32) % w, (i as u32) / w);
+            px[0] = c[0];
+            px[1] = c[1];
+            px[2] = c[2];
+        }
+        let img = image::RgbaImage::from_raw(w, h, rgba).unwrap();
+        let mut cur = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::ImageRgba8(img).write_to(&mut cur, image::ImageFormat::Png).unwrap();
+        cur.into_inner()
+    }
+
+    fn render_with(
+        png: &[u8],
+        ops: Vec<Operation>,
+        defaults: &crate::settings::AnnotationDefaults,
+    ) -> RenderOutput {
+        let s = script(ops);
+        render(&RenderInput { png, script: &s, anchor_blocks: None, defaults }).unwrap()
+    }
+
+    fn rgb8(c: Option<Color>) -> [u8; 3] {
+        c.map(|x| [(x.red() * 255.0) as u8, (x.green() * 255.0) as u8, (x.blue() * 255.0) as u8])
+            .unwrap_or([0, 0, 0])
+    }
+
+    #[test]
+    fn theme_color_prefers_tool_key_then_global() {
+        let d = crate::settings::AnnotationDefaults { color: "#FF0000".into(), ..Default::default() };
+        // 无 tool_colors：回落全局主题色
+        assert_eq!(rgb8(theme_color(&d, "arrow")), [255, 0, 0]);
+        // 命中工具键：工具色优先
+        let d2 = crate::settings::AnnotationDefaults {
+            color: "#FF0000".into(),
+            tool_colors: Some(serde_json::json!({ "arrow": "#00FF00" })),
+            ..Default::default()
+        };
+        assert_eq!(rgb8(theme_color(&d2, "arrow")), [0, 255, 0]);
+        // 未命中键：回落全局主题色
+        assert_eq!(rgb8(theme_color(&d2, "text")), [255, 0, 0]);
+    }
+
+    #[test]
+    fn stroke_contrast_matches_gui_rule() {
+        let white = Color::from_rgba8(255, 255, 255, 255);
+        let black = Color::from_rgba8(0, 0, 0, 255);
+        assert_eq!(rgb8(Some(stroke_contrast(white))), [0, 0, 0]);
+        assert_eq!(rgb8(Some(stroke_contrast(black))), [255, 255, 255]);
+    }
+
+    #[test]
+    fn inherit_arrow_color_from_tool_colors() {
+        let png = png_of(200, 120, |_, _| [200, 200, 200]);
+        let d = crate::settings::AnnotationDefaults {
+            color: "#FF0000".into(),
+            tool_colors: Some(serde_json::json!({ "arrow": "#00FF00" })),
+            ..Default::default()
+        };
+        let r = render_with(
+            &png,
+            vec![Operation::Arrow {
+                from: [20.0, 60.0],
+                to: [120.0, 60.0],
+                color: None,
+                width: None,
+                dash: None,
+                double_head: None,
+                heads: None,
+                line_style: None,
+                rotation: None,
+            }],
+            &d,
+        );
+        let px = image::load_from_memory(&r.png).unwrap().to_rgba8().get_pixel(70, 60).0;
+        assert_eq!((px[0], px[1], px[2]), (0, 255, 0), "箭头未传 color 必须继承 tool_colors.arrow");
+    }
+
+    #[test]
+    fn explicit_arrow_color_overrides_theme() {
+        let png = png_of(200, 120, |_, _| [200, 200, 200]);
+        let d = crate::settings::AnnotationDefaults {
+            color: "#FF0000".into(),
+            tool_colors: Some(serde_json::json!({ "arrow": "#00FF00" })),
+            ..Default::default()
+        };
+        let r = render_with(
+            &png,
+            vec![Operation::Arrow {
+                from: [20.0, 60.0],
+                to: [120.0, 60.0],
+                color: Some("#0000FF".into()),
+                width: None,
+                dash: None,
+                double_head: None,
+                heads: None,
+                line_style: None,
+                rotation: None,
+            }],
+            &d,
+        );
+        let px = image::load_from_memory(&r.png).unwrap().to_rgba8().get_pixel(70, 60).0;
+        assert_eq!((px[0], px[1], px[2]), (0, 0, 255), "显式 color 必须覆盖主题色");
+    }
+
+    #[test]
+    fn inherit_rect_fill_from_shape_fill() {
+        let png = png_of(200, 120, |_, _| [200, 200, 200]);
+        let op = op_rect([40.0, 40.0], [50.0, 30.0]);
+        let mut d = crate::settings::AnnotationDefaults::default();
+        d.shape_fill = "fill".into();
+        let r = render_with(&png, vec![op.clone()], &d);
+        let px = image::load_from_memory(&r.png).unwrap().to_rgba8().get_pixel(65, 55).0;
+        assert_eq!((px[0], px[1], px[2]), (255, 59, 48), "shape_fill=fill 时矩形中心为主题色");
+        // 出厂默认 outline：中心保持底色
+        let d2 = crate::settings::AnnotationDefaults::default();
+        let r2 = render_with(&png, vec![op], &d2);
+        let px2 = image::load_from_memory(&r2.png).unwrap().to_rgba8().get_pixel(65, 55).0;
+        assert_eq!([px2[0], px2[1], px2[2]], [200, 200, 200]);
+    }
+
+    #[test]
+    fn inherit_arrow_heads_from_theme() {
+        let png = png_of(240, 120, |_, _| [200, 200, 200]);
+        let mk = || {
+            vec![Operation::Arrow {
+                from: [20.0, 60.0],
+                to: [200.0, 60.0],
+                color: Some("#000000".into()),
+                width: None,
+                dash: None,
+                double_head: None,
+                heads: None,
+                line_style: None,
+                rotation: None,
+            }]
+        };
+        let mut d_end = crate::settings::AnnotationDefaults::default();
+        d_end.arrow_heads = "end".into();
+        let mut d_none = crate::settings::AnnotationDefaults::default();
+        d_none.arrow_heads = "none".into();
+        assert_ne!(
+            render_with(&png, mk(), &d_end).png,
+            render_with(&png, mk(), &d_none).png,
+            "arrow_heads 主题值必须参与渲染"
+        );
+    }
+
+    #[test]
+    fn inherit_step_autonumber_start() {
+        let png = png_of(300, 120, |_, _| [200, 200, 200]);
+        let mk = || {
+            vec![
+                Operation::StepNumber { at: [40.0, 60.0], label: None, color: None, diameter: None, style: None, rotation: None },
+                Operation::StepNumber { at: [100.0, 60.0], label: None, color: None, diameter: None, style: None, rotation: None },
+            ]
+        };
+        let mut d1 = crate::settings::AnnotationDefaults::default();
+        d1.num_start = 1;
+        let mut d5 = crate::settings::AnnotationDefaults::default();
+        d5.num_start = 5;
+        let r1 = render_with(&png, mk(), &d1);
+        let r5 = render_with(&png, mk(), &d5);
+        assert_ne!(r1.png, r5.png, "自动编号必须从 num_start 起");
+        assert_eq!(r5.png, render_with(&png, mk(), &d5).png, "同 defaults 渲染仍须确定");
+    }
+
+    #[test]
+    fn inherit_text_style_from_defaults() {
+        let png = png_of(300, 140, |_, _| [240, 240, 240]);
+        let mk = |shadow: Option<bool>| {
+            vec![Operation::Text {
+                at: [20.0, 30.0],
+                text: "测试 Test".into(),
+                size: Some(28.0),
+                color: None,
+                family: None,
+                bold: None,
+                italic: None,
+                underline: None,
+                shadow,
+                rotation: None,
+                align: None,
+                line_height: None,
+                background: None,
+                background_opacity: None,
+                background_radius: None,
+                stroke_color: None,
+                stroke_width: None,
+            }]
+        };
+        let d_on = crate::settings::AnnotationDefaults::default(); // 出厂 text_shadow: true
+        let mut d_off = crate::settings::AnnotationDefaults::default();
+        d_off.text_shadow = false;
+        let r_def = render_with(&png, mk(None), &d_on);
+        let r_off = render_with(&png, mk(None), &d_off);
+        assert_ne!(r_def.png, r_off.png, "text_shadow 主题值必须参与渲染");
+        // 显式传参覆盖主题：显式 false + 主题 true == 主题 false
+        assert_eq!(render_with(&png, mk(Some(false)), &d_on).png, r_off.png);
+    }
+
+    #[test]
+    fn inherit_text_family_from_defaults() {
+        let png = png_of(300, 140, |_, _| [240, 240, 240]);
+        let mk = || {
+            vec![Operation::Text {
+                at: [20.0, 30.0],
+                text: "定影 Onceglance 123".into(),
+                size: Some(28.0),
+                color: None,
+                family: None,
+                bold: None,
+                italic: None,
+                underline: None,
+                shadow: None,
+                rotation: None,
+                align: None,
+                line_height: None,
+                background: None,
+                background_opacity: None,
+                background_radius: None,
+                stroke_color: None,
+                stroke_width: None,
+            }]
+        };
+        let d_a = crate::settings::AnnotationDefaults::default();
+        let mut d_b = crate::settings::AnnotationDefaults::default();
+        d_b.text_family = "simsun".into();
+        assert_ne!(
+            render_with(&png, mk(), &d_a).png,
+            render_with(&png, mk(), &d_b).png,
+            "text_family 主题值必须参与渲染"
+        );
+    }
+
+    #[test]
+    fn inherit_mosaic_mode_from_defaults() {
+        // 渐变底图：像素化与模糊可区分
+        let png = png_of(160, 120, |x, y| [((x * 7) % 256) as u8, ((y * 5) % 256) as u8, 128]);
+        let mk = |mode: Option<String>| {
+            vec![Operation::Mosaic { at: [20.0, 20.0], size: [80.0, 60.0], mode, strength: None }]
+        };
+        let mut d_px = crate::settings::AnnotationDefaults::default(); // "mosaic" → 像素化
+        d_px.mosaic_mode = "mosaic".into();
+        let mut d_bl = crate::settings::AnnotationDefaults::default();
+        d_bl.mosaic_mode = "blur".into();
+        let a = render_with(&png, mk(None), &d_px);
+        let b = render_with(&png, mk(None), &d_bl);
+        assert_ne!(a.png, b.png, "mosaic_mode 主题值必须继承");
+        // 显式 mode 覆盖主题
+        assert_eq!(render_with(&png, mk(Some("blur".into())), &d_px).png, b.png);
+    }
+
+    #[test]
+    fn inherit_output_fx_from_theme() {
+        let png = png_of(100, 80, |_, _| [128, 128, 128]);
+        let mut d = crate::settings::AnnotationDefaults::default();
+        d.output_shadow = Some(serde_json::json!({ "on": true, "blur": 10, "color": "#000000" }));
+        d.output_border = Some(serde_json::json!({ "on": true, "width": 4, "color": "#FFFFFF" }));
+        let r = render_with(&png, vec![], &d);
+        assert_eq!(r.width, 100 + 28, "主题记忆的阴影+边框必须外扩画布");
+        assert_eq!(r.height, 80 + 28);
+        // on=false 不注入
+        let mut d_off = crate::settings::AnnotationDefaults::default();
+        d_off.output_shadow = Some(serde_json::json!({ "on": false, "blur": 10, "color": "#000000" }));
+        let r_off = render_with(&png, vec![], &d_off);
+        assert_eq!((r_off.width, r_off.height), (100, 80), "on=false 的输出选项不得注入");
     }
 }
 

@@ -253,7 +253,7 @@ fn tool_definitions() -> Value {
         },
         {
             "name": "annotate_image",
-            "description": "指令驱动标注：在截图上叠加箭头/矩形/椭圆/步骤序号/文字/高亮/马赛克/裁剪，生成衍生图（永不覆盖原图）。坐标默认物理像素 px，可用 unit=\"rel\" 传 0–1 相对坐标（推荐视觉模型使用），或 anchor=\"block:N\" 引用 OCR 块。返回 data.path 衍生图绝对路径。",
+            "description": "指令驱动标注：在截图上叠加箭头/矩形/椭圆/步骤序号/文字/高亮/马赛克/裁剪，生成衍生图（永不覆盖原图）。坐标默认物理像素 px，可用 unit=\"rel\" 传 0–1 相对坐标（推荐视觉模型使用），或 anchor=\"block:N\" 引用 OCR 块。未显式指定的样式属性（颜色/线宽/字体/序号样式/马赛克模式/整图阴影边框）继承用户标注主题默认值（主面板「标注主题」页只读可见），显式传参优先。返回 data.path 衍生图绝对路径。",
             "inputSchema": {
                 "type": "object",
                 "properties": {
