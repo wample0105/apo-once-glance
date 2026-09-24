@@ -92,6 +92,7 @@ button { font-family: inherit; }
   min-height: 32px;
 }
 .btn.primary:hover { background: var(--accent-hover); }
+.btn:disabled { opacity: .55; cursor: default; pointer-events: none; }
 .btn.ghost {
   border-color: transparent;
   background: transparent;

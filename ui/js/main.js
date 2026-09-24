@@ -57,8 +57,7 @@ $$(".nav-item").forEach((btn) => {
     $("#page-" + btn.dataset.page).classList.add("on");
     if (btn.dataset.page === "history") refreshCurrentView();
     if (btn.dataset.page === "theme") loadThemeValues().catch(reportErr);
-    if (btn.dataset.page === "agent") { refreshBridgeStatus(); loadAgentRegistry().catch(reportErr); }
-    if (btn.dataset.page === "privacy") refreshAudit();
+    if (btn.dataset.page === "agent") { refreshBridgeStatus(); loadAgentRegistry().catch(reportErr); refreshAudit(); }
     if (btn.dataset.page === "doctor") runDoctor();
   };
 });
@@ -640,16 +639,26 @@ $("#audit-clear").onclick = async () => {
 
 // ===== 诊断 =====
 async function runDoctor() {
-  const r = await invoke("doctor_run");
-  $("#doctor-list").innerHTML = r.items.map((it) => `
+  const btn = $("#btn-doctor");
+  if (btn) { btn.disabled = true; btn.textContent = "自检中…"; }
+  try {
+    const r = await invoke("doctor_run");
+    $("#doctor-list").innerHTML = r.items.map((it) => `
     <div class="doctor-item">
       <span class="${it.ok ? "d-ok" : "d-bad"}">${it.ok ? "✓" : "✕"}</span>
       <span style="width:90px">${it.check}</span>
       <span style="color:var(--text-secondary)">${it.detail || ""}</span>
     </div>`).join("");
-  const dot = $("#status-dot");
-  dot.className = "statusdot " + (r.ok_all ? "" : "warn");
-  dot.title = r.ok_all ? "全部正常" : "有可修复项，点击直达诊断";
+    const dot = $("#status-dot");
+    dot.className = "statusdot " + (r.ok_all ? "" : "warn");
+    dot.title = r.ok_all ? "全部正常" : "有可修复项，点击直达诊断";
+  } catch (e) {
+    reportErr(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "重新自检"; }
+    const at = $("#doctor-ran-at");
+    if (at) at.textContent = "上次自检 " + new Date().toLocaleTimeString("zh-CN", { hour12: false });
+  }
 }
 $("#btn-doctor").onclick = runDoctor;
 
@@ -906,22 +915,17 @@ function showHotkeyConflicts(conflicts) {
     : "";
 }
 
-// ===== 桥接状态（接入页横幅）=====
+// ===== 桥接状态（异常才显示：在线不占版面，离线出警示条）=====
 async function refreshBridgeStatus() {
   const el = $("#bridge-status");
   if (!el) return;
   try {
     const r = await invoke("bridge_ping");
-    if (r && r.ok && r.data) {
-      const d = r.data;
-      el.textContent = `桥接在线 · v${d.version} · 本机命名管道（仅当前用户） · OCR 引擎 ${d.ocr_engine} · 历史 ${d.history_count} 张 · Agent ${d.agent_enabled ? "允许" : "已切断"}`;
-      el.style.color = "var(--success)";
-    } else {
-      throw new Error(r && r.error ? r.error.message || "未知" : "空响应");
-    }
+    if (!(r && r.ok && r.data)) throw new Error(r && r.error ? r.error.message || "未知" : "空响应");
+    el.style.display = "none";
   } catch (e) {
     el.textContent = "桥接离线（CLI/MCP 仍直接驱动内核，功能不受影响）：" + (e && e.message ? e.message : e);
-    el.style.color = "var(--text-tertiary)";
+    el.style.display = "block";
   }
 }
 
