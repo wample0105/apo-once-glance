@@ -95,6 +95,23 @@
   .page.on { display: block; }
   .ptitle { font-size: 15px; font-weight: 500; margin-bottom: 2px; }
   .psub { font-size: 12px; color: var(--text-tertiary); margin-bottom: 14px; line-height: 1.6; }
+  /* 低频参考内容折叠（接口速查等） */
+  details.refbox { border: 1px solid var(--border); border-radius: var(--r-card); background: #fff; margin-top: 14px; }
+  details.refbox summary {
+    cursor: pointer; user-select: none;
+    padding: 9px 14px; font-size: 12.5px; font-weight: 500;
+    color: var(--text-secondary); list-style: none; display: flex; align-items: center; gap: 6px;
+  }
+  details.refbox summary::before { content: "▸"; font-size: 11px; color: var(--text-tertiary); transition: transform .12s; }
+  details.refbox[open] summary::before { transform: rotate(90deg); }
+  details.refbox[open] summary { border-bottom: 1px solid var(--border); }
+  details.refbox > .group { margin: 10px 0; }
+  /* 桥接状态横幅：异常才显示（在线隐藏，离线出警示条） */
+  .bridge-warn {
+    border: 1px solid #FFD2C9; border-radius: var(--r-card);
+    background: var(--accent-bg); color: var(--accent-text);
+    font-size: 12px; line-height: 1.6; padding: 9px 14px;
+  }
 
   /* 首页动作卡片（业界同款动作导向）：主推卡横贯 + 次卡网格 */
   .actiongrid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; margin-bottom: 18px; }
@@ -269,17 +286,13 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
         首页
       </button>
+      <button class="nav-item" data-page="agent">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 14V9.5M10 14V9.5M4.5 9.5h7M5 9.5V6a3 3 0 016 0v3.5M8 3V1.5"/></svg>
+        Agent
+      </button>
       <button class="nav-item" data-page="theme">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10.8 2.6l2.6 2.6L6 12.6l-3.4.8.8-3.4z"/></svg>
         标注主题
-      </button>
-      <button class="nav-item" data-page="privacy">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 1.8l5 1.8v4c0 3.2-2.1 5.5-5 6.6-2.9-1.1-5-3.4-5-6.6v-4z"/></svg>
-        Agent 与隐私
-      </button>
-      <button class="nav-item" data-page="agent">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 14V9.5M10 14V9.5M4.5 9.5h7M5 9.5V6a3 3 0 016 0v3.5M8 3V1.5"/></svg>
-        Agent 接入
       </button>
       <button class="nav-item" data-page="general">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M12.4 3.6L11 5M5 11l-1.4 1.4"/></svg>
@@ -300,7 +313,7 @@
             <button class="hero-card primary" id="act-region">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V4h3M17 4h3v3M21 17v3h-3M7 20H4v-3"/><rect x="8" y="8" width="8" height="8" rx="1" stroke-dasharray="2 2"/></svg>
               <span class="hc-name">截图</span>
-              <span class="hc-desc">框选任意区域，标注后保存（窗口吸附规划中）</span>
+              <span class="hc-desc">框选任意区域，标注后保存</span>
               <span class="kbd">Alt+Shift+A</span>
             </button>
             <button class="hero-card" id="card-agent">
@@ -334,7 +347,7 @@
             <!-- ===== 标注主题（只读管理视图，§4.8）===== -->
       <section class="page" id="page-theme">
         <div class="ptitle">标注主题</div>
-        <div class="psub">调参入口在标注编辑器——这里展示的是编辑器自动记忆的"上次使用值"。本页不做第二套参数，也不需要保存。Agent（CLI/MCP）标注时未显式传参的属性，继承本页全部默认值。</div>
+        <div class="psub">调参入口在标注编辑器——这里只读展示编辑器记忆的默认值；Agent 标注未显式传参的属性，全部继承本页。</div>
         <div class="group">
           <div class="row">
             <div class="label"><div class="t">记住标注设置</div><div class="d">关闭后，编辑器里的改动仅本次生效，默认值不再更新</div></div>
@@ -346,16 +359,16 @@
           </div>
         </div>
         <div id="theme-values"></div>
-        <div class="psub">本页没有"保存"按钮——默认值由编辑器自动记忆，这里看到的永远是最新的一份，也是 Agent 标注的继承来源。</div>
       </section>
 
-      <!-- ===== Agent 与隐私（§4.9）===== -->
-      <section class="page" id="page-privacy">
-        <div class="ptitle">Agent 与隐私</div>
-        <div class="psub">隐私是卖点，外露不藏：总开关、黑名单、审计日志一页看全。</div>
+      <!-- ===== Agent（§4.9+§4.10 合并：接入、权限与隐私一页管全）===== -->
+      <section class="page" id="page-agent">
+        <div class="ptitle">Agent</div>
+        <div class="psub">接入本机 Agent，并管理它的权限与隐私边界。</div>
+        <div class="ptitle" style="font-size:13px">权限</div>
         <div class="group">
           <div class="row">
-            <div class="label"><div class="t">允许本机 Agent 调用定影</div><div class="d">CLI、Agent Skill 与 MCP 通过仅限当前用户的本机桥接调用，不开放网络端口</div></div>
+            <div class="label"><div class="t">允许本机 Agent 调用定影</div><div class="d">关闭后，所有 Agent 的截图、取字与标注调用立即被拒</div></div>
             <div class="ctl"><button class="switch on" id="sw-agent" role="switch" aria-checked="true"></button></div>
           </div>
           <div class="statline ok" id="agent-stat"></div>
@@ -364,35 +377,13 @@
             <div class="ctl"><button class="switch on" id="sw-autocap" role="switch" aria-checked="true"></button></div>
           </div>
         </div>
-        <div class="ptitle" style="font-size:13px">隐私 App 黑名单</div>
-        <div class="psub">命中即拒绝截图，不留成图，Agent 收到退出码 6 的明确错误。不提供"本次放行"。</div>
-        <div class="group">
-          <div id="blacklist-rows"></div>
-          <div class="row">
-            <input type="text" class="formin" id="bl-input" placeholder="进程名（1password.exe）或关键字（*银行*），回车添加" style="flex:1">
-            <button class="btn" id="bl-add">添加</button>
-          </div>
-        </div>
-        <div class="ptitle" style="font-size:13px">审计日志</div>
-        <div class="psub">仅元数据（时间、命令、耗时、状态、目标进程名），永不记录图片内容与 OCR 正文。30 天自动清理。</div>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <select id="audit-filter"><option value="all">全部</option><option value="fail">仅失败</option></select>
-          <span style="flex:1"></span>
-          <button class="btn ghost" id="audit-clear">清空</button>
-        </div>
-        <div class="auditlist" id="audit-list"></div>
-      </section>
-
-      <!-- ===== Agent 接入（§4.10）===== -->
-      <section class="page" id="page-agent">
-        <div class="ptitle">Agent 接入</div>
-        <div class="psub">让 Agent 看见你的屏幕，替你把操作变成教程。</div>
-        <div class="codebox" id="bridge-status" style="margin-bottom:14px">桥接状态检测中…</div>
+        <div class="bridge-warn" id="bridge-status" style="display:none;margin-bottom:14px"></div>
         <div class="ptitle" style="font-size:13px">一键接入 MCP（推荐）</div>
-        <div class="psub">把截图 / 取字 / 标注能力挂给本机 Agent。按配置文件逐个注册，写入前自动备份原配置（备份目录 %APPDATA%\Onceglance\agent-backups）；同一家族的桌面端与 CLI 端配置互不相通，需分别接入。</div>
+        <div class="psub">把截图、取字、标注能力挂给本机 Agent；写入前自动备份原配置。</div>
         <div class="group" id="agent-reg"><div class="row"><div class="label"><div class="d">检测中…</div></div></div></div>
+        <div class="syntaxhint">同一家族的桌面端与 CLI 端配置互不相通，需分别接入。</div>
         <div class="ptitle" style="font-size:13px">第 1 步 · 安装 CLI 与 Skill（一次装齐）</div>
-        <div class="psub">一条命令同时安装或更新 CLI 与 Skill：自动校验下载文件，并适配 Codex 和通用 Agent Skills 目录。</div>
+        <div class="psub">一条命令同时安装或更新 CLI 与 Agent Skill。</div>
         <div class="installcards">
           <div class="installcard">
             <h4>方式一 · 终端</h4>
@@ -405,26 +396,45 @@ curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wampl
 安装完成后，运行 once status --json 验证是否安装成功。</span></div>
           </div>
         </div>
-        <div class="psub" style="margin-top:8px">安装后重启 Agent，再运行 <code>once status --json</code> 验证连接。Windows 在 Git Bash / WSL 中执行，macOS 在终端执行。</div>
+        <div class="psub" style="margin-top:8px">安装后重启 Agent，再运行 <code>once status --json</code> 验证连接；Windows 在 Git Bash / WSL 中执行。</div>
         <div class="ptitle" style="font-size:13px;margin-top:14px">第 2 步 · 配置 MCP</div>
         <div class="psub">把下面的 JSON 加入你的 Agent 的 MCP 配置（命令为 once.exe 的绝对路径）。</div>
         <div class="codebox" id="mcp-config"><span class="copy">复制</span></div>
-        <div class="ptitle" style="font-size:13px;margin-top:14px">接口速查</div>
-        <div class="group" style="padding:0 14px">
-          <table class="ref">
-            <tr><th>命令</th><th>说明</th></tr>
-            <tr><td><code>once status</code></td><td>版本、实例、桥接、热键状态</td></tr>
-            <tr><td><code>once capture window|fullscreen|region</code></td><td>捕获；--out 指定输出</td></tr>
-            <tr><td><code>once ocr &lt;path|last&gt;</code></td><td>本地 OCR，blocks + bbox</td></tr>
-            <tr><td><code>once annotate &lt;path|last&gt; --script F --out P</code></td><td>指令驱动标注（衍生图）</td></tr>
-            <tr><td><code>once history --query Q</code></td><td>FTS 检索</td></tr>
-            <tr><td><code>once mcp</code></td><td>stdio 启动 MCP Server</td></tr>
-            <tr><th colspan="2">退出码（冻结）</th></tr>
-            <tr><td><code>0</code></td><td>成功</td></tr>
-            <tr><td><code>1 / 2 / 3</code></td><td>参数错误 / 捕获失败 / OCR 失败</td></tr>
-            <tr><td><code>4 / 5 / 6</code></td><td>读写失败 / 权限被拒 / 黑名单拦截</td></tr>
-          </table>
+        <div class="ptitle" style="font-size:13px;margin-top:14px">隐私防线 · App 黑名单</div>
+        <div class="psub">命中即拒绝截图，不留成图，Agent 收到退出码 6 的明确错误。不提供"本次放行"。</div>
+        <div class="group">
+          <div id="blacklist-rows"></div>
+          <div class="row">
+            <input type="text" class="formin" id="bl-input" placeholder="进程名（1password.exe）或关键字（*银行*），回车添加" style="flex:1">
+            <button class="btn" id="bl-add">添加</button>
+          </div>
         </div>
+        <div class="ptitle" style="font-size:13px">审计日志</div>
+        <div class="psub">仅记录命令元数据，永不记录图片内容与 OCR 正文；30 天自动清理。</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <select id="audit-filter"><option value="all">全部</option><option value="fail">仅失败</option></select>
+          <span style="flex:1"></span>
+          <button class="btn ghost" id="audit-clear">清空</button>
+        </div>
+        <div class="auditlist" id="audit-list"></div>
+        <details class="refbox">
+          <summary>接口速查</summary>
+          <div class="group" style="padding:0 14px">
+            <table class="ref">
+              <tr><th>命令</th><th>说明</th></tr>
+              <tr><td><code>once status</code></td><td>版本、实例、桥接、热键状态</td></tr>
+              <tr><td><code>once capture window|fullscreen|region</code></td><td>捕获；--out 指定输出</td></tr>
+              <tr><td><code>once ocr &lt;path|last&gt;</code></td><td>本地 OCR，blocks + bbox</td></tr>
+              <tr><td><code>once annotate &lt;path|last&gt; --script F --out P</code></td><td>指令驱动标注（衍生图）</td></tr>
+              <tr><td><code>once history --query Q</code></td><td>FTS 检索</td></tr>
+              <tr><td><code>once mcp</code></td><td>stdio 启动 MCP Server</td></tr>
+              <tr><th colspan="2">退出码（冻结）</th></tr>
+              <tr><td><code>0</code></td><td>成功</td></tr>
+              <tr><td><code>1 / 2 / 3</code></td><td>参数错误 / 捕获失败 / OCR 失败</td></tr>
+              <tr><td><code>4 / 5 / 6</code></td><td>读写失败 / 权限被拒 / 黑名单拦截</td></tr>
+            </table>
+          </div>
+        </details>
       </section>
 
       <!-- ===== 资产详情（§4.6：文字块与图片联动）===== -->
@@ -486,6 +496,10 @@ curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wampl
               </select>
             </div>
           </div>
+          <div class="row">
+            <div class="label"><div class="t">截图退出确认</div><div class="d">Esc 退出且有未保存标注时弹窗询问；关闭后按记住的选择直接执行</div></div>
+            <div class="ctl"><button class="switch on" id="sw-escconfirm" role="switch" aria-checked="true"></button></div>
+          </div>
         </div>
         <div class="ptitle" style="font-size:13px">保存</div>
         <div class="group">
@@ -503,16 +517,12 @@ curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wampl
         <div class="ptitle" style="font-size:13px">启动</div>
         <div class="group">
           <div class="row">
-            <div class="label"><div class="t">开机自启</div><div class="d">通过任务计划程序在登录时启动（SYS-4）</div></div>
+            <div class="label"><div class="t">开机自启</div><div class="d">登录时自动启动定影</div></div>
             <div class="ctl"><button class="switch" id="sw-autostart" role="switch" aria-checked="false"></button></div>
           </div>
           <div class="row">
-            <div class="label"><div class="t">关闭主窗口时最小化到托盘</div><div class="d">关闭（关闭即退出）——改动下次关窗生效</div></div>
+            <div class="label"><div class="t">关闭主窗口时最小化到托盘</div><div class="d">开启后点 ✕ 缩到托盘继续截图；关闭则点 ✕ 直接退出。改动下次关窗生效</div></div>
             <div class="ctl"><button class="switch on" id="sw-closetray" role="switch" aria-checked="true"></button></div>
-          </div>
-          <div class="row">
-            <div class="label"><div class="t">截图退出确认</div><div class="d">Esc 退出且有未保存标注时弹窗询问；关闭后按记住的选择直接执行</div></div>
-            <div class="ctl"><button class="switch on" id="sw-escconfirm" role="switch" aria-checked="true"></button></div>
           </div>
         </div>
         <div class="ptitle" style="font-size:13px">关于</div>
@@ -526,7 +536,10 @@ curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wampl
       <section class="page" id="page-doctor">
         <div class="ptitle">诊断</div>
         <div class="psub">一键自检：捕获、落盘目录、OCR 引擎、桥接。诊断报告不含任何截图内容与 OCR 文字。</div>
-        <button class="btn primary" id="btn-doctor">重新自检</button>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <button class="btn primary" id="btn-doctor">重新自检</button>
+          <span class="metaline" id="doctor-ran-at"></span>
+        </div>
         <div class="group" id="doctor-list" style="margin-top:12px"></div>
       </section>
     </main>
