@@ -13,7 +13,7 @@ apo-once-glance/
 │  └─ 04-备份区/               # 历史档案，不要读也不要动
 ├─ assets/logo/               # 品牌资产（一处定稿、处处同图，禁止改色/拉伸/自画）
 ├─ ui/                        # Web 前端（无构建步骤，Tauri 直接内嵌）
-│  ├─ index.html              # 主面板（6 页导航：历史/标注主题/Agent 与隐私/Agent 接入/通用/诊断）
+│  ├─ index.html              # 主面板（5 页导航：历史/标注主题/Agent/通用/诊断）
 │  ├─ overlay.html + js/overlay.js   # 捕获覆盖层（区域/取字/长截图三种模式）
 │  ├─ toast.html              # 通知浮层（右下角，成功 3s / 错误 6s）
 │  ├─ quality.html            # 长截图接缝质检页
@@ -93,6 +93,20 @@ npm run build                                  # 产出 src-tauri/target/release
 cd src-tauri && cargo build --release -p once-cli    # once.exe CLI
 # 发布物打包时生成 SHA-256 清单（checksums.txt，install.sh 自动校验）
 ```
+
+## 常见问题
+
+### 截图整体发白、像曝光过度？
+
+**现象**：部分窗口截出来整体偏白、亮度失真，但屏幕上看着完全正常；截其他窗口又没问题。
+
+**原因**：系统开启了 HDR（高动态范围）显示。HDR 开启时，Windows 桌面以高亮度范围合成画面，而传统截图接口拿到的是经过亮度映射后的降维帧，中间调被整体提亮，于是截图发白。这是 Windows HDR 合成与传统捕获方式之间的兼容性问题，与具体应用无关——受影响的是所有走传统捕获路径的截图工具。
+
+**解决**：关闭 HDR 即可恢复正常：
+
+> 设置 → 系统 → 屏幕 → HDR → 关闭「使用 HDR」
+
+（任务栏搜索「HDR」可直达该设置页。）
 
 ## 当前状态
 
