@@ -3,7 +3,7 @@
 #
 # 用法（Git Bash / WSL / macOS）：
 #   curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 \
-#     https://github.com/wample/OnceGlance/releases/latest/download/install.sh | bash
+#     https://github.com/wample0105/apo-once-glance/releases/latest/download/install.sh | bash
 #
 # 行为：
 #   1. 下载发行版 once CLI（按平台/架构选择）+ SHA-256 校验
@@ -13,7 +13,7 @@
 #   4. 运行 once status --json 验证安装
 set -euo pipefail
 
-REPO="wample/OnceGlance"
+REPO="wample0105/apo-once-glance"
 VERSION="${ONCEGLANCE_VERSION:-latest}"
 INSTALL_DIR="$HOME/.onceglance/bin"
 SKILLS_DIR="$HOME/.agents/skills"
