@@ -612,8 +612,73 @@ fn get_logo_svg(app: AppHandle, name: String) -> Result<String, String> {
     Err(format!("品牌资产不存在：{name}"))
 }
 
+/// 解析 once.exe（CLI/MCP 二进制）的落点，按可信度排序取第一个存在的：
+/// 安装目录（含 binaries/）→ 资源目录 → install.sh 标准位 → 开发构建。
+fn resolve_once_exe(app: &AppHandle) -> Option<std::path::PathBuf> {
+    let mut cands: Vec<std::path::PathBuf> = Vec::new();
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            cands.push(dir.join("once.exe"));
+            cands.push(dir.join("binaries").join("once.exe"));
+        }
+    }
+    if let Ok(rd) = app.path().resource_dir() {
+        cands.push(rd.join("binaries").join("once.exe"));
+        cands.push(rd.join("once.exe"));
+    }
+    if let Some(home) = dirs::home_dir() {
+        cands.push(home.join(".onceglance").join("bin").join("once.exe"));
+    }
+    cands.push(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("target")
+            .join("release")
+            .join("once.exe"),
+    );
+    cands.into_iter().find(|p| p.is_file())
+}
+
 #[tauri::command]
-fn doctor_run() -> serde_json::Value {
+fn once_exe_path(app: AppHandle) -> Option<String> {
+    resolve_once_exe(&app).map(|p| p.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn agent_list() -> Vec<once_core::agents::AgentEntry> {
+    let appdata = dirs::data_dir().unwrap_or_default();
+    let home = dirs::home_dir().unwrap_or_default();
+    once_core::agents::list(&appdata, &home)
+}
+
+#[tauri::command]
+fn agent_register(app: AppHandle, id: String) -> Result<once_core::agents::RegisterOutcome, String> {
+    let once_exe = resolve_once_exe(&app)
+        .ok_or_else(|| "未找到 once.exe——请先在「Agent 接入」页安装 CLI，或重新安装客户端".to_string())?;
+    let appdata = dirs::data_dir().unwrap_or_default();
+    let home = dirs::home_dir().unwrap_or_default();
+    once_core::agents::register(
+        &once_core::agents::Dirs { appdata: &appdata, home: &home },
+        &once_exe,
+        &id,
+        once_core::agents::claude_cli_available,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn agent_unregister(id: String) -> Result<Option<String>, String> {
+    let appdata = dirs::data_dir().unwrap_or_default();
+    let home = dirs::home_dir().unwrap_or_default();
+    once_core::agents::unregister(
+        &once_core::agents::Dirs { appdata: &appdata, home: &home },
+        &id,
+        once_core::agents::claude_cli_available,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn doctor_run(app: AppHandle) -> serde_json::Value {
     let s = settings::load();
     let mut items = Vec::new();
     let capture_ok = (|| -> bool {
@@ -625,11 +690,19 @@ fn doctor_run() -> serde_json::Value {
     let dir_ok = s.save_dir_writable();
     let ocr_ok = ocr::engine_available();
     let runtime_ok = webview2_present();
+    let once_exe = resolve_once_exe(&app);
+    let mcp_ok = once_exe.is_some() && s.agent_enabled;
     items.push(serde_json::json!({ "check": "capture", "ok": capture_ok, "detail": "角落捕获自检" }));
     items.push(serde_json::json!({ "check": "save_dir", "ok": dir_ok, "detail": s.save_root().display().to_string() }));
     items.push(serde_json::json!({ "check": "ocr_engine", "ok": ocr_ok, "detail": ocr::engine_language() }));
     items.push(serde_json::json!({ "check": "runtime", "ok": runtime_ok, "detail": "WebView2 运行时" }));
-    serde_json::json!({ "ok_all": capture_ok && dir_ok && ocr_ok && runtime_ok, "items": items })
+    items.push(serde_json::json!({
+        "check": "mcp",
+        "ok": mcp_ok,
+        "detail": once_exe.map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "once.exe 未找到（重新安装客户端或在「Agent 接入」页安装 CLI）".into())
+    }));
+    serde_json::json!({ "ok_all": capture_ok && dir_ok && ocr_ok && runtime_ok && mcp_ok, "items": items })
 }
 
 /// 审计日志读取（Agent 与隐私页）。
@@ -874,6 +947,10 @@ pub fn run() {
             get_logo_path,
             get_logo_svg,
             doctor_run,
+            once_exe_path,
+            agent_list,
+            agent_register,
+            agent_unregister,
             read_audit,
             clear_audit
         ])

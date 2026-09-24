@@ -11,3 +11,6 @@ tools/out/
 probe_*.png
 uitest_*.png
 *.pyc
+
+# sidecar 打包暂存（构建脚本生成）
+src-tauri/binaries/

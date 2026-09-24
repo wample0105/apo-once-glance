@@ -1,0 +1,49 @@
+{
+  "created_at": "2026-09-23T21:15:24.105+08:00",
+  "file": "01-定时任务列表.png",
+  "height": 1371,
+  "id": "images#01-定时任务列表",
+  "inherits": {
+    "created_at": "2026-09-23T20:40:30.541+08:00",
+    "dpi_scale": 1.5,
+    "file": "204030-window-7ay4.png",
+    "height": 1371,
+    "id": "2026-09-23#204030-window-7ay4",
+    "kind": "window",
+    "screen": 0,
+    "screen_layout": {
+      "monitors": [
+        {
+          "dpi_scale": 1.5,
+          "index": 1,
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "rect": [
+            0,
+            0,
+            2560,
+            1600
+          ]
+        }
+      ],
+      "virtual_desktop": [
+        0,
+        0,
+        2560,
+        1600
+      ]
+    },
+    "source_window": {
+      "pid": 52160,
+      "process_name": "WorkBuddy.exe",
+      "title": "WorkBuddy"
+    },
+    "width": 2037
+  },
+  "kind": "annotated",
+  "ops_count": 10,
+  "parent_file": "204030-window-7ay4.png",
+  "parent_id": "2026-09-23#204030-window-7ay4",
+  "script_sha256": "f5f573e6c7806e5e23071945c26dee0dfc0685b0bfe76329847fbb4d09d480a3",
+  "width": 2037
+}

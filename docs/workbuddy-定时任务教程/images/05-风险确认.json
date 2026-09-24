@@ -1,0 +1,49 @@
+{
+  "created_at": "2026-09-23T21:15:25.165+08:00",
+  "file": "05-风险确认.png",
+  "height": 1371,
+  "id": "images#05-风险确认",
+  "inherits": {
+    "created_at": "2026-09-23T21:01:17.422+08:00",
+    "dpi_scale": 1.5,
+    "file": "210117-window-qusq.png",
+    "height": 1371,
+    "id": "2026-09-23#210117-window-qusq",
+    "kind": "window",
+    "screen": 0,
+    "screen_layout": {
+      "monitors": [
+        {
+          "dpi_scale": 1.5,
+          "index": 1,
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "rect": [
+            0,
+            0,
+            2560,
+            1600
+          ]
+        }
+      ],
+      "virtual_desktop": [
+        0,
+        0,
+        2560,
+        1600
+      ]
+    },
+    "source_window": {
+      "pid": 52160,
+      "process_name": "WorkBuddy.exe",
+      "title": "WorkBuddy"
+    },
+    "width": 2037
+  },
+  "kind": "annotated",
+  "ops_count": 4,
+  "parent_file": "210117-window-qusq.png",
+  "parent_id": "2026-09-23#210117-window-qusq",
+  "script_sha256": "edc67758f779fd9900ab2941c0fbd550b87adc97503f87225c4cae33893e6dc3",
+  "width": 2037
+}
