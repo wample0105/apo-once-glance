@@ -1,6 +1,6 @@
 [package]
 name = "once-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "定影 Onceglance CLI（once 命令）"
 edition = "2021"
 

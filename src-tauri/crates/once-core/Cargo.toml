@@ -1,6 +1,6 @@
 [package]
 name = "once-core"
-version = "0.1.0"
+version = "0.1.1"
 description = "定影 Onceglance 内核：捕获 / OCR / 标注 / 落盘 / 历史"
 edition = "2021"
 
