@@ -92,7 +92,7 @@ document.getElementById("s3-agentpage").addEventListener("click", async () => {
 });
 document.getElementById("s3-install").addEventListener("click", async () => {
   // 复制安装命令并提示交给 Agent / 终端执行（SKL-4）
-  const cmd = "curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wample/OnceGlance/releases/latest/download/install.sh | bash";
+  const cmd = "curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wample0105/apo-once-glance/releases/latest/download/install.sh | bash";
   await navigator.clipboard.writeText(cmd);
   const btn = document.getElementById("s3-install");
   btn.textContent = "安装命令已复制 · 粘贴到终端，或直接交给你的 Agent 执行";
