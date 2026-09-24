@@ -44,12 +44,15 @@ else
 fi
 
 # ---- 1) 下载 CLI ----
+if [ "$os" != "windows" ]; then
+  log "提示：当前发行版暂仅提供 Windows CLI；macOS/Linux 资产上线前，下方 CLI 下载可能失败，Skill 安装不受影响。"
+fi
 mkdir -p "$INSTALL_DIR"
 ASSET="once-${os}-${arch}.zip"
 log "下载 $DL/$ASSET"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 -o "$TMP/once.zip" "$DL/$ASSET" \
+curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 -o "$TMP/$ASSET" "$DL/$ASSET" \
   || fail "下载失败。请检查网络或到 $BASE 手动下载。"
 
 # SHA-256 校验（发行版随附 checksums.txt；缺失时警告继续）
@@ -65,7 +68,7 @@ else
   log "警告：未找到 checksums.txt，跳过校验（建议从 Release 页面手动核对）。"
 fi
 
-unzip -oq "$TMP/once.zip" -d "$TMP/unzipped"
+unzip -oq "$TMP/$ASSET" -d "$TMP/unzipped"
 EXE_NAME="once"
 [ "$os" = "windows" ] && EXE_NAME="once.exe"
 found="$(find "$TMP/unzipped" -name "$EXE_NAME" -type f | head -1)"
