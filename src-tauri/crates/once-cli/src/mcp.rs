@@ -40,6 +40,8 @@ pub fn run() {
         let is_notification = id.is_none();
         match method.as_str() {
             "initialize" => {
+                // 连接证据：谁连上了 MCP，记录握手（时间戳 + 来源父进程），供 GUI 注册中心判定"已接入"
+                once_core::agents::record_handshake();
                 let resp = json!({
                     "jsonrpc": "2.0",
                     "id": id,

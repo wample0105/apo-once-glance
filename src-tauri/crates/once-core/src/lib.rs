@@ -1,6 +1,7 @@
 //! 定影 Onceglance 内核：捕获 / OCR / 标注渲染 / 落盘 / 历史 / 设置。
 //! 人类 UI 与 Agent 接口（CLI / MCP）共享同一内核（PRD §3.3-6）。
 
+pub mod agents;
 pub mod annotate;
 pub mod audit;
 pub mod blacklist;

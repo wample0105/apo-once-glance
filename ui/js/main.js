@@ -14,6 +14,18 @@ try {
   document.body.dataset.os = os;
 } catch (e) {}
 
+// ===== 前端错误可见化：未捕获错误同步到页面顶部红条（排障通道，无错误时不占位）=====
+function showFrontendErr(text) {
+  const el = document.getElementById("frontend-err");
+  if (!el) return;
+  el.textContent = String(text).slice(0, 300);
+  el.style.display = "block";
+}
+window.addEventListener("error", (e) =>
+  showFrontendErr((e.message || "error") + " @" + String(e.filename || "").split("/").pop() + ":" + e.lineno));
+window.addEventListener("unhandledrejection", (e) =>
+  showFrontendErr("Promise: " + ((e.reason && e.reason.message) || e.reason)));
+
 // ===== 标题栏 =====
 $("#btn-min").onclick = () => getCurrentWindow().minimize();
 $("#btn-max").onclick = () => getCurrentWindow().toggleMaximize();
@@ -45,19 +57,60 @@ $$(".nav-item").forEach((btn) => {
     $("#page-" + btn.dataset.page).classList.add("on");
     if (btn.dataset.page === "history") refreshCurrentView();
     if (btn.dataset.page === "theme") loadThemeValues().catch(reportErr);
+    if (btn.dataset.page === "agent") { refreshBridgeStatus(); loadAgentRegistry().catch(reportErr); }
     if (btn.dataset.page === "privacy") refreshAudit();
     if (btn.dataset.page === "doctor") runDoctor();
-    if (btn.dataset.page === "agent") refreshBridgeStatus();
   };
 });
 
 // ===== 操作条 =====
 function reportErr(e) {
-  document.title = "ERR: " + (e && e.message ? e.message : e);
+  const msg = "ERR: " + (e && e.message ? e.message : e);
+  document.title = msg;
   console.error(e);
+  showFrontendErr(msg);
 }
 $("#act-region").onclick = () => invoke("start_overlay", { kind: "region" }).catch(reportErr);
 $("#card-agent").onclick = () => document.querySelector('.nav-item[data-page="agent"]').click();
+
+// 注册中心事件委托（轻量补丁会替换按钮节点，委托才不会丢事件）
+$("#agent-reg").addEventListener("click", async (e) => {
+  const reg = e.target.closest("[data-reg]");
+  const unreg = e.target.closest("[data-unreg]");
+  const copy = e.target.closest("[data-copy-mcp]");
+  if (reg) {
+    const id = reg.dataset.reg;
+    agentConnecting[id] = Date.now() + 60000;
+    loadAgentRegistry(true);
+    try {
+      await invoke("agent_register", { id });
+    } catch (err) {
+      delete agentConnecting[id];
+      reg.title = String(err && err.message ? err.message : err);
+    }
+    loadAgentRegistry(true);
+  } else if (unreg) {
+    delete agentConnecting[unreg.dataset.unreg];
+    try {
+      await invoke("agent_unregister", { id: unreg.dataset.unreg });
+    } catch (err) {
+      unreg.title = String(err && err.message ? err.message : err);
+    }
+    loadAgentRegistry(true);
+  } else if (copy) {
+    const exe = await invoke("once_exe_path").catch(() => null);
+    const old = copy.textContent;
+    if (!exe) {
+      copy.textContent = "未找到 once.exe";
+      setTimeout(() => { copy.textContent = old; }, 2000);
+      return;
+    }
+    await navigator.clipboard.writeText(JSON.stringify(
+      { mcpServers: { onceglance: { command: exe, args: ["mcp"] } } }, null, 2));
+    copy.textContent = "已复制";
+    setTimeout(() => { copy.textContent = old; }, 1500);
+  }
+});
 // act-ocr/act-scroll/act-window/act-fullscreen 的卡片已删——顶层绑定必须同链清理，
 // 否则 $() 查到 null 赋值抛 TypeError、后半段 main.js 全部不执行（最近截图空白的根因）
 window.addEventListener("error", (ev) => reportErr(ev.error || ev.message));
@@ -304,11 +357,16 @@ async function loadSettingsUI() {
   // 黑名单
   renderBlacklist(s.blacklist);
 
-  // MCP 配置
-  try {
-    const logo = await invoke("get_logo_path", { name: "onceglance-favicon.svg" });
-    const onceExe = (await invoke("get_logo_path", { name: "@once-exe" })) || "";
-  } catch (e) {}
+  // MCP 配置（once.exe 路径由后端解析：安装目录 → 资源目录 → install.sh 标准位 → 开发构建）
+  const onceExe = await invoke("once_exe_path").catch(() => null);
+  $("#mcp-config").textContent = JSON.stringify({
+    mcpServers: {
+      onceglance: {
+        command: onceExe || "<安装 OnceGlance 后自动解析>",
+        args: ["mcp"],
+      },
+    },
+  }, null, 2);
   // 接入页复制按钮（事件委托）
   document.querySelectorAll(".codebox .copy").forEach((c) => {
     if (c.dataset.wired) return;
@@ -321,15 +379,6 @@ async function loadSettingsUI() {
       setTimeout(() => { c.textContent = old; }, 2000);
     });
   });
-  $("#mcp-config").textContent = JSON.stringify({
-    mcpServers: {
-      onceglance: {
-        command: "C:\\\\…\\\\once.exe",
-        args: ["mcp"],
-        description: "实际路径以发行版安装位置为准（M3 install.sh 会写入 PATH）",
-      },
-    },
-  }, null, 2);
 }
 
 // 标注主题只读值：与 settings.annotation 逐字段对齐的全量镜像（§4.8）。
@@ -401,6 +450,65 @@ async function loadThemeValues() {
         roRow("边框", rv(fxBorder)),
       ]);
 }
+
+// Agent 一键接入注册中心：按配置文件粒度探测/注册/移除。
+// 状态机由真实握手驱动：once mcp 收到 initialize 时记录握手（时间戳+来源父进程），
+// 本页 1s 轮询 agent_list 同步三态：未接入 → 连接中…(60s 有界) → 已接入 / 已写入·等待首次连接。
+const agentConnecting = {}; // id -> 截止时间(ms)；「连接中」覆盖态
+let agentRegTimer = null;
+
+function agentCtlHtml(a) {
+  const connecting = Boolean(agentConnecting[a.id]) && agentConnecting[a.id] > Date.now() && a.conn !== "connected";
+  if (a.conn === "connected") delete agentConnecting[a.id];
+  const chip = a.conn === "connected"
+    ? '<span class="tagok">已接入</span>'
+    : a.conn === "awaiting"
+      ? (connecting
+        ? '<span class="pulse">连接中…</span>'
+        : '<span style="color:var(--ov-fg-dim)" title="配置已写入；该客户端首次连接 MCP 后自动转为已接入">已写入 · 等待首次连接</span>')
+      : (a.client_installed
+        ? '<span class="tagok" style="color:var(--error)">未接入</span>'
+        : '<span style="color:var(--ov-fg-dim)">未检测到客户端</span>');
+  let btn;
+  if (connecting) btn = '<button class="btn" disabled>连接中…</button>';
+  else if (a.mode === "copy-only") btn = `<button class="btn ghost" data-copy-mcp="${a.id}">复制配置</button>`;
+  else if (a.registered) btn = `<button class="btn ghost" data-unreg="${a.id}">移除</button>`;
+  else if (a.client_installed) btn = `<button class="btn" data-reg="${a.id}">一键接入</button>`;
+  else btn = '<button class="btn" disabled>未安装</button>';
+  return chip + ' ' + btn;
+}
+
+async function loadAgentRegistry(light = false) {
+  const box = $("#agent-reg");
+  if (!box) { showFrontendErr("loadAgentRegistry: #agent-reg 容器不存在"); return; }
+  const list = await invoke("agent_list").catch((e) => { showFrontendErr("agent_list: " + (e && e.message ? e.message : e)); return null; });
+  if (!list) return;
+  if (light) {
+    // 轻量补丁：只刷状态与按钮，不整表重绘（避免打断悬停/点击）
+    for (const a of list) {
+      const el = box.querySelector(`[data-ctl="${a.id}"]`);
+      if (el) { const html = agentCtlHtml(a); if (el.innerHTML !== html) el.innerHTML = html; }
+    }
+    return;
+  }
+  try {
+    box.innerHTML = list.map((a) => `
+    <div class="row"><div class="label"><div class="t">${a.family} <span style="color:var(--ov-fg-dim)">· ${a.form}</span></div>
+    <div class="d">${a.hint || a.config_path}</div></div>
+    <div class="ctl"><span data-ctl="${a.id}">${agentCtlHtml(a)}</span></div></div>`).join("");
+  } catch (e) {
+    showFrontendErr("agent 列表渲染失败: " + (e && e.message ? e.message : e));
+  }
+}
+
+function startAgentPoll() {
+  if (agentRegTimer) return;
+  agentRegTimer = setInterval(() => {
+    if ($("#page-agent")?.classList.contains("on")) loadAgentRegistry(true).catch(() => {});
+  }, 1000);
+}
+// 顶层调用必须放在 agentRegTimer/agentConnecting 声明之后——放前面会 TDZ 中断整个脚本后半区
+startAgentPoll();
 
 function renderBlacklist(list) {
   const box = $("#blacklist-rows");

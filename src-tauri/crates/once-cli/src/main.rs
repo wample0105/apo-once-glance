@@ -848,6 +848,12 @@ fn cmd_doctor() -> Result<Value> {
         "ok": dir_ok,
         "detail": format!("{} ({})", s.save_root().display(), if dir_ok { "可写" } else { "不可写" })
     }));
+    // 4.5 MCP 就绪：总开关决定 MCP 是否可被 Agent 调用
+    items.push(json!({
+        "check": "mcp",
+        "ok": s.agent_enabled,
+        "detail": if s.agent_enabled { "Agent 调用已启用（MCP 可用）".to_string() } else { "agent_enabled=false，Agent 调用被拒".to_string() }
+    }));
     // 5 OCR 引擎
     let ocr_ok = ocr::engine_available();
     if !ocr_ok { all_ok = false; }

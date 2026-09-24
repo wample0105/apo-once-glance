@@ -250,6 +250,7 @@
 </style>
 </head>
 <body data-os="windows">
+  <div id="frontend-err" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c0392b;color:#fff;font-size:12px;padding:4px 10px;word-break:break-all"></div>
   <div id="titlebar">
     <span class="brandchip"><img id="brand-img" alt="定影影章" src=""></span>
     <span class="brandname">定影 Onceglance</span>
@@ -387,6 +388,9 @@
         <div class="ptitle">Agent 接入</div>
         <div class="psub">让 Agent 看见你的屏幕，替你把操作变成教程。</div>
         <div class="codebox" id="bridge-status" style="margin-bottom:14px">桥接状态检测中…</div>
+        <div class="ptitle" style="font-size:13px">一键接入 MCP（推荐）</div>
+        <div class="psub">把截图 / 取字 / 标注能力挂给本机 Agent。按配置文件逐个注册，写入前自动备份原配置（备份目录 %APPDATA%\Onceglance\agent-backups）；同一家族的桌面端与 CLI 端配置互不相通，需分别接入。</div>
+        <div class="group" id="agent-reg"><div class="row"><div class="label"><div class="d">检测中…</div></div></div></div>
         <div class="ptitle" style="font-size:13px">第 1 步 · 安装 CLI 与 Skill（一次装齐）</div>
         <div class="psub">一条命令同时安装或更新 CLI 与 Skill：自动校验下载文件，并适配 Codex 和通用 Agent Skills 目录。</div>
         <div class="installcards">

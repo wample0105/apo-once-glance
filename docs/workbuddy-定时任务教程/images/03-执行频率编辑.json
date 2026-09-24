@@ -1,0 +1,49 @@
+{
+  "created_at": "2026-09-23T21:15:24.649+08:00",
+  "file": "03-执行频率编辑.png",
+  "height": 1371,
+  "id": "images#03-执行频率编辑",
+  "inherits": {
+    "created_at": "2026-09-23T20:52:33.045+08:00",
+    "dpi_scale": 1.5,
+    "file": "205233-window-7fwv.png",
+    "height": 1371,
+    "id": "2026-09-23#205233-window-7fwv",
+    "kind": "window",
+    "screen": 0,
+    "screen_layout": {
+      "monitors": [
+        {
+          "dpi_scale": 1.5,
+          "index": 1,
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "rect": [
+            0,
+            0,
+            2560,
+            1600
+          ]
+        }
+      ],
+      "virtual_desktop": [
+        0,
+        0,
+        2560,
+        1600
+      ]
+    },
+    "source_window": {
+      "pid": 52160,
+      "process_name": "WorkBuddy.exe",
+      "title": "WorkBuddy"
+    },
+    "width": 2037
+  },
+  "kind": "annotated",
+  "ops_count": 8,
+  "parent_file": "205233-window-7fwv.png",
+  "parent_id": "2026-09-23#205233-window-7fwv",
+  "script_sha256": "d745f1277ba39e1d26ffafacfe603a9222652feee4c915fa28c9be93ae1b0991",
+  "width": 2037
+}

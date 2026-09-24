@@ -1,0 +1,49 @@
+{
+  "created_at": "2026-09-23T21:15:25.480+08:00",
+  "file": "06-任务详情.png",
+  "height": 1371,
+  "id": "images#06-任务详情",
+  "inherits": {
+    "created_at": "2026-09-23T21:02:28.085+08:00",
+    "dpi_scale": 1.5,
+    "file": "210228-window-xgm5.png",
+    "height": 1371,
+    "id": "2026-09-23#210228-window-xgm5",
+    "kind": "window",
+    "screen": 0,
+    "screen_layout": {
+      "monitors": [
+        {
+          "dpi_scale": 1.5,
+          "index": 1,
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "rect": [
+            0,
+            0,
+            2560,
+            1600
+          ]
+        }
+      ],
+      "virtual_desktop": [
+        0,
+        0,
+        2560,
+        1600
+      ]
+    },
+    "source_window": {
+      "pid": 52160,
+      "process_name": "WorkBuddy.exe",
+      "title": "WorkBuddy"
+    },
+    "width": 2037
+  },
+  "kind": "annotated",
+  "ops_count": 8,
+  "parent_file": "210228-window-xgm5.png",
+  "parent_id": "2026-09-23#210228-window-xgm5",
+  "script_sha256": "533bd44b63a0934892d2623c77397d7cdc56f33d92df24cd63bbb4b75e8d9f57",
+  "width": 2037
+}
