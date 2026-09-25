@@ -15,3 +15,7 @@ uitest_*.png
 # sidecar 打包暂存（构建脚本生成）
 src-tauri/binaries/
 /target/
+
+# 本地交接日志不入库
+/handoff.md
+/src-tauri/handoff.md
