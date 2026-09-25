@@ -40,13 +40,14 @@
 
 ## 🚀 安装
 
-### 1. 客户端（GUI）
+### 1. 客户端（GUI，给人用）
 
-前往 [Releases](https://github.com/wample0105/apo-once-glance/releases) 下载最新的 `onceglance` 客户端安装包，解压即用。
+前往 [Releases](https://github.com/wample0105/apo-once-glance/releases) 下载 **`onceglance-desktop-windows-x64.zip`**，解压后双击 `onceglance.exe` 即用。
 
 - **系统要求**：Windows 10 (19045+) / Windows 11，WebView2 Runtime（Win11 自带）。
+- 装了 GUI 之后想让 AI 也能用？再跑一次下面的 `install.sh` 即可，GUI 与 CLI 自动共享全部历史与设置。
 
-### 2. CLI 与 Agent Skill（一条命令）
+### 2. CLI 与 Agent Skill（给 AI Agent 用，一条命令）
 
 ```bash
 curl -fsSL --retry 3 https://github.com/wample0105/apo-once-glance/releases/latest/download/install.sh | bash
