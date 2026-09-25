@@ -48,7 +48,7 @@ if [ "$os" != "windows" ]; then
   log "提示：当前发行版暂仅提供 Windows CLI；macOS/Linux 资产上线前，下方 CLI 下载可能失败，Skill 安装不受影响。"
 fi
 mkdir -p "$INSTALL_DIR"
-ASSET="once-${os}-${arch}.zip"
+ASSET="onceglance-cli-${os}-${arch}.zip"
 log "下载 $DL/$ASSET"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
