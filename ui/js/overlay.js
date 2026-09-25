@@ -105,7 +105,7 @@ async function init() {
   await activate({}); // 无事件环境（无头测试）兜底走旧路径
 }
 
-// 激活：重置上次会话状态 → 冻结（优先 Rust 已截好的 dataUrl）→ 蒙版 → 设置
+// 激活：重置上次会话状态 → 冻结（优先 Rust 已截好的 url）→ 蒙版 → 设置
 async function activate(payload) {
   try { resetOverlayState(); }
   catch (err) { console.warn("resetOverlayState", err); }
@@ -127,9 +127,9 @@ async function activate(payload) {
     await closeOverlay();
     return;
   }
-  // 冻结画布：热键路径 Rust 已在显示前截好（payload.dataUrl），零等待直接渲染
-  if (payload.dataUrl) {
-    magImg.src = payload.dataUrl;
+  // 冻结画布：热键路径 Rust 已在显示前截好（payload.url → freeze 位图直通协议），零等待直接渲染
+  if (payload.url) {
+    magImg.src = payload.url;
     await new Promise((res, rej) => {
       if (magImg.complete && magImg.naturalWidth) res();
       else {
@@ -143,7 +143,7 @@ async function activate(payload) {
   } else {
     try {
       const f = await invoke("freeze_begin");
-      magImg.src = f.dataUrl; // JPEG data URL：不受 asset 作用域限制，100% 可加载
+      magImg.src = f.url; // freeze 位图直通协议：无损 BMP，零解码成本
       await new Promise((res) => { if (magImg.complete && magImg.naturalWidth) res(); else magImg.onload = res; });
       document.body.classList.add("frozen");
       stage.classList.add("dim-idle");

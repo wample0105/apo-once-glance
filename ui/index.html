@@ -441,14 +441,17 @@ curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wampl
       <section class="page" id="page-detail">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
           <button class="btn ghost" id="detail-back">← 返回</button>
-          <span style="font-size:12.5px;font-weight:500" id="detail-name"></span>
+          <span style="font-size:12.5px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="detail-name"></span>
           <span class="tagok" id="detail-kind" style="display:none"></span>
+          <button class="btn ghost" id="detail-zoom-fit">适应窗口</button>
+          <button class="btn ghost" id="detail-zoom-100">1:1</button>
+          <span class="metaline" id="detail-zoom-pct" style="min-width:44px;text-align:right"></span>
         </div>
         <div style="display:flex;gap:12px;min-height:0">
-          <div style="flex:1;min-width:0;position:relative;background:var(--bg-tertiary);border-radius:var(--r-card);
+          <div id="detail-viewport" style="flex:1;min-width:0;position:relative;background:var(--bg-tertiary);border-radius:var(--r-card);
                       overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:12px;max-height:520px">
             <div id="detail-imgwrap" style="position:relative;display:inline-block">
-              <img id="detail-img" style="max-width:100%;display:block" draggable="false">
+              <img id="detail-img" style="display:block" draggable="false">
             </div>
           </div>
           <aside style="width:260px;flex:none;display:flex;flex-direction:column;gap:10px;overflow:auto;max-height:520px">

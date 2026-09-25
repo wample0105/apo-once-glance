@@ -1169,25 +1169,8 @@ fn freeze_begin_inner() -> Result<serde_json::Value, String> {
         .ok_or_else(|| "无显示器".to_string())?;
     let (sx, sy, sw, sh) = m.rect;
     let bmp = capture::capture_region_px(sx, sy, sw as u32, sh as u32).map_err(oe)?;
-    // 预览用 JPEG data URL（asset 协议作用域不含 TEMP，data URL 100% 可加载）；
-    // 精确裁剪/取色走内存 BGRA，不受预览压缩影响。
-    // 热路径提速：RGBA→RGB 直编 JPEG q70（旧 PNG 编码→解码→JPEG 三连是数百 ms 大头）
-    let preview = {
-        let rgb = image::RgbImage::from_raw(bmp.width, bmp.height, {
-            let mut v = Vec::with_capacity((bmp.width * bmp.height * 3) as usize);
-            for px in bmp.pixels.chunks_exact(4) {
-                v.extend_from_slice(&[px[0], px[1], px[2]]);
-            }
-            v
-        })
-        .ok_or("预览帧构造失败")?;
-        let mut jout = std::io::Cursor::new(Vec::new());
-        let enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jout, 70);
-        image::DynamicImage::ImageRgb8(rgb)
-            .write_with_encoder(enc)
-            .map_err(|e| e.to_string())?;
-        format!("data:image/jpeg;base64,{}", crate::base64_encode(&jout.into_inner()))
-    };
+    // 预览帧走 freeze:// 位图直通协议（无损 BMP，零编码零解码）；
+    // 精确裁剪/取色走内存无损帧，不受显示通道影响。URL 带毫秒时间戳防 WebView 缓存。
     *FREEZE.lock().unwrap() = Some(FreezeFrame {
         rgba: bmp.pixels,
         width: bmp.width,
@@ -1195,18 +1178,56 @@ fn freeze_begin_inner() -> Result<serde_json::Value, String> {
         origin: (sx, sy),
         path: std::env::temp_dir().join("onceglance-freeze.png"),
     });
+    let seq = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
     Ok(serde_json::json!({
-        "dataUrl": preview,
+        "url": format!("http://freeze.localhost/frame?v={}", seq),
         "width": bmp.width,
         "height": bmp.height,
     }))
 }
 
-/// 热键路径直调（不经 IPC）：返回 (dataUrl, w, h)；失败时 JS 兜底走 freeze_begin 命令
+/// 冻结帧编码为 32bpp 无压缩 BMP（零压缩：WebView 解码即内存拷贝，画质无损直通取景层）。
+pub fn freeze_frame_bmp_bytes() -> Option<Vec<u8>> {
+    let g = FREEZE.lock().unwrap();
+    let f = g.as_ref()?;
+    let (w, h) = (f.width as usize, f.height as usize);
+    let data_len = w * h * 4;
+    let mut out = Vec::with_capacity(54 + data_len);
+    // BITMAPFILEHEADER（14B）
+    out.extend_from_slice(b"BM");
+    out.extend_from_slice(&((54 + data_len) as u32).to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes());
+    out.extend_from_slice(&54u32.to_le_bytes());
+    // BITMAPINFOHEADER（40B）；负高度 = top-down，帧数据行序原样使用
+    out.extend_from_slice(&40u32.to_le_bytes());
+    out.extend_from_slice(&(f.width as i32).to_le_bytes());
+    out.extend_from_slice(&(-(f.height as i32)).to_le_bytes());
+    out.extend_from_slice(&1u16.to_le_bytes());
+    out.extend_from_slice(&32u16.to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes()); // BI_RGB
+    out.extend_from_slice(&(data_len as u32).to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes());
+    // 像素：RGBA -> BGRA（BMP 32bpp BI_RGB 的字节序）
+    for px in f.rgba.chunks_exact(4) {
+        out.push(px[2]);
+        out.push(px[1]);
+        out.push(px[0]);
+        out.push(0xFF);
+    }
+    Some(out)
+}
+
+/// 热键路径直调（不经 IPC）：返回 (freezeUrl, w, h)；失败时 JS 兜底走 freeze_begin 命令
 pub fn freeze_begin_inner_ok() -> Option<(String, u32, u32)> {
     match freeze_begin_inner() {
         Ok(v) => {
-            let url = v.get("dataUrl").and_then(|x| x.as_str()).unwrap_or("").to_string();
+            let url = v.get("url").and_then(|x| x.as_str()).unwrap_or("").to_string();
             let w = v.get("width").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
             let h = v.get("height").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
             if url.is_empty() { None } else { Some((url, w, h)) }
