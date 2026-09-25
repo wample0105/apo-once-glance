@@ -1,0 +1,11 @@
+{
+  "unit": "px",
+  "operations": [
+    { "type": "rect", "at": [262, 150], "size": [890, 52] },
+    { "type": "step_number", "at": [214, 152], "label": 1 },
+    { "type": "text", "at": [480, 250], "text": "输入语法搜索历史" },
+    { "type": "arrow", "from": [560, 272], "to": [520, 196] },
+    { "type": "mosaic", "at": [268, 428], "size": [300, 50], "mode": "pixelate" },
+    { "type": "step_number", "at": [214, 430], "label": 2 }
+  ]
+}

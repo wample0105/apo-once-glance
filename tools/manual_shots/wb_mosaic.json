@@ -1,0 +1,6 @@
+{
+  "unit": "px",
+  "operations": [
+    { "type": "mosaic", "at": [220, 675], "size": [520, 55], "mode": "pixelate" }
+  ]
+}

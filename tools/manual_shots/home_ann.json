@@ -1,0 +1,13 @@
+{
+  "unit": "px",
+  "operations": [
+    { "type": "rect", "at": [250, 80], "size": [520, 181] },
+    { "type": "step_number", "at": [270, 96], "label": 1 },
+    { "type": "rect", "at": [774, 80], "size": [366, 181] },
+    { "type": "step_number", "at": [788, 96], "label": 2 },
+    { "type": "rect", "at": [64, 86], "size": [176, 238] },
+    { "type": "step_number", "at": [176, 88], "label": 3 },
+    { "type": "rect", "at": [250, 288], "size": [890, 36] },
+    { "type": "step_number", "at": [204, 292], "label": 4 }
+  ]
+}

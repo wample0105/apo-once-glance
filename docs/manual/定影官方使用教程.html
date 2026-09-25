@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>定影 Onceglance 官方使用教程</title>
+<style>
+:root { --ink:#1f2733; --muted:#5c6773; --accent:#B3261E; --line:#e3e7ec; --bg:#ffffff; }
+@page { size: A4; margin: 17mm 16mm; }
+html, body { margin:0; padding:0; background:#ffffff; }
+body {
+  font-family:"Microsoft YaHei","微软雅黑","Segoe UI",sans-serif;
+  color:var(--ink); font-size:10.5pt; line-height:1.75;
+  line-break:strict; overflow-wrap:break-word;
+}
+/* 封面 */
+.cover { height:255mm; display:flex; flex-direction:column; justify-content:center; break-after:page; }
+.cover .kicker { font-size:11pt; letter-spacing:.35em; color:var(--accent); font-weight:bold; margin-bottom:10mm; }
+.cover h1.title { font-size:34pt; line-height:1.3; margin:0 0 6mm; border:none; padding:0; }
+.cover .subtitle { font-size:13pt; color:var(--muted); margin-bottom:16mm; }
+.cover .points { font-size:11pt; color:var(--ink); border-left:3px solid var(--accent); padding-left:6mm; line-height:2.1; }
+.cover .meta { margin-top:22mm; font-size:10pt; color:var(--muted); }
+/* 目录 */
+.toc { break-after:page; }
+.toc h2 { font-size:16pt; }
+.toc table { width:100%; }
+.toc td { padding:2.2mm 2mm; border-bottom:1px solid var(--line); font-size:10.5pt; }
+.toc td:first-child { width:34%; font-weight:bold; }
+/* 正文标题 */
+h1 { font-size:20pt; line-height:1.4; border-bottom:2px solid var(--ink); padding-bottom:3mm; margin:0 0 6mm; }
+h1:not(:first-of-type) { break-before:page; }
+h2 { font-size:14.5pt; margin:9mm 0 3.5mm; break-after:avoid; }
+h3 { font-size:12pt; margin:6mm 0 2.5mm; break-after:avoid; }
+p { margin:0 0 3mm; }
+li { margin-bottom:1.2mm; }
+strong { color:#111827; }
+blockquote { margin:3mm 0; padding:2.5mm 5mm; border-left:3px solid var(--accent); background:#faf7f6; color:var(--muted); break-inside:avoid; }
+blockquote p { margin:0; }
+/* 图片 */
+img { display:block; max-width:100%; max-height:110mm; width:auto; height:auto; margin:3mm auto 1.5mm; border:1px solid var(--line); border-radius:2px; }
+p:has(> img:only-child) { break-inside:avoid; text-align:center; }
+/* 表格 */
+table { width:100%; border-collapse:collapse; margin:3.5mm auto 4.5mm; break-inside:avoid; }
+thead { display:table-header-group; }
+th { background:#f4f6f8; font-weight:bold; }
+th, td { border:1px solid var(--line); padding:2mm 2.6mm; font-size:9.5pt; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+td code, th code { white-space:normal; overflow-wrap:anywhere; }
+/* 代码 */
+code { font-family:Consolas,"Courier New",monospace; font-size:9pt; background:#f4f6f8; padding:.4mm 1.4mm; border-radius:2px; }
+pre { background:#f7f8fa; border:1px solid var(--line); border-radius:3px; padding:3.5mm 4mm; break-inside:avoid; margin:3mm 0 4mm; }
+pre code { background:none; padding:0; font-size:8.5pt; line-height:1.55; white-space:pre-wrap; overflow-wrap:break-word; }
+hr { border:none; border-top:1px solid var(--line); margin:6mm 0; }
+</style></head>
+<body>
+
+<div class="cover">
+  <div class="kicker">OFFICIAL USER GUIDE</div>
+  <h1 class="title">定影 Onceglance<br />官方使用教程</h1>
+  <div class="subtitle">会截图，更能帮你看屏、取字、做图的 AI 截图工具</div>
+  <div class="points">
+    截图标注 · 长截图 · 贴图 · 离线取字<br />
+    全程本地处理：零 API Key · 零云端上传 · 零遥测<br />
+    接入 AI Agent：WorkBuddy / Claude / Cursor 一句话替你截屏
+  </div>
+  <div class="meta">
+    本教程由 AI Agent 通过定影全自动完成——文字、截图与标注均为真实产出，<br />
+    它本身就是定影「让 AI 看懂屏幕」能力的效果展示（详见第 08–09 章）。<br /><br />
+    适用版本 v0.1.1 · Windows 10/11 · 2026 年 9 月
+  </div>
+</div>
+
+<div class="toc"><h2>目录</h2><table><tr><td>快速开始</td><td>三分钟上手：安装 → Alt+Shift+A → Enter</td></tr><tr><td>01 认识定影</td><td>定影是什么、六大热键、主面板导览</td></tr><tr><td>02 第一张截图</td><td>取景层、窗口自动识别、放大镜、动作条</td></tr><tr><td>03 给截图加标注</td><td>箭头/序号/马赛克/文字四任务，随时改</td></tr><tr><td>04 长截图</td><td>滚动采集、自动拼接、两条注意</td></tr><tr><td>05 贴图</td><td>按 D 钉在屏幕上，缩放与透明度</td></tr><tr><td>06 历史与取字</td><td>自动入库、搜索语法、OCR 取字</td></tr><tr><td>07 主面板与设置</td><td>五页导览、Agent 权限、标注主题</td></tr><tr><td>08 接入 AI Agent</td><td>WorkBuddy 三步主线、一键接入、CLI</td></tr><tr><td>09 让 AI 替你写教程</td><td>Skill 产线：一句话出图文教程</td></tr><tr><td>附录</td><td>快捷键总表 / CLI·MCP 速查 / 主题参数 / FAQ</td></tr></table></div>
+<h1 id="定影-onceglance--官方使用教程">定影 Onceglance ·
+官方使用教程</h1>
+<blockquote>
+<p>会截图，更能帮你看屏、取字、做图的 AI 截图工具。 全程本地处理：零 API
+Key、零云端上传、零遥测。</p>
+</blockquote>
+<blockquote>
+<p><strong>📖
+关于这本教程</strong>：你手里的这本教程——包括全部文字、截图、图上的红框序号标注、乃至排版——<strong>由一个
+AI Agent 通过定影全自动完成</strong>：Agent 用 <code>once capture</code>
+拍下每一步的真实界面，用 <code>once ocr</code> 读出界面文字与坐标，用
+<code>once annotate</code>
+在精确位置画上标注。没有一张图是手工截的，没有一处标注是手动画的。<strong>这本教程本身，就是定影「让
+AI 看懂屏幕」能力的完整效果展示</strong>（想让自己的 AI 也这么干，见 <a
+href="08-接入AI-Agent.md">08 接入 AI Agent</a> 与 <a
+href="09-让AI替你写教程.md">09 让 AI 替你写教程</a>）。</p>
+</blockquote>
+<h2 id="三分钟快速开始">三分钟快速开始</h2>
+<p>装好客户端后，你只需要记住一个键：</p>
+<ol type="1">
+<li>按 <code>Alt+Shift+A</code>——屏幕定格、变暗；</li>
+<li>在想要的位置按下鼠标左键，拖出一个框，松手；</li>
+<li>按 <code>Enter</code>——截图已经复制到剪贴板；</li>
+<li>到微信、Word 或任何输入框里按 <code>Ctrl+V</code>——完成。</li>
+</ol>
+<p>恭喜，你已经会用定影了。剩下的都是让这件事变得更快、更好看、更自动的技巧。</p>
+<h2 id="教程目录">教程目录</h2>
+<table>
+<thead>
+<tr>
+<th>章节</th>
+<th>内容</th>
+<th>适合谁</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01 认识定影</td>
+<td>定影是什么、六大热键、主面板导览</td>
+<td>所有人</td>
+</tr>
+<tr>
+<td>02 第一张截图</td>
+<td>取景层、窗口自动识别、放大镜取色</td>
+<td>所有人</td>
+</tr>
+<tr>
+<td>03 给截图加标注</td>
+<td>箭头/序号/马赛克/文字，画完随时改</td>
+<td>所有人</td>
+</tr>
+<tr>
+<td>04 长截图</td>
+<td>聊天记录、长网页一图打包</td>
+<td>所有人</td>
+</tr>
+<tr>
+<td>05 贴图</td>
+<td>把截图钉在屏幕上随取随用</td>
+<td>所有人</td>
+</tr>
+<tr>
+<td>06 历史与取字</td>
+<td>截图自动入库、搜索语法、OCR 取字</td>
+<td>所有人</td>
+</tr>
+<tr>
+<td>07 主面板与设置</td>
+<td>五个页面各管什么、常用开关</td>
+<td>所有人</td>
+</tr>
+<tr>
+<td>08 接入 AI Agent</td>
+<td>让 Claude / WorkBuddy / Cursor 替你截图取字</td>
+<td>想偷懒的人</td>
+</tr>
+<tr>
+<td>09 让 AI 替你写教程</td>
+<td>一句话产出带标注的教程图</td>
+<td>进阶玩家</td>
+</tr>
+<tr>
+<td>附录</td>
+<td>快捷键总表、CLI/MCP 速查、主题参数、常见问题</td>
+<td>按需查阅</td>
+</tr>
+</tbody>
+</table>
+<h2 id="阅读路径">阅读路径</h2>
+<ul>
+<li><strong>只想截图</strong>：读完上面的「三分钟快速开始」就够了；</li>
+<li><strong>想用得顺手</strong>：按顺序读 01–06，约 20 分钟；</li>
+<li><strong>想让 AI 干活</strong>：直接跳 08 接入 AI Agent，WorkBuddy
+用户三步搞定。</li>
+</ul>
+<h2 id="获取帮助与交流">获取帮助与交流</h2>
+<ul>
+<li>关注公众号「<strong>阿坡RPA</strong>」获取定影最新版本与实用工具；</li>
+<li>加作者微信，发送暗号「<strong>OnceGlance</strong>」进专属交流群；</li>
+<li>更多方式见 <a href="../../README.md">项目主页 README</a>。</li>
+</ul>
+<h1 id="01-认识定影">01 认识定影</h1>
+<p>定影是一款装在你自己电脑上的 Windows
+截图工具。对人，它是键盘手感极佳的截图+贴图工具；对
+AI，它是本机视觉能力的标准出口——任何支持 MCP 或命令行的 AI
+Agent，都能通过它完成「截屏 → 取字 → 标注 → 落盘」。</p>
+<p>这一章带你认识定影能做什么、用什么键唤起它。10 分钟读完。</p>
+<h2 id="它能做的四件事">它能做的四件事</h2>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>一句话</th>
+<th>入口</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>截图标注</td>
+<td>框选屏幕任意区域，直接画箭头、序号、马赛克</td>
+<td><code>Alt+Shift+A</code></td>
+</tr>
+<tr>
+<td>长截图</td>
+<td>聊天记录、长网页，滚动一下拼成一张长图</td>
+<td><code>Alt+Shift+L</code></td>
+</tr>
+<tr>
+<td>贴图</td>
+<td>把截图钉在屏幕最上层，随取随用</td>
+<td>截图后按 <code>D</code></td>
+</tr>
+<tr>
+<td>取字 OCR</td>
+<td>把屏幕上的文字变成可复制的文本，全程离线</td>
+<td><code>Alt+Shift+T</code></td>
+</tr>
+</tbody>
+</table>
+<p>除此之外，它还有一件别家没有的事：<strong>接给 AI Agent
+用</strong>。你可以在 Claude、WorkBuddy、Cursor 等 Agent
+里说一句「帮我截个屏」，让 AI 自己完成截图、取字和标注——详见 08 接入 AI
+Agent。</p>
+<h2 id="关于隐私先说清楚">关于隐私，先说清楚</h2>
+<ul>
+<li>所有截图、OCR、标注<strong>全部在本机完成</strong>，不上传任何图片与文字；</li>
+<li>定影没有任何账号体系，没有云端，没有遥测；</li>
+<li>你可以随时用「Agent 总开关」一键切断所有 AI 调用，也可以用「App
+黑名单」保护密码管理器、银行类应用不被任何 Agent 截图（详见 07
+主面板与设置）。</li>
+</ul>
+<h2 id="六个全局热键">六个全局热键</h2>
+<p>这六个组合键在任何界面下都生效，是定影的全部入口：</p>
+<table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Alt+Shift+A</code></td>
+<td>区域截图（框选，最常用）</td>
+</tr>
+<tr>
+<td><code>Alt+Shift+W</code></td>
+<td>窗口截图（一键截当前活动窗口）</td>
+</tr>
+<tr>
+<td><code>Alt+Shift+F</code></td>
+<td>全屏截图</td>
+</tr>
+<tr>
+<td><code>Alt+Shift+T</code></td>
+<td>自动取字（截屏并直接把文字复制到剪贴板）</td>
+</tr>
+<tr>
+<td><code>Alt+Shift+L</code></td>
+<td>长截图</td>
+</tr>
+<tr>
+<td><code>Alt+Shift+H</code></td>
+<td>打开主面板</td>
+</tr>
+</tbody>
+</table>
+<p>截图过程中还有一套快捷键（<code>Enter</code> 复制、<code>Esc</code>
+取消、<code>D</code> 贴图等），见 附录 A 快捷键总表。</p>
+<h2 id="主面板导览">主面板导览</h2>
+<p>按
+<code>Alt+Shift+H</code>（或双击托盘图标）打开主面板。这是你的大本营：</p>
+<p><img src="./images/01-home-ann.png" alt="主面板首页" /></p>
+<ol type="1">
+<li><strong>截图卡</strong>——点一下立刻开始区域截图，右上角标着它的热键；</li>
+<li><strong>AI Agent 接入卡</strong>——把定影的能力挂给 AI 的入口（08
+章）；</li>
+<li><strong>左侧导航</strong>——首页、Agent、标注主题、通用、诊断五个页面；</li>
+<li><strong>最近截图</strong>——每张截图自动入库，点「查看全部」进全量历史。</li>
+</ol>
+<h2 id="下一步">下一步</h2>
+<p>按一下 <code>Alt+Shift+A</code>，我们开始 02 第一张截图。</p>
+<h1 id="02-第一张截图">02 第一张截图</h1>
+<p>这一章带你完整走一遍 <code>Alt+Shift+A</code>
+的截图流程：怎么选区、怎么取消、怎么把图交出去。读完你就能覆盖日常 90%
+的截图场景。</p>
+<h2 id="按下-altshifta-之后">按下 Alt+Shift+A 之后</h2>
+<p>屏幕会<strong>瞬间定格并整体变暗</strong>——这个变暗的画面叫「取景层」。别担心，屏幕没有真的卡住，它只是被拍了一张快照铺在最上层，你在上面框选的就是刚才那一瞬间的屏幕。</p>
+<blockquote>
+<p>取景层是预驻留的：从按下热键到定格大约 40
+毫秒，感觉就是「啪」一下。</p>
+</blockquote>
+<h2 id="三个自动助手">三个自动助手</h2>
+<p>定格后不用急着拖，先看看这三个帮你省事的东西：</p>
+<ol type="1">
+<li><strong>自动识别框</strong>——鼠标悬停在哪个窗口上，哪个窗口就自动亮起边框。看准了<strong>点一下</strong>，整个窗口就被选中；再点一次还能选中窗口里的具体控件（按钮、输入框、列表）；</li>
+<li><strong>放大镜</strong>——鼠标附近会跟着一个放大镜，显示 8
+倍放大的像素和颜色值（HEX），做设计取色时特别好使；</li>
+<li><strong>尺寸牌</strong>——拖拽过程中实时显示选区的宽 ×
+高（物理像素）。</li>
+</ol>
+<p><img src="./images/02-overlay.png"
+alt="取景层：自动识别框 + 放大镜" /></p>
+<h2 id="两种选法">两种选法</h2>
+<ul>
+<li><strong>点一下</strong>：选中自动识别的窗口或控件，最省事；</li>
+<li><strong>拖一下</strong>：按住左键拖出任意矩形，想要多大框多大。</li>
+</ul>
+<p>选完还能调整：拖<strong>四角与四边的白色手柄</strong>改大小，拖<strong>框内部</strong>整体挪位置。</p>
+<h2 id="不想要了怎么办">不想要了怎么办</h2>
+<p>按 <code>Esc</code>，或者点工具栏的
+✕——定格画面消失，屏幕恢复，不留任何文件、不碰剪贴板。连续按
+<code>Esc</code> 会先放弃当前选区，再彻底退出。</p>
+<h2 id="把图交出去">把图交出去</h2>
+<p>选好区域后，屏幕下方浮出一条工具栏：</p>
+<p><img src="./images/02-toolbar.png" alt="动作条" /></p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>按键/按钮</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>复制</td>
+<td><code>Enter</code></td>
+<td>截图进剪贴板，去任何地方 <code>Ctrl+V</code></td>
+</tr>
+<tr>
+<td>保存</td>
+<td><code>Ctrl+S</code></td>
+<td>存进默认目录（<code>图片\Onceglance</code>），不占剪贴板</td>
+</tr>
+<tr>
+<td>另存为</td>
+<td>💾 按钮</td>
+<td>弹出对话框，自己选位置和文件名</td>
+</tr>
+<tr>
+<td>贴图</td>
+<td><code>D</code></td>
+<td>截图变成钉在屏幕上的浮窗（05 章）</td>
+</tr>
+<tr>
+<td>取字</td>
+<td>按钮</td>
+<td>截图里的文字直接变文本进剪贴板（06 章）</td>
+</tr>
+<tr>
+<td>长截图</td>
+<td>按钮</td>
+<td>转入滚动截图模式（04 章）</td>
+</tr>
+</tbody>
+</table>
+<p>按 <code>Enter</code> 后取景层自动退出，去粘贴试试——一张 1254×1409
+的截图就这样进了你的聊天框。</p>
+<h2 id="一键变体不想框选时">一键变体：不想框选时</h2>
+<ul>
+<li><code>Alt+Shift+W</code>：直接截取当前活动窗口，不用框；</li>
+<li><code>Alt+Shift+F</code>：直接截取整个屏幕。</li>
+</ul>
+<p>多显示器也没问题，两个屏幕各按各的，像素 1:1。</p>
+<h2 id="下一步-1">下一步</h2>
+<p>光有图还不够，下一章 03 给截图加标注——让截图一眼说明问题。</p>
+<h1 id="03-给截图加标注">03 给截图加标注</h1>
+<p>截图的价值在于一眼说明问题。这一章用四个小任务带你上手全部画图工具，再教你怎么「改到满意为止」——定影的标注在保存前随时可以回头改，不是画完就定死。</p>
+<h2 id="工具在哪">工具在哪</h2>
+<p>框选完成后不用找菜单，工具栏就贴在选区下方：箭头、矩形、椭圆、画笔、荧光笔、马赛克、文字、序号、橡皮擦、裁剪，每个工具都有单键快捷键（鼠标悬停可见）。选中工具后，颜色、线宽等属性在工具栏下一行随手调。</p>
+<p><img src="./images/03-editor.png" alt="标注编辑器全景" /></p>
+<h2 id="任务一加一个红色箭头指重点">任务一：加一个红色箭头指重点</h2>
+<ol type="1">
+<li>按 <code>A</code>（或点箭头图标）；</li>
+<li>从空白处按住左键，拖向你要指的目标，松手——箭头自动带饱满的尖端；</li>
+<li>按住 <code>Shift</code> 再拖，可以锁定 45°
+方向（水平/垂直/对角）。</li>
+</ol>
+<p>颜色不满意？在属性行的色板里点一个，画完的箭头选中后改色也来得及。</p>
+<h2 id="任务二给步骤标序号">任务二：给步骤标序号</h2>
+<p>写教程、报 bug 时，序号比箭头更清楚操作顺序：</p>
+<ol type="1">
+<li>按 <code>N</code>
+选序号工具——鼠标会变成「下一个序号」的幽灵预览；</li>
+<li>在起点点一下，出现 ①；继续点，自动出现 ②③④；</li>
+<li>想重复用同一个号（比如多处标同一个东西）：按住 <code>Alt</code>
+点击。</li>
+</ol>
+<p>序号的样式（实心圆/描边圆/纯数字）、起始编号、大小都在属性行调。</p>
+<h2 id="任务三遮住敏感信息">任务三：遮住敏感信息</h2>
+<p>截图里有账号、金额、邮箱？两种遮法：</p>
+<ol type="1">
+<li>按 <code>M</code> 选马赛克工具；</li>
+<li>在敏感区域拖一个框——<strong>马赛克</strong>打格子，<strong>模糊</strong>上毛玻璃，属性行可切换模式和强度；</li>
+<li>框错了直接拖走——遮罩是「动态」的，遮哪糊哪，挪走后原区域自动恢复清晰。</li>
+</ol>
+<p><img src="./images/03-demo.png" alt="标注实战成品" /></p>
+<h2 id="任务四写字说明">任务四：写字说明</h2>
+<ol type="1">
+<li>按 <code>T</code>，点选区里任意空白处，直接打字；</li>
+<li>属性行可以换字体、字号、行距、加粗斜体；</li>
+<li>想要「文字带底色块」的效果：点工具栏上的<strong>背景色块</strong>，选一个背景色，还能调透明度和圆角——做步骤说明特别清楚；</li>
+<li>文字的外描边不用管——定影自动用反色描边，白字黑边、红字白边，任何底色都清晰。</li>
+</ol>
+<h2 id="画错了改就是了">画错了？改就是了</h2>
+<p>定影的标注是「对象」：每一个箭头、每一块马赛克都能单独选中再改。</p>
+<ul>
+<li><strong>单击</strong>任意标注：选中（蓝虚线框），拖动移动、拉手柄缩放、拖
+◎ 旋转；</li>
+<li>选中后<strong>属性行自动切换</strong>成它的参数，改颜色、线型、填充随手就来；</li>
+<li>点右上角 <strong>×</strong> 删除选中的标注；</li>
+<li><code>Ctrl+Z</code> 撤销、<code>Ctrl+Y</code> 重做，最多 20
+步——包括删除和属性修改。</li>
+</ul>
+<p><img src="./images/03-selected.png"
+alt="选中编辑态：手柄 + 旋转锚 + 删除锚" /></p>
+<p>双击文字随时重新编辑；任何工具下单击文字都能直接改字——不用先切工具。</p>
+<h2 id="满意了交出去">满意了，交出去</h2>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Enter</code></td>
+<td>成品图（标注已合成）进剪贴板</td>
+</tr>
+<tr>
+<td><code>Ctrl+S</code></td>
+<td>成品存进默认目录</td>
+</tr>
+<tr>
+<td>保存按钮</td>
+<td>弹对话框选位置</td>
+</tr>
+</tbody>
+</table>
+<p>带标注的截图会生成一张 <code>-ann</code>
+结尾的成品图，<strong>原图永远原样保留</strong>——两张图都进历史，改崩了随时从原图重来。</p>
+<h2 id="下一步-2">下一步</h2>
+<p>一屏装不下的内容怎么办？04 长截图。</p>
+<h1 id="04-长截图">04 长截图</h1>
+<p>一屏装不下的聊天记录、要存档的长网页、滚不到头的配置列表——这一章教你把它们滚成一张完整的长图。</p>
+<h2 id="两条进入路径">两条进入路径</h2>
+<ul>
+<li><strong>从截图进</strong>：<code>Alt+Shift+A</code>
+框选起始区域，点工具栏的长图按钮（或按 <code>L</code>）；</li>
+<li><strong>直接进</strong>：按
+<code>Alt+Shift+L</code>，框选后松手即开始采集。</li>
+</ul>
+<p>框选时不用精确框住「整个长页面」——框住开头一段就行，剩下的靠滚动。</p>
+<h2 id="三步出图">三步出图</h2>
+<ol type="1">
+<li><strong>框选</strong>起始区域，松手；</li>
+<li><strong>慢慢、匀速地滚动</strong>页面——鼠标滚轮直接作用于下层网页，选区蓝框保持不动，画面滚过多久图就有多长；</li>
+<li>滚完了，点屏幕上工具条的
+<strong>保存</strong>（弹对话框选位置）、<strong>贴图</strong> 或
+<strong>复制</strong>。</li>
+</ol>
+<p><img src="./images/04-scrolling.png" alt="长截图进行中" /></p>
+<p>工具条长这样，四个按钮，一目了然：</p>
+<p><img src="./images/04-endbar.png" alt="长截图工具条" /></p>
+<p>中途不想截了？<code>Esc</code> 取消，什么都不留。</p>
+<h2 id="两条注意">两条注意</h2>
+<ol type="1">
+<li><strong>慢滚是唯一的要求</strong>。匀速慢滚成功率
+100%；滚太快（两次采样之间滚过一屏以上）会丢段。丢了也不怕——定影只拼接「确认连续」的画面，宁缺毋滥，重滚那一段即可；</li>
+<li><strong>滚到底部时停一秒</strong>再点完成，让定影确认「到底了」，避免把任务栏拼进去。</li>
+</ol>
+<p>接缝你不用管——相邻画面自动对齐拼接，出现可疑接缝时定影会自动取最优结果，一般不需要手动修。</p>
+<h2 id="下一步-3">下一步</h2>
+<p>长图存好了，想让它在屏幕上挂一整天？05 贴图。</p>
+<h1 id="05-贴图">05 贴图</h1>
+<p>贴图（Pin）=
+把一张截图<strong>钉在屏幕最上层</strong>。对照着抄一段配置、边看参考图边做设计、贴一张二维码随时扫——凡是要「挂着看」的图，都适合贴出来。</p>
+<h2 id="贴出来按-d">贴出来：按 D</h2>
+<p>截图框选完成后，按 <code>D</code>（或点工具栏的图钉图标 📌）：</p>
+<ul>
+<li>截图<strong>原地、原大小</strong>浮出，带四边阴影悬浮在最上层；</li>
+<li>取景层同时退出，截图流程结束，一气呵成。</li>
+</ul>
+<p><img src="./images/05-pin.png" alt="贴图效果" /></p>
+<h2 id="摆弄一张贴图">摆弄一张贴图</h2>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>移动</td>
+<td>按住拖动</td>
+</tr>
+<tr>
+<td>缩放</td>
+<td>滚轮</td>
+</tr>
+<tr>
+<td>调透明度</td>
+<td><code>Ctrl+滚轮</code>，十档，中央显示百分比</td>
+</tr>
+<tr>
+<td>关闭</td>
+<td><strong>双击</strong></td>
+</tr>
+</tbody>
+</table>
+<p>透明度调到 50%
+左右可以当「衬底」用——照着打字、照着画图，图在下文字在上互不干扰。</p>
+<p>贴图<strong>不怕关软件</strong>：关掉定影、甚至重启电脑，贴图还在原地（重启后仍在，双击关闭才消失）。</p>
+<h2 id="典型用法">典型用法</h2>
+<ul>
+<li><strong>对照着回消息</strong>：把上一条消息截图贴在输入框旁边，逐条回复不遗漏；</li>
+<li><strong>照着配置抄</strong>：把参考配置贴在编辑器上方，<code>Ctrl+滚轮</code>
+调成半透明；</li>
+<li><strong>挂着二维码/工单号</strong>：贴在屏幕角落，随时扫、随时看。</li>
+</ul>
+<h2 id="下一步-4">下一步</h2>
+<p>贴图会占屏幕，但截图都在 06 历史与取字
+里等你——每张图自动入库，可搜索。</p>
+<h1 id="06-历史与取字">06 历史与取字</h1>
+<p>「上周那张截图去哪了？」——不用翻文件夹。定影把每张截图自动入库，写清了时间、来源、类型，还能按图片里的<strong>文字内容</strong>搜索。这一章讲怎么找图、怎么看图、怎么把屏幕上的字变成文本。</p>
+<h2 id="每张截图自动入库">每张截图自动入库</h2>
+<p>不需要你做任何事：截图、标注、长截图、贴图的底图，全部自动存进
+<code>图片\Onceglance\&lt;日期&gt;\</code>，同时在主面板可查。</p>
+<ul>
+<li>首页显示<strong>最近 8 张</strong>，点「查看全部」进全量历史；</li>
+<li>卡片上有类型角标（窗口 / 区域 / 标注 / 长图），点卡片进详情。</li>
+</ul>
+<p><img src="./images/06-history.png" alt="历史页" /></p>
+<h2 id="找图筛选--搜索">找图：筛选 + 搜索</h2>
+<p>历史页顶部是搜索框，支持自然输入和精确语法：</p>
+<table>
+<thead>
+<tr>
+<th>你想找</th>
+<th>搜这个</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>窗口截图</td>
+<td><code>kind:window</code></td>
+</tr>
+<tr>
+<td>带标注的图</td>
+<td><code>has:annotated</code></td>
+</tr>
+<tr>
+<td>昨天之后的</td>
+<td><code>after:昨天</code>（也支持 <code>after:2026-09-01</code>）</td>
+</tr>
+<tr>
+<td>图片里写过「发票」的</td>
+<td><code>ocr:发票</code></td>
+</tr>
+<tr>
+<td>取字失败的图</td>
+<td><code>ocr:failed</code></td>
+</tr>
+</tbody>
+</table>
+<p>语法可以组合：<code>kind:window after:昨天</code> =
+昨天以来的窗口截图。</p>
+<h2 id="看图详情页">看图：详情页</h2>
+<p>点开任意卡片进详情页：<strong>1:1
+原图显示</strong>（不压缩，文字线条和截图时一样锐利），右上角可切「适应窗口」，滚轮缩放。</p>
+<p><img src="./images/06-detail.png" alt="详情页" /></p>
+<p>详情页最有价值的是<strong>版本链</strong>：原图和它的衍生图（标注版
+<code>-ann</code>、裁剪版）自动关联成一条线——原图永远不可变，改崩了随时从源头重来。</p>
+<p>卡片的三个常用动作：<strong>复制</strong>（进剪贴板）、<strong>打开</strong>（系统看图器）、<strong>编辑</strong>（进标注编辑器继续改）。</p>
+<h2 id="取字把屏幕上的字变成文本">取字：把屏幕上的字变成文本</h2>
+<p>两种用法：</p>
+<ul>
+<li><strong>一键直取</strong>：按
+<code>Alt+Shift+T</code>——框选一块区域，区域里的文字直接进剪贴板；</li>
+<li><strong>截图时顺手取</strong>：取景层工具栏点「取字」。</li>
+</ul>
+<p>OCR 由 Windows
+自带引擎完成，<strong>全程离线</strong>。取字结果同时保存为
+<code>.ocr.json</code>，记录每个文字块的内容和坐标——这也是 Agent
+能「看懂屏幕」的基础（08 章）。</p>
+<blockquote>
+<p>找不到想搜的词？先确认那张图拍清晰了——OCR
+搜的是图里识别出的文字，糊图搜不到。</p>
+</blockquote>
+<h2 id="下一步-5">下一步</h2>
+<p>界面上的开关都是什么意思？07 主面板与设置。</p>
+<h1 id="07-主面板与设置">07 主面板与设置</h1>
+<p>按 <code>Alt+Shift+H</code>
+打开主面板。左侧五个页面，这一页讲清「每个页面管什么、哪些开关值得你动」。</p>
+<table>
+<thead>
+<tr>
+<th>页面</th>
+<th>管什么</th>
+<th>什么时候来</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>首页</td>
+<td>开始截图、最近截图、查看全部</td>
+<td>日常</td>
+</tr>
+<tr>
+<td>Agent</td>
+<td>AI 的权限、接入、隐私防线</td>
+<td>接 AI 或担心隐私时</td>
+</tr>
+<tr>
+<td>标注主题</td>
+<td>你的标注默认样式</td>
+<td>想换标注风格时</td>
+</tr>
+<tr>
+<td>通用</td>
+<td>热键、开机自启、保存位置</td>
+<td>刚装好时过一遍</td>
+</tr>
+<tr>
+<td>诊断</td>
+<td>一键体检</td>
+<td>出问题时</td>
+</tr>
+</tbody>
+</table>
+<h2 id="首页">首页</h2>
+<p>两张动作卡 + 最近截图。点「截图」卡 = 按
+<code>Alt+Shift+A</code>；点「AI Agent 接入」卡直达 Agent 页。</p>
+<h2 id="agent-页给-ai-立规矩">Agent 页：给 AI 立规矩</h2>
+<p>这一页是你对 AI 的全部控制权，从上到下三道防线：</p>
+<p><img src="./images/07-agent-ann.png" alt="Agent 页" /></p>
+<ol type="1">
+<li><strong>权限总开关</strong>——关闭后，所有 AI
+的截图、取字、标注调用立即被拒。一键拉闸；</li>
+<li><strong>无感自动截图</strong>——允许 Agent
+静默截图（不弹取景层、不抢焦点、不模拟键鼠）。介意弹窗就关掉，黑名单和审计日志依然生效；</li>
+<li><strong>一键接入 MCP</strong>——把截图能力挂给 Claude Desktop、Claude
+Code、Cursor、Codex、ZCode
+等，点「一键接入」自动写配置（写入前自动备份原配置）。</li>
+</ol>
+<p>往下还有两样保护你的东西：</p>
+<ul>
+<li><strong>App
+黑名单</strong>：内置密码管理器、银行类应用，命中即拒、没有「本次放行」。可以自己加条目。黑名单管的是「AI
+不在场的自动截图」；你本人在场手动框选不受影响；</li>
+<li><strong>审计日志</strong>：每次 AI
+调用的时间、动作、结果都留记录，30 天自动清理。</li>
+</ul>
+<p>接入的完整步骤在 08 接入 AI Agent。</p>
+<h2 id="标注主题页你的标注风格">标注主题页：你的标注风格</h2>
+<p>你在标注时调的颜色、线宽、字体、序号样式……都会<strong>自动记住</strong>（「即改即存」），下一次打开就是你的风格，不用每次重调。</p>
+<p>这一页是<strong>只读的全量清单</strong>——显示当前所有默认值，想改去标注编辑器里改。它还有个特殊意义：<strong>AI
+的标注会继承这里的主题</strong>。你把箭头调成红色粗线、序号调成描边圆，AI
+生成的教程图就是这个风格（完整参数表见 附录 D）。</p>
+<p>想全部重来？页内一键「恢复默认值」。</p>
+<h2 id="通用页装好先过一遍">通用页：装好先过一遍</h2>
+<ul>
+<li><strong>快捷键</strong>：六个热键点击即可改键，冲突会明确提示（比如被别的软件占了）；</li>
+<li><strong>开机自启</strong>：默认关，常驻党打开；</li>
+<li><strong>关闭主面板</strong>：选「最小化到托盘」（推荐，热键照常可用）或「退出程序」；</li>
+<li><strong>保存位置</strong>：默认
+<code>图片\Onceglance</code>，可改；</li>
+<li><strong>截图退出确认</strong>：按 Esc
+时是否弹「保存/不保存」确认，可记住选择不再询问。</li>
+</ul>
+<p><img src="./images/07-general.png" alt="通用页" /></p>
+<h2 id="诊断页一键体检">诊断页：一键体检</h2>
+<p>点「重新自检」，七项全绿就是健康状态：捕获、落盘目录、OCR
+引擎、剪贴板、托盘、桥接管道、历史库。哪项红了，按提示处理，或带着截图来交流群问。</p>
+<p><img src="./images/07-doctor.png" alt="诊断页" /></p>
+<h2 id="下一步-6">下一步</h2>
+<p>设置就绪，来点真正省事的：08 接入 AI Agent。</p>
+<h1 id="08-接入-ai-agent">08 接入 AI Agent</h1>
+<p>你每天对 AI 说「看一下这个报错」「帮我把这个界面整理成文档」——可 AI
+看不见你的屏幕。这一章解决这个问题：<strong>让 AI
+通过定影截屏、取字、标注</strong>，从此「看图办事」一句话的事。</p>
+<p>以 WorkBuddy 为主线（用户最多、接入最简单），其他 Agent
+一张速查表带过。</p>
+<h2 id="先吃三颗定心丸">先吃三颗定心丸</h2>
+<ol type="1">
+<li><strong>全程本地</strong>：截图和取字都发生在你的电脑上，没有任何图片和文字上传；</li>
+<li><strong>不占你的键盘鼠标</strong>：Agent
+调用走后台接口，不弹窗、不抢焦点、不模拟键鼠（这是「无感自动截图」开关控制的，默认允许，介意可关）；</li>
+<li><strong>你随时能拉闸</strong>：主面板 Agent 页的权限总开关一关，所有
+AI 调用立即被拒；黑名单里的应用（密码管理器、银行类）任何 AI
+都截不了。</li>
+</ol>
+<p>另外，<strong>客户端没开 AI 也能干活</strong>——CLI 与 GUI
+共享同一内核，截图、取字、标注、历史检索都不依赖客户端运行，只有交互式框选和长截图需要你在场。</p>
+<h2 id="主线workbuddy-三步接入">主线：WorkBuddy 三步接入</h2>
+<p>WorkBuddy 走的是「复制 → 粘贴 → 验证」的最简路径：</p>
+<p><strong>第一步：复制接入配置</strong></p>
+<p>打开定影主面板（<code>Alt+Shift+H</code>）→ Agent 页 → 在「一键接入
+MCP」区域找到 WorkBuddy（或在接口速查里复制通用 MCP 配置），点复制。</p>
+<p><strong>第二步：到 WorkBuddy 里粘贴</strong></p>
+<p>打开 WorkBuddy 的设置 → MCP / 工具接入界面 →
+把配置粘贴进去，保存。</p>
+<p><img src="./images/08-workbuddy.png"
+alt="WorkBuddy 配置粘贴位置" /></p>
+<p><strong>第三步：验证</strong></p>
+<p>在 WorkBuddy 的对话里说一句：</p>
+<pre class="text"><code>帮我截一张当前屏幕的图</code></pre>
+<p>WorkBuddy
+会调用定影完成截图并把图片路径告诉你——能看到返回的图片文件，就是接通了。</p>
+<h2 id="其他-agent一键接入">其他 Agent：一键接入</h2>
+<p>主面板 Agent 页的「一键接入 MCP」列表覆盖常见客户端：<strong>Claude
+Desktop、Claude Code、Cursor、Codex、ZCode</strong>
+等——对号点「一键接入」，自动写入配置（写入前自动备份你的原配置，随时可回退；不想要了点「移除」干净卸载）。</p>
+<h2 id="命令行党一条命令装-cli">命令行党：一条命令装 CLI</h2>
+<p>不依赖 MCP 的 Agent（或脚本）直接用命令行：</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fsSL</span> <span class="at">--retry</span> 3 https://github.com/wample0105/apo-once-glance/releases/latest/download/install.sh <span class="kw">|</span> <span class="fu">bash</span></span></code></pre></div>
+<p>装完验证：</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">once</span> status <span class="at">--json</span></span></code></pre></div>
+<p><img src="./images/08-status.png" alt="once status 验证输出" /></p>
+<p><code>"ok": true</code>、<code>gui_online</code>、<code>agent_enabled</code>
+都是 true，就绪。之后 Agent 就可以执行完整链路：</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">once</span> capture window <span class="at">--json</span>                          <span class="co"># 截前台窗口</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">once</span> ocr last <span class="at">--json</span>                                <span class="co"># 对刚才的截图取字</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">once</span> annotate last <span class="at">--script</span> ops.json <span class="at">--out</span> out.png  <span class="co"># 按指令标注</span></span></code></pre></div>
+<p>全部命令与退出码见 附录 B。</p>
+<h2 id="已支持客户端速查">已支持客户端速查</h2>
+<table>
+<thead>
+<tr>
+<th>客户端</th>
+<th>接入方式</th>
+<th>在哪操作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WorkBuddy</td>
+<td>复制配置粘贴</td>
+<td>定影 Agent 页复制 → WorkBuddy 设置粘贴</td>
+</tr>
+<tr>
+<td>Claude Desktop</td>
+<td>一键接入</td>
+<td>定影 Agent 页 → 点「一键接入」</td>
+</tr>
+<tr>
+<td>Claude Code</td>
+<td>一键接入</td>
+<td>同上（优先官方 <code>claude mcp add</code>）</td>
+</tr>
+<tr>
+<td>Cursor</td>
+<td>一键接入</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>Codex</td>
+<td>一键接入</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>ZCode</td>
+<td>一键接入</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>其他 MCP 客户端</td>
+<td>手动配置</td>
+<td>把 <code>once mcp</code> 命令加进你的 MCP 配置</td>
+</tr>
+</tbody>
+</table>
+<h2 id="接入后的小问题">接入后的小问题</h2>
+<ul>
+<li><strong>Agent 说调用被拒？</strong> 主面板 Agent
+页看权限总开关是否被关；审计日志里能看到每次被拒的记录；</li>
+<li><strong>截了但内容空白/被拒并提示黑名单？</strong>
+目标应用在保护名单里——这是设计行为，没有「本次放行」；</li>
+<li><strong>一键接入后客户端没反应？</strong> 重启一次该客户端让它重读
+MCP 配置；</li>
+<li><strong>同一家族的桌面端和 CLI 端是两个配置</strong>（如 Claude
+Desktop 与 Claude Code）——各接各的，别只接一个就以为全家都通了。</li>
+</ul>
+<h2 id="下一步-7">下一步</h2>
+<p>AI 已经能替你截图取字了，最后一章让它替你<strong>写教程</strong>：09
+让 AI 替你写教程。</p>
+<h1 id="09-让-ai-替你写教程">09 让 AI 替你写教程</h1>
+<blockquote>
+<p>本章功能需要 <strong>v0.1.2 及以上</strong>版本的
+CLI/Skill（<code>once status --json</code> 的 <code>version</code>
+字段可查）。</p>
+</blockquote>
+<p>上一章 AI
+已经会截图取字了，这一章再往前一步：<strong>让它把操作过程写成图文教程</strong>。你只要说「帮我把刚才的操作写成教程」，AI
+就会自动完成截图、取字、标注、成稿——就像你现在读的这套官方教程，配图全部由这条产线自己产出。</p>
+<h2 id="原理一条产线三个命令">原理：一条产线，三个命令</h2>
+<p>AI 写教程靠的是定影的三个命令串成链：</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">once</span> capture window <span class="at">--json</span>                    <span class="co"># ① 拍下每一步的画面</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">once</span> ocr last <span class="at">--json</span>                          <span class="co"># ② 读出画面文字和坐标</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">once</span> annotate last <span class="at">--script</span> ops.json <span class="at">--out</span> out.png   <span class="co"># ③ 按坐标画标注</span></span></code></pre></div>
+<p>关键在 ②：取字结果自带每个文字块的<strong>坐标框</strong>，AI
+据此精确画出「箭头指向哪个按钮、序号标在哪一步」——不需要它真的「看懂」图片。</p>
+<h2 id="安装一条命令">安装：一条命令</h2>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fsSL</span> <span class="at">--retry</span> 3 https://github.com/wample0105/apo-once-glance/releases/latest/download/install.sh <span class="kw">|</span> <span class="fu">bash</span></span></code></pre></div>
+<p>这条命令会同时装好 <code>once</code> 命令行和
+<strong>onceglance-tutorial Skill</strong>（教程写作工作流）到通用 Agent
+Skills 目录。装完在 Agent 里说：</p>
+<pre class="text"><code>帮我确认 onceglance-tutorial skill 已安装</code></pre>
+<h2 id="实战一句话产教程">实战：一句话产教程</h2>
+<p>对装好 Skill 的 Agent 说：</p>
+<pre class="text"><code>我马上要在系统设置里关闭 HDR，请跟着我的操作写一篇带标注图文的教程</code></pre>
+<p>然后你正常操作，Agent 会：</p>
+<ol type="1">
+<li>每完成一步自动截一张图（或让你按 <code>Alt+Shift+A</code>
+后它取最近一张）；</li>
+<li>从图里读出按钮文字和位置；</li>
+<li>按「红框圈重点 + 序号标步骤 +
+中文指令签」的规范给每张图加标注；</li>
+<li>输出一篇 Markdown 教程，图片引用本地相对路径。</li>
+</ol>
+<p>产出的教程直接可用：发群、发文档、贴博客都行。</p>
+<h2 id="标注风格继承你的主题">标注风格：继承你的主题</h2>
+<p>AI
+画标注<strong>不自带样式</strong>——颜色、线宽、序号样式全部继承你在定影里调好的
+标注主题。你平时怎么标，AI 就怎么标，产出的图和你的手笔一致。</p>
+<p>想固定某种风格批量出图？在标注主题页把默认值调好即可，不用在指令里写死任何颜色参数。</p>
+<h2 id="下一步-8">下一步</h2>
+<p>到 附录 查阅快捷键总表、CLI/MCP 速查、常见问题——按需回来翻。</p>
+<h1 id="附录">附录</h1>
+<blockquote>
+<p>参考区：按需查阅。快捷键、命令、参数的口径与 README 门面同源。</p>
+</blockquote>
+<h2 id="a-快捷键总表">A 快捷键总表</h2>
+<h3 id="全局热键任何界面生效">全局热键（任何界面生效）</h3>
+<table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Alt+Shift+A</code></td>
+<td>区域截图</td>
+</tr>
+<tr>
+<td><code>Alt+Shift+W</code></td>
+<td>窗口截图</td>
+</tr>
+<tr>
+<td><code>Alt+Shift+F</code></td>
+<td>全屏截图</td>
+</tr>
+<tr>
+<td><code>Alt+Shift+T</code></td>
+<td>自动取字</td>
+</tr>
+<tr>
+<td><code>Alt+Shift+L</code></td>
+<td>长截图</td>
+</tr>
+<tr>
+<td><code>Alt+Shift+H</code></td>
+<td>打开主面板</td>
+</tr>
+</tbody>
+</table>
+<p>热键冲突可在主面板「通用页」改键。</p>
+<h3 id="取景层内截图过程中">取景层内（截图过程中）</h3>
+<table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Enter</code></td>
+<td>复制到剪贴板（有标注时合成成品）</td>
+</tr>
+<tr>
+<td><code>Ctrl+C</code></td>
+<td>同复制</td>
+</tr>
+<tr>
+<td><code>Ctrl+S</code></td>
+<td>保存到默认目录</td>
+</tr>
+<tr>
+<td><code>D</code></td>
+<td>贴图（选区原位贴出）</td>
+</tr>
+<tr>
+<td><code>L</code></td>
+<td>转入长截图模式</td>
+</tr>
+<tr>
+<td><code>Esc</code></td>
+<td>取消（先弃选区，再彻底退出；有标注时弹确认，可记住选择）</td>
+</tr>
+<tr>
+<td><code>Tab</code></td>
+<td>切换自动识别的窗口候选</td>
+</tr>
+<tr>
+<td>右键</td>
+<td>输出选项菜单（无选区时=退出）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="标注工具单键">标注工具单键</h3>
+<table>
+<thead>
+<tr>
+<th>键</th>
+<th>工具</th>
+<th>键</th>
+<th>工具</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>V</code></td>
+<td>选择</td>
+<td><code>M</code></td>
+<td>马赛克/模糊</td>
+</tr>
+<tr>
+<td><code>A</code></td>
+<td>箭头</td>
+<td><code>T</code></td>
+<td>文字</td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td>矩形</td>
+<td><code>N</code></td>
+<td>序号</td>
+</tr>
+<tr>
+<td><code>O</code></td>
+<td>椭圆</td>
+<td><code>E</code></td>
+<td>橡皮擦</td>
+</tr>
+<tr>
+<td><code>P</code></td>
+<td>画笔</td>
+<td><code>C</code></td>
+<td>裁剪</td>
+</tr>
+<tr>
+<td><code>H</code></td>
+<td>荧光笔</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="标注编辑辅助">标注编辑辅助</h3>
+<table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ctrl+Z</code> / <code>Ctrl+Y</code></td>
+<td>撤销 / 重做（20 步）</td>
+</tr>
+<tr>
+<td><code>Delete</code></td>
+<td>删除选中标注</td>
+</tr>
+<tr>
+<td>方向键</td>
+<td>微调选中标注（<code>Shift+方向键</code> = 10px）</td>
+</tr>
+<tr>
+<td><code>Shift</code>（拖箭头时）</td>
+<td>锁定 45° 方向</td>
+</tr>
+<tr>
+<td><code>Alt</code>+点击（序号工具）</td>
+<td>复用上一个序号不递增</td>
+</tr>
+<tr>
+<td>双击文字</td>
+<td>重新编辑文字内容</td>
+</tr>
+</tbody>
+</table>
+<h2 id="b-cli-速查">B CLI 速查</h2>
+<p>全部命令输出统一 JSON
+envelope：<code>{ok, data, error, meta}</code>，判断成功只看
+<code>ok</code> 与退出码。</p>
+<table>
+<thead>
+<tr>
+<th>命令</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>once status [--json]</code></td>
+<td>实例/落盘/OCR/热键状态</td>
+</tr>
+<tr>
+<td><code>once capture window --json</code></td>
+<td>截前台窗口</td>
+</tr>
+<tr>
+<td><code>once capture fullscreen --json</code></td>
+<td>截全屏</td>
+</tr>
+<tr>
+<td><code>once capture region --json</code></td>
+<td>交互式框选（需 GUI；无 GUI 时用 <code>--x --y --w --h</code>
+物理像素直采）</td>
+</tr>
+<tr>
+<td><code>once ocr last --json</code></td>
+<td>对最近截图取字（也可传图片路径）</td>
+</tr>
+<tr>
+<td><code>once annotate last --script s.json --out out.png</code></td>
+<td>按脚本标注</td>
+</tr>
+<tr>
+<td><code>once history --query "kind:window after:昨天"</code></td>
+<td>历史检索</td>
+</tr>
+<tr>
+<td><code>once doctor</code></td>
+<td>环境自检</td>
+</tr>
+<tr>
+<td><code>once mcp</code></td>
+<td>启动 stdio MCP Server</td>
+</tr>
+</tbody>
+</table>
+<h3 id="退出码冻结契约">退出码（冻结契约）</h3>
+<table>
+<thead>
+<tr>
+<th>码</th>
+<th>含义</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>成功</td>
+<td></td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>参数错误</td>
+<td>envelope.error 里有逐条明细</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>捕获失败</td>
+<td>锁屏/驱动/杀软拦截</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td>OCR 失败</td>
+<td>已自动重试 1 次</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td>读写失败</td>
+<td>文件/剪贴板</td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td>权限被拒</td>
+<td>用户关闭了 Agent 总开关</td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td>黑名单命中</td>
+<td>无「本次放行」，不要重试</td>
+</tr>
+</tbody>
+</table>
+<h3 id="标注脚本ops-json示例">标注脚本（ops JSON）示例</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;unit&quot;</span><span class="fu">:</span> <span class="st">&quot;px&quot;</span><span class="fu">,</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;operations&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;rect&quot;</span><span class="fu">,</span> <span class="dt">&quot;at&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="dv">520</span><span class="ot">,</span> <span class="dv">24</span><span class="ot">]</span><span class="fu">,</span> <span class="dt">&quot;size&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="dv">330</span><span class="ot">,</span> <span class="dv">40</span><span class="ot">]</span><span class="fu">,</span> <span class="dt">&quot;style&quot;</span><span class="fu">:</span> <span class="st">&quot;outline&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;arrow&quot;</span><span class="fu">,</span> <span class="dt">&quot;from&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="dv">200</span><span class="ot">,</span> <span class="dv">100</span><span class="ot">]</span><span class="fu">,</span> <span class="dt">&quot;to&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="dv">535</span><span class="ot">,</span> <span class="dv">45</span><span class="ot">]</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;step_number&quot;</span><span class="fu">,</span> <span class="dt">&quot;at&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="dv">180</span><span class="ot">,</span> <span class="dv">90</span><span class="ot">]</span><span class="fu">,</span> <span class="dt">&quot;label&quot;</span><span class="fu">:</span> <span class="dv">1</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;text&quot;</span><span class="fu">,</span> <span class="dt">&quot;at&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="dv">620</span><span class="ot">,</span> <span class="dv">20</span><span class="ot">]</span><span class="fu">,</span> <span class="dt">&quot;text&quot;</span><span class="fu">:</span> <span class="st">&quot;点击导出报表&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;mosaic&quot;</span><span class="fu">,</span> <span class="dt">&quot;at&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="dv">2200</span><span class="ot">,</span> <span class="dv">20</span><span class="ot">]</span><span class="fu">,</span> <span class="dt">&quot;size&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="dv">150</span><span class="ot">,</span> <span class="dv">50</span><span class="ot">]</span><span class="fu">,</span> <span class="dt">&quot;mode&quot;</span><span class="fu">:</span> <span class="st">&quot;pixelate&quot;</span> <span class="fu">}</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li>坐标系：<code>unit:"px"</code> 物理像素；<code>unit:"rel"</code> 为
+0–1 相对坐标（无精确像素时推荐）；</li>
+<li>未显式指定的样式属性<strong>全部继承标注主题</strong>（见 D
+节），显式传参优先；</li>
+<li>支持的
+type：<code>arrow / rect / ellipse / text / step_number / highlight / pen / mosaic(pixelate|blur) / crop</code>。</li>
+</ul>
+<h2 id="c-mcp-工具速查">C MCP 工具速查</h2>
+<p>MCP Server 由 <code>once mcp</code> 启动（stdio），共 6 个工具：</p>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>capture_screen</code></td>
+<td>截屏（窗口/全屏/区域）</td>
+</tr>
+<tr>
+<td><code>scroll_capture</code></td>
+<td>长截图（滚动采集）</td>
+</tr>
+<tr>
+<td><code>ocr_image</code></td>
+<td>对指定图片（或最近截图）取字</td>
+</tr>
+<tr>
+<td><code>annotate_image</code></td>
+<td>按标注脚本生成衍生图</td>
+</tr>
+<tr>
+<td><code>list_history</code></td>
+<td>检索历史（支持 kind:/after:/has:/ocr: 语法）</td>
+</tr>
+<tr>
+<td><code>doctor</code></td>
+<td>环境自检</td>
+</tr>
+</tbody>
+</table>
+<h2 id="d-标注主题参数表">D 标注主题参数表</h2>
+<p>以下全部参数在主面板「标注主题」页只读展示、在标注编辑器里即改即存；<strong>AI
+的标注自动继承</strong>，未显式传参时按此默认值渲染。</p>
+<table>
+<thead>
+<tr>
+<th>组</th>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>通用</td>
+<td>主题色、默认线宽</td>
+<td>未单独记忆的工具回落主题色</td>
+</tr>
+<tr>
+<td>每工具颜色</td>
+<td>arrow / pen / marker / rect / ellipse / text / num</td>
+<td>每个工具独立记忆</td>
+</tr>
+<tr>
+<td>箭头</td>
+<td>头型（终点/双向/起点/无）、线型（实线/虚线/点线）</td>
+<td></td>
+</tr>
+<tr>
+<td>形状</td>
+<td>填充（描边/填充/描边+填充）、圆角、虚线、不透明度</td>
+<td>矩形与椭圆共用</td>
+</tr>
+<tr>
+<td>文字</td>
+<td>字体、字号、行距、粗体/斜体/下划线/阴影、对齐、背景色、背景透明度、背景圆角、描边</td>
+<td>描边自动取反色</td>
+</tr>
+<tr>
+<td>序号</td>
+<td>样式（实心/描边/纯数字）、直径、起始编号</td>
+<td></td>
+</tr>
+<tr>
+<td>马赛克</td>
+<td>模式（马赛克/模糊）、强度</td>
+<td></td>
+</tr>
+<tr>
+<td>荧光笔</td>
+<td>不透明度</td>
+<td></td>
+</tr>
+<tr>
+<td>整图输出</td>
+<td>阴影（模糊半径/颜色）、边框（宽度/颜色）</td>
+<td>衍生图整图特效</td>
+</tr>
+</tbody>
+</table>
+<h2 id="e-隐私与黑名单">E 隐私与黑名单</h2>
+<ul>
+<li><strong>权限总开关</strong>：关闭即拒绝全部 AI 调用（退出码
+5）；</li>
+<li><strong>无感自动截图</strong>：允许 Agent
+静默截图；关闭后仅影响弹窗行为，黑名单与审计不受影响；</li>
+<li><strong>App
+黑名单</strong>：内置密码管理器、银行类应用，支持自定义条目；命中即拒（退出码
+6），无「本次放行」。黑名单针对 Agent
+自动截图与热键直采（你不在场的场景）；手动框选是本人在场的主动行为，不予拦截；</li>
+<li><strong>审计日志</strong>：记录每次 AI
+调用的时间、动作、目标与结果，30 天自动清理，可一键清空；</li>
+<li><strong>删除保护</strong>：历史删除进系统回收站；衍生图永不覆盖原图。</li>
+</ul>
+<h2 id="f-常见问题与排障">F 常见问题与排障</h2>
+<p><strong>截图整体发白、像曝光过度？</strong> 系统开启了 HDR。HDR 下
+Windows
+以高亮度范围合成桌面，传统截图接口拿到的是亮度映射后的降维帧。解决：设置
+→ 系统 → 屏幕 → HDR → 关闭「使用 HDR」。</p>
+<p><strong>客户端没打开，Agent 能调用吗？</strong> 能。CLI/MCP 与 GUI
+共享同一内核，截图/取字/标注/历史检索均不依赖客户端运行；仅交互式框选与长截图需要
+GUI。</p>
+<p><strong>热键按了没反应？</strong>
+多半是被其他软件占了（部分工具默认占用相同组合键）。主面板「通用页」给冲突的热键改键即可。另注意：后台驻留的同类截图软件可能注册了相同全局热键（如
+<code>F3</code>），窗口内按键抢不过系统级全局热键，建议关闭或改键对方。</p>
+<p><strong>长截图拼不完整 / 丢段？</strong>
+慢速匀速滚动成功率最高；两次采样之间滚过一屏以上必丢段（物理边界）。滚到底部停一秒再点完成。</p>
+<p><strong>衍生图会覆盖原图吗？</strong> 永远不会。标注/裁剪产物按
+<code>-ann</code> 命名并记录 lineage，删除只进回收站。</p>
+<p><strong>一键接入后 Agent 没反应？</strong> 重启该客户端让它重读 MCP
+配置；同一家族的桌面端与 CLI
+端配置互不相通，确认接的是你正在用的那个端；还不行去「诊断页」跑自检，看桥接管道一项。</p>
+<p><strong>Agent 调用被拒（退出码 5）？</strong> 主面板 Agent
+页的权限总开关被关了，打开即恢复。</p>
+<p><strong>怎么卸载？</strong> 客户端：托盘退出后删除程序目录（图片在
+<code>图片\Onceglance</code>，按需保留）；CLI：删除
+<code>~/.onceglance</code> 目录；MCP 配置：在 Agent
+页对已接入客户端点「移除」。</p>
+<h2 id="g-版本说明">G 版本说明</h2>
+<ul>
+<li>本教程对应 <strong>v0.1.1</strong> 功能基线，Windows 10 (19045+) /
+Windows 11；</li>
+<li>「让 AI 替你写教程」（09 章）需要 <strong>v0.1.2+</strong> 的
+CLI/Skill；</li>
+<li>更新日志见仓库 <a
+href="https://github.com/wample0105/apo-once-glance/releases">Releases</a>
+页。</li>
+</ul>
+
+</body></html>
