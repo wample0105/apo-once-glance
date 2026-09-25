@@ -1,113 +1,160 @@
 # 定影 Onceglance
 
-> 让 Agent 看见你的屏幕，替你把操作变成教程。
-> Windows 优先 · 本地优先 · 零 API Key / 零云端上传 / 零遥测
+<p align="center">
+  <img src="assets/logo/png/appicon-windows-512.png" alt="定影 Onceglance Logo" width="120" height="120" />
+</p>
 
-AI 原生截图工具（Agent 视觉层）：任何支持 MCP 或 shell 的 Agent 都可以通过标准化接口完成「截屏 → 取字（带坐标）→ 标注 → 落盘」的完整感知链路。
+<p align="center">
+  <b>让 Agent 看见你的屏幕，替你把操作变成教程。</b><br />
+  AI 原生截图工具 · Windows 优先 · 本地优先 · 零 API Key / 零云端上传 / 零遥测
+</p>
 
-## 仓库结构
+<p align="center">
+  <a href="README_EN.md">English</a> | 中文
+</p>
 
-```text
-apo-once-glance/
-├─ docs/                      # 只读规格（PRD v1.1 / UI 设计规范 v1.2 / 交互说明书 v1.1 / 原型 v2）
-│  └─ 04-备份区/               # 历史档案，不要读也不要动
-├─ assets/logo/               # 品牌资产（一处定稿、处处同图，禁止改色/拉伸/自画）
-├─ ui/                        # Web 前端（无构建步骤，Tauri 直接内嵌）
-│  ├─ index.html              # 主面板（5 页导航：历史/标注主题/Agent/通用/诊断）
-│  ├─ overlay.html + js/overlay.js   # 捕获覆盖层（区域/取字/长截图三种模式）
-│  ├─ toast.html              # 通知浮层（右下角，成功 3s / 错误 6s）
-│  ├─ quality.html            # 长截图接缝质检页
-│  └─ css/tokens.css          # 设计令牌（ui-design.md §3 的唯一实现）
-└─ src-tauri/                 # Cargo 工作区
-   ├─ src/                    # onceglance 桌面壳（Tauri 2）
-   │  ├─ lib.rs               # 窗口/托盘/热键/覆盖层调度
-   │  ├─ deliver.rs           # 捕获交付：落盘→历史→剪贴板→toast
-   │  └─ scrollcmd.rs         # 长截图会话 + 低级键盘钩子 + 质检窗口
-   ├─ crates/once-core/       # 内核（GUI 与 CLI 共享）
-   │  ├─ capture.rs           # GDI 捕获（BitBlt/PrintWindow）+ 显示器枚举（物理像素）
-   │  ├─ ocr.rs               # Windows.Media.Ocr，blocks+bbox，Provider trait 留 P1
-   │  ├─ annotate.rs          # 标注渲染引擎（tiny-skia + ttf-parser，确定性输出）
-   │  ├─ longshot.rs          # 长截图拼接内核（位移匹配/固定区消除/接缝质检）
-   │  ├─ history.rs           # SQLite + FTS5（搜索语法 kind:/after:/has:/ocr:）
-   │  ├─ storage.rs           # 落盘：Pictures\Onceglance\<日期>\HHmmss-<kind>-<shortid>.png + manifest
-   │  ├─ clipboard.rs         # DIB+PNG+CF_HDROP+文本，退避重试，写回校验，回收站删除
-   │  ├─ settings.rs          # %APPDATA%\Onceglance\settings.json
-   │  ├─ blacklist.rs         # 隐私黑名单（命中即拒，无"本次放行"）
-   │  └─ audit.rs             # 审计日志 JSONL（仅元数据，30 天清理）
-   └─ crates/once-cli/        # once 命令（PRD §6.7）+ MCP Server（once mcp）
+<p align="center">
+  <img src="https://img.shields.io/badge/平台-Windows%2010%2F11-lightgrey.svg" alt="Platform" />
+  <img src="https://img.shields.io/badge/版本-v0.1.1-green.svg" alt="Version" />
+  <img src="https://img.shields.io/badge/语言-Rust%20%2B%20TypeScript-orange.svg" alt="Language" />
+  <img src="https://img.shields.io/badge/许可证-MIT-blue.svg" alt="License" />
+</p>
+
+---
+
+**定影 Onceglance** 是一款 AI 原生的 Windows 截图工具：任何支持 MCP 或 Shell 的 Agent（Claude、Codex、Cursor 等）都可以通过标准化接口，完成「截屏 → 取字 → 标注 → 落盘」的完整感知链路。对人，它是键盘手感极佳的截图+贴图工具；对 Agent，它是本机视觉能力的标准出口。
+
+- **本地三零**：零 API Key、零云端上传、零遥测，OCR 全程本地运行；
+- **三端同源**：GUI、CLI、MCP 共享同一内核，装一次客户端，三种用法；
+- **不依赖常驻**：客户端没有打开时，Agent 依然可以独立调用截图、取字与标注。
+
+## ✨ 核心功能
+
+- **📸 智能截图**：区域框选（窗口/控件自动识别高亮）、窗口截图、全屏、多显示器物理像素支持；冻结式取景层预驻留，热键到蒙版 ~44ms。
+- **🖍️ 专业标注**：覆盖层直接画——箭头/矩形/椭圆/序号/文字/高亮/马赛克/裁剪，8 个键盘快捷键 + 撤销；保存走确定性渲染引擎，衍生图永不覆盖原图。
+- **🔤 本地 OCR**：Windows.Media.Ocr 引擎离线取字，输出文字块 + 坐标框 + 置信度；主面板内 OCR 结果与原图坐标联动。
+- **📜 长截图**：框选松手即采、滚轮穿透采集（帧稳定检测消除动画重影）、自动接缝拼接、到底提示、接缝质检页。
+- **📌 贴图**：截图原位贴回屏幕，支持拖动、滚轮缩放、透明度调节。
+- **🤖 Agent 能力**：CLI `once` 全命令 JSON 输出 + stdio MCP Server；标注属性全量继承客户端主题记忆，Agent 未显式传参即继承。
+- **🛡️ 隐私防线**：Agent 总开关 + 无感自动截图开关 + 隐私 App 黑名单（密码管理器/银行类命中即拒，无「本次放行」）+ 元数据审计日志（30 天自动清理）。
+
+## 🚀 安装
+
+### 1. 客户端（GUI）
+
+前往 [Releases](https://github.com/wample0105/apo-once-glance/releases) 下载最新的 `onceglance` 客户端安装包，解压即用。
+
+- **系统要求**：Windows 10 (19045+) / Windows 11，WebView2 Runtime（Win11 自带）。
+
+### 2. CLI 与 Agent Skill（一条命令）
+
+```bash
+curl -fsSL --retry 3 https://github.com/wample0105/apo-once-glance/releases/latest/download/install.sh | bash
 ```
 
-## 构建
+自动按平台下载 `once` CLI 并校验 SHA-256，安装到 `~/.onceglance/bin`，同时把 `onceglance-tutorial` Skill 装入通用 Agent Skills 目录。安装后运行 `once status --json` 验证。
 
-依赖：Rust 1.77+（MSVC）、Node 18+、WebView2 Runtime（Win11 自带）。
+### 3. MCP 接入（推荐在客户端内一键完成）
+
+打开客户端「Agent」页 → 对 Claude Desktop / Claude Code / Cursor / Codex / ZCode 等点击「一键接入」，自动写入 MCP 配置（写入前自动备份原配置）。也可以手动把 `once mcp` 加进你的 MCP 配置。
+
+## 📝 使用方法
+
+### 键盘（给人用）
+
+| 快捷键 | 功能 |
+|--------|------|
+| `Alt+Shift+A` | 区域截图 |
+| `Alt+Shift+W` | 窗口截图 |
+| `Alt+Shift+F` | 全屏截图 |
+| `Alt+Shift+T` | 自动取字 |
+| `Alt+Shift+L` | 长截图 |
+| `Alt+Shift+H` | 打开主面板 |
+
+### 命令行（给 Agent 用）
+
+```bash
+once status                  # 实例/落盘/OCR/热键状态
+once capture window --json   # 截前台窗口
+once ocr last --json         # 取字：文字块 + 坐标
+once annotate last --script s.json --out r.png   # 指令驱动标注
+once history --query "kind:window after:昨天"     # 历史检索
+once mcp                     # stdio MCP Server
+```
+
+全部命令输出统一 JSON envelope（`{ok, data, error, meta}`），退出码冻结：`0` 成功 / `1` 参数 / `2` 捕获 / `3` OCR / `4` 读写 / `5` 权限 / `6` 黑名单。
+
+MCP 工具：`capture_screen` / `ocr_image` / `annotate_image` / `list_history` / `doctor`。
+
+## ❓ 常见问题
+
+- **截图整体发白、像曝光过度？**
+  系统开启了 HDR。HDR 下 Windows 桌面以高亮度范围合成，传统截图接口拿到的是亮度映射后的降维帧。解决：设置 → 系统 → 屏幕 → HDR → 关闭「使用 HDR」。
+- **客户端没打开，Agent 能调用吗？**
+  能。CLI/MCP 与 GUI 是同一内核的独立入口，截图/取字/标注/历史检索均不依赖客户端运行；仅交互式框选与长截图需要 GUI。
+- **隐私黑名单拦不住手动框选？**
+  黑名单针对 Agent 自动截图与热键直采（你不在场的场景）；手动框选是你本人在场的主动行为，与其他工具行为一致。
+- **衍生图会覆盖原图吗？**
+  永远不会。所有标注/裁剪产物按 `-ann` 命名并记录 lineage manifest；删除只进系统回收站。
+
+## 🗑️ 卸载
+
+1. 客户端：退出托盘程序，删除程序目录；落盘图片在 `图片\Onceglance`，按需保留。
+2. CLI：删除 `~/.onceglance` 目录。
+3. MCP 配置：在客户端「Agent」页对已接入的客户端点击「移除」。
+
+## ☕ 关注与交流
+
+如果定影对你有帮助，欢迎关注更新、加入交流群，或者请作者喝杯咖啡。
+
+<table align="center">
+  <tr>
+    <td align="center"><b>关注公众号</b></td>
+    <td align="center"><b>加我微信</b></td>
+    <td align="center"><b>随喜支持</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/cta/apo-rpa-qrcode.png" alt="阿坡RPA 公众号二维码" width="180" /></td>
+    <td align="center"><img src="assets/cta/apo-wechat-qrcode.png" alt="阿坡个人微信二维码" width="180" /></td>
+    <td align="center"><img src="assets/cta/apo-donate-qrcode.png" alt="支持作者二维码" width="180" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>阿坡RPA</b><br />获取定影最新版本与实用工具</td>
+    <td align="center"><b>阿坡</b><br />发送暗号「OnceGlance」，加入专属交流群</td>
+    <td align="center"><b>请作者喝杯咖啡</b><br />自愿打赏，感谢支持</td>
+  </tr>
+</table>
+
+<p align="center">点击图片可查看原图，长按或右键可保存。</p>
+
+## 🛠 开发与构建
 
 ```bash
 npm install
 npm run build        # 产物在 src-tauri/target/release/
 npm run dev          # 开发模式
-cargo test -p once-core   # 内核单元测试（15 个）
+cargo test -p once-core   # 内核单元测试
 ```
 
-## Agent 接入
-
-```bash
-once status                  # 实例/落盘/OCR/热键状态
-once capture window --json   # 截前台窗口
-once ocr last --json         # 取字：blocks[] 带 bbox（物理像素）
-once annotate last --script s.json --out r.png
-once mcp                     # stdio MCP Server（capture_screen/ocr_image/annotate_image/list_history/doctor）
+```text
+src-tauri/
+├─ src/                # 桌面壳：窗口/托盘/热键/取景层/交付/长截图/贴图
+└─ crates/
+   ├─ once-core/       # 内核：捕获/OCR/标注/长截图/历史/落盘/剪贴板/黑名单/审计
+   └─ once-cli/        # once 命令 + MCP Server
+ui/                    # Web 前端（主面板 / 取景层 / toast / 质检页），无构建步骤
+docs/                  # 只读规格（PRD / UI 设计规范 / 交互说明书）
+handoff.md             # 交接日志：每个开发段落的需求、决策与验证记录
 ```
 
-JSON envelope：`{ok, data, error, meta:{version, elapsed_ms}}`。
-退出码（冻结）：`0` 成功 / `1` 参数 / `2` 捕获 / `3` OCR / `4` 读写 / `5` 权限被拒 / `6` 黑名单。
+欢迎 Issue 与 PR；开发约定与项目状态见 `handoff.md`。
 
-## 硬约束（违反即返工）
+## 📄 许可证
 
-1. 退出码契约冻结。
-2. 本地三零：零 API Key、零云端上传、零遥测；OCR 本地跑。
-3. 命名 `HHmmss-<kind>-<shortid>.png` + 同名 manifest，按日期落 `Pictures\Onceglance`。
-4. 衍生图永不覆盖原图。
-5. 删除只进系统回收站；黑名单无"本次放行"。
-6. 错误提示必须带文字 + 退出码。
-7. 一处定稿、处处同图：界面引用 `assets/logo/` 同一份资产。
-8. `docs/` 与 `assets/` 只读。
-9. 验收标准不许静默跳过；做不到就写进 `handoff.md`。
+[MIT](LICENSE) © 阿坡
 
-## 功能清单（v0.1.0，Windows 11 / Win10 19045+）
+---
 
-- **捕获**：区域框选（30%/55% 两档遮罩、物理像素尺寸提示、动作条）、窗口（PrintWindow+回退）、全屏、多显示器（物理像素坐标、逐屏 DPI）、捕获前自动隐藏自身
-- **标注**：覆盖层直接画（箭头/矩形/椭圆/序号/文字/高亮/马赛克/裁剪 + 8 键盘快捷键 + 撤销），保存走确定性渲染引擎生成衍生图（-ann 命名、lineage manifest、永不覆盖原图）。标注主题单源（SET-7）：GUI 记忆的属性默认值，Agent（CLI/MCP）未显式传参时全量继承（含每工具独立色与整图输出选项），主面板「标注主题」页只读可见；显式传参优先
-- **OCR**：本地 Windows.Media.Ocr，blocks[]（type/text/bbox/confidence/lines）+ full_text + 语言，无文字返回 empty_reason 不报错
-- **长截图**：框选松手即采、滚轮穿透采集（帧稳定检测消除动画重影）、固定区消除、到底提示且永不自动完成、接缝质检页（±1/±10 修正、全部接受、分段导出）
-- **CLI `once`**：status / capture / ocr / annotate / history / open / config / doctor / mcp，全命令 --json envelope，退出码 0~6 冻结
-- **MCP**：capture_screen / scroll_capture / ocr_image / annotate_image / list_history / doctor，stdio
-- **GUI 主面板**：历史工作台（缩略图、OCR 预览、FTS 搜索、卡片→详情页：大图缩放 + OCR bbox 联动 + 版本时间线）、标注主题（只读管理视图）、Agent 与隐私（总开关/无感开关/黑名单/审计）、Agent 接入（SKL-4 双卡 + MCP 配置 + 速查表）、通用（热键录制/默认动作/落盘目录/开机自启）、诊断
-- **隐私**：Agent 总开关 + 无感自动截图开关 + 隐私黑名单（命中退出码 6，无"本次放行"）+ 元数据审计日志（JSONL，30 天清理）
-- **托盘**：常驻、左键主面板、右键全功能菜单；热键冲突检测与降级
-- **首次引导**：环境自检 → 试一次 → 接 Agent（三步，可跳过）
-
-## 发布（M4）
-
-```bash
-npm run build                                  # 产出 src-tauri/target/release/
-cd src-tauri && cargo build --release -p once-cli    # once.exe CLI
-# 发布物打包时生成 SHA-256 清单（checksums.txt，install.sh 自动校验）
-```
-
-## 常见问题
-
-### 截图整体发白、像曝光过度？
-
-**现象**：部分窗口截出来整体偏白、亮度失真，但屏幕上看着完全正常；截其他窗口又没问题。
-
-**原因**：系统开启了 HDR（高动态范围）显示。HDR 开启时，Windows 桌面以高亮度范围合成画面，而传统截图接口拿到的是经过亮度映射后的降维帧，中间调被整体提亮，于是截图发白。这是 Windows HDR 合成与传统捕获方式之间的兼容性问题，与具体应用无关——受影响的是所有走传统捕获路径的截图工具。
-
-**解决**：关闭 HDR 即可恢复正常：
-
-> 设置 → 系统 → 屏幕 → HDR → 关闭「使用 HDR」
-
-（任务栏搜索「HDR」可直达该设置页。）
-
-## 当前状态
-
-见 `handoff.md`（每个里程碑一行的交接日志）。M0–M3 完成，M4 构建产物就绪后发布。
+<p align="center">
+  由 <a href="https://github.com/wample0105">阿坡</a> 用 ❤️ 制作
+</p>

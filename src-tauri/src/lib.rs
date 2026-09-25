@@ -223,7 +223,7 @@ fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
     // 热键路径：冻结图已在移回前截好（纯净画面），随后推送激活事件（JS 已驻留，收事件即渲染蒙版）
     let mut payload = serde_json::json!({ "kind": kind });
     if let Some(f) = frozen {
-        payload["dataUrl"] = serde_json::Value::String(f.0);
+        payload["url"] = serde_json::Value::String(f.0);
         payload["width"] = serde_json::Value::from(f.1);
         payload["height"] = serde_json::Value::from(f.2);
     }
@@ -871,6 +871,20 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
 pub fn run() {
     once_core::dpi::ensure_per_monitor_dpi_aware();
     tauri::Builder::default()
+        // 取景层冻结帧位图直通协议：无损 BMP（零编码零解码），画质感与热路径延迟双优
+        .register_uri_scheme_protocol("freeze", |_ctx, _request| {
+            match scrollcmd::freeze_frame_bmp_bytes() {
+                Some(bytes) => tauri::http::Response::builder()
+                    .header("Content-Type", "image/bmp")
+                    .header("Cache-Control", "no-store")
+                    .body(std::borrow::Cow::Owned(bytes))
+                    .unwrap(),
+                None => tauri::http::Response::builder()
+                    .status(404)
+                    .body(std::borrow::Cow::Owned(Vec::new()))
+                    .unwrap(),
+            }
+        })
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 多实例：激活既有实例（§9）
             show_main(app);

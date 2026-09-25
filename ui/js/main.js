@@ -676,14 +676,33 @@ event.listen("tauri://focus", () => {
 
 
 // ===== 资产详情（§4.6：文字块与图片联动、版本时间线）=====
-let detailState = null; // { basePath, scale, data }
+let detailState = null; // { basePath, scale, fit, data }——fit=适应窗口；free 时 scale=显示宽/原图宽
 
 function escapeSel(s) { return s.replace(/"/g, "&quot;"); }
+
+// 像素保真：1:1 指「物理像素 1:1」——CSS 显示宽须除以 devicePixelRatio（DPI≠100% 时
+// HTML 的 CSS px 与屏幕物理 px 不等尺），插值只发生在用户主动缩放时
+function applyDetailZoom() {
+  const img = $("#detail-img");
+  const vp = $("#detail-viewport");
+  if (!img.naturalWidth || !vp) return;
+  const natW = img.naturalWidth, natH = img.naturalHeight;
+  const dpr = window.devicePixelRatio || 1;
+  if (detailState.fit) {
+    const k = Math.min((vp.clientWidth - 24) * dpr / natW, (520 - 24) * dpr / natH);
+    detailState.scale = k;
+    img.style.width = Math.max(40, Math.round(natW * k / dpr)) + "px";
+  } else {
+    img.style.width = Math.max(40, Math.round(natW * detailState.scale / dpr)) + "px";
+  }
+  $("#detail-zoom-pct").textContent = Math.round(detailState.scale * 100) + "%";
+  setTimeout(positionBboxes, 60);
+}
 
 async function openDetail(path) {
   const data = await invoke("detail_data", { path });
   const m = data.manifest || {};
-  detailState = { basePath: path, scale: 1, data };
+  detailState = { basePath: path, scale: 1, fit: false, data };
   $$(".page").forEach((p) => p.classList.remove("on"));
   $("#page-detail").classList.add("on");
   // 详情页：窗口放大到 1024×680（D-3）；命名空间异常不阻断
@@ -698,11 +717,12 @@ async function openDetail(path) {
   kl.style.display = "inline-flex";
   $("#detail-meta1").textContent = `${m.width || "?"}×${m.height || "?"} · DPI ${Math.round((m.dpi_scale || 1) * 100)}%`;
   $("#detail-meta2").textContent = (m.created_at || "").replace("T", " ").slice(0, 19);
-  // 主图
+  // 主图：默认 1:1 原图直出（与屏幕原始画面逐像素一致，插值只发生在用户主动缩放时）
   const img = $("#detail-img");
-  img.src = await invoke("thumbnail", { path, maxW: 1400 });
-  img.style.width = "100%";
+  img.src = await invoke("thumbnail", { path, maxW: 99999 });
   detailState.scale = 1;
+  detailState.fit = false;
+  img.onload = () => setTimeout(() => { if (detailState) applyDetailZoom(); }, 30);
   // 文字块
   const blocks = (data.ocr && data.ocr.blocks) || [];
   $("#detail-bcount").textContent = blocks.length;
@@ -759,10 +779,14 @@ async function openDetail(path) {
 
 function switchVersion(p) {
   detailState.basePath = p;
-  invoke("thumbnail", { path: p, maxW: 1400 }).then((url) => {
+  detailState.fit = false;
+  detailState.scale = 1;
+  invoke("thumbnail", { path: p, maxW: 99999 }).then((url) => {
     const bw = $("#detail-imgwrap");
     bw.querySelectorAll(".bboxhl").forEach((e) => e.remove());
-    $("#detail-img").src = url;
+    const img = $("#detail-img");
+    img.src = url;
+    img.onload = () => setTimeout(() => { if (detailState) applyDetailZoom(); }, 30);
     $("#detail-name").textContent = p.split(/[\/]/).pop();
   });
 }
@@ -832,10 +856,17 @@ $("#detail-delete").onclick = async () => {
 $("#detail-img").addEventListener("wheel", (e) => {
   e.preventDefault();
   if (!detailState) return;
-  detailState.scale = Math.min(4, Math.max(0.2, detailState.scale * (e.deltaY < 0 ? 1.15 : 0.87)));
-  $("#detail-img").style.width = (detailState.scale * 100) + "%";
-  setTimeout(positionBboxes, 60);
+  const img = $("#detail-img");
+  const cur = detailState.fit ? img.clientWidth / (img.naturalWidth || 1) : detailState.scale;
+  setDetailZoom(cur * (e.deltaY < 0 ? 1.15 : 0.87), false);
 });
+$("#detail-zoom-100").onclick = () => detailState && setDetailZoom(1, false);
+$("#detail-zoom-fit").onclick = () => detailState && setDetailZoom(0, true);
+function setDetailZoom(scale, fit) {
+  detailState.fit = fit;
+  detailState.scale = fit ? detailState.scale : Math.min(8, Math.max(0.05, scale));
+  applyDetailZoom();
+}
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && $("#page-detail").classList.contains("on")) closeDetail();
 });

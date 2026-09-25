@@ -80,6 +80,7 @@ button { font-family: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  white-space: nowrap;
   transition: background 0.1s;
   min-height: 30px;
 }
