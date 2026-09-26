@@ -7,7 +7,7 @@ mod mcp;
 use clap::{Parser, Subcommand};
 use once_core::error::OnceError;
 use once_core::settings::Settings;
-use once_core::{audit, capture, history, ocr, annotate, storage, ExitCode, Result};
+use once_core::{ai, audit, capture, history, ocr, annotate, storage, ExitCode, Result};
 use serde_json::{json, Value};
 use std::io::Write as _;
 use std::path::PathBuf;
@@ -59,6 +59,24 @@ enum Commands {
         limit: usize,
         #[arg(long, default_value = "")]
         query: String,
+    },
+    /// 截图翻译：图片路径或 last（本地 OCR → 云端翻译）；或 --text 纯文本直译
+    Translate {
+        /// 图片路径或 last（与 --text 二选一）
+        target: Option<String>,
+        /// 纯文本直译（跳过 OCR）
+        #[arg(long)]
+        text: Option<String>,
+        /// 目标语言（缺省用设置 ai.translate_lang，再缺省简体中文）
+        #[arg(long, default_value = "")]
+        lang: String,
+    },
+    /// AI 问图：图片路径或 last + 问题（云端视觉模型）
+    Ask {
+        /// 图片路径或 last
+        target: String,
+        #[arg(long)]
+        question: String,
     },
     /// 在资源管理器中定位文件
     Open { target: String },
@@ -160,6 +178,12 @@ fn dispatch(cli: &Cli) -> (String, Result<Value>) {
             ("annotate".into(), cmd_annotate(target, script, out))
         }
         Commands::History { limit, query } => ("history".into(), cmd_history(*limit, query)),
+        Commands::Translate { target, text, lang } => {
+            ("translate".into(), cmd_translate(target.as_deref(), text.as_deref(), &lang))
+        }
+        Commands::Ask { target, question } => {
+            ("ask".into(), cmd_ask(target, &question))
+        }
         Commands::Open { target } => ("open".into(), cmd_open(target)),
         Commands::Config { action } => cmd_config(action),
         Commands::Doctor => ("doctor".into(), cmd_doctor()),
@@ -362,9 +386,127 @@ fn layout_scale() -> f32 {
     capture::monitors().first().map(|m| m.dpi_scale).unwrap_or(1.0)
 }
 
+// ===== AI 能力（v0.2 M3 三端同步：与 GUI 同一内核 once_core::ai）=====
+
+/// AI 命令入口统一自愈（幂等）：默认角色缺失/悬空时补任——GUI setup 同款内核逻辑。
+fn ai_heal() {
+    let _ = once_core::settings::update(|s| {
+        ai::autofill_defaults(&mut s.ai);
+    });
+}
+
+/// 目标语言解析：显式 --lang > 设置 ai.translate_lang > 简体中文（与 GUI 同序）。
+fn resolve_lang(explicit: &str) -> String {
+    if !explicit.trim().is_empty() {
+        return explicit.to_string();
+    }
+    let s = once_core::settings::load();
+    if s.ai.translate_lang.trim().is_empty() {
+        "简体中文".to_string()
+    } else {
+        s.ai.translate_lang.clone()
+    }
+}
+
+/// once translate：--text 纯文本直译；否则图片（路径|last）→ 本地 OCR → 云端翻译。
+/// 与 GUI 翻译同一内核链路（once_core::ai::translate_text）；调用入审计（不记录正文）。
+fn cmd_translate(target: Option<&str>, text: Option<&str>, lang: &str) -> Result<Value> {
+    ai_heal();
+    let cfg = once_core::settings::load().ai;
+    let lang = resolve_lang(lang);
+    if let Some(t) = text.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()) {
+        let (profile, out) = ai::translate_text(&cfg, &t, &lang)?;
+        audit::record_ai(
+            "ai.translate",
+            out.latency_ms as u64,
+            0,
+            Some(&profile.provider),
+            Some(&profile.text_model),
+            Some(false),
+        );
+        return Ok(json!({
+            "mode": "text", "lang": lang, "text": out.text,
+            "provider": profile.provider, "model": profile.text_model,
+            "latency_ms": out.latency_ms as u64,
+        }));
+    }
+    let target = target.ok_or_else(|| {
+        OnceError::usage("需要图片路径、last 或 --text <纯文本>").with_hint("示例：once translate last --lang English / once translate --text \"Hello\"")
+    })?;
+    let path = resolve_target(target)?;
+    let (rgba, w, h) = ai::load_image_rgba(&path)?;
+    let png = capture::encode_png(&capture::CapturedBitmap {
+        pixels: rgba, width: w, height: h, origin: (0, 0),
+    })?;
+    // §9：引擎异常重试 1 次（与 once ocr 同策）
+    let ocr_r = match ocr::provider().recognize_png(&png) {
+        Ok(r) => r,
+        Err(_) => ocr::provider()
+            .recognize_png(&png)
+            .map_err(|e| OnceError::ocr(format!("本地识别失败（已重试 1 次）：{}", e.message)))?,
+    };
+    let source_text = ocr_r.full_text.trim().to_string();
+    if source_text.is_empty() {
+        return Err(OnceError::ocr("图片中未发现文字——纯图内容请改用 once ask <path> --question"));
+    }
+    let chars = source_text.chars().count();
+    let (profile, out) = ai::translate_text(&cfg, &source_text, &lang)?;
+    audit::record_ai(
+        "ai.translate",
+        out.latency_ms as u64,
+        0,
+        Some(&profile.provider),
+        Some(&profile.text_model),
+        Some(false),
+    );
+    Ok(json!({
+        "mode": "image", "lang": lang, "source": path.to_string_lossy(),
+        "ocr_chars": chars, "text": out.text,
+        "provider": profile.provider, "model": profile.text_model,
+        "latency_ms": out.latency_ms as u64,
+    }))
+}
+
+/// once ask：图片（路径|last）→ 云端视觉模型。与 GUI 问图同一内核链路（once_core::ai::ask_image_rgba）。
+fn cmd_ask(target: &str, question: &str) -> Result<Value> {
+    ai_heal();
+    let q = question.trim();
+    if q.is_empty() {
+        return Err(OnceError::usage("问题不能为空").with_hint("示例：once ask last --question \"把图中的表格提取成 Markdown\""));
+    }
+    let cfg = once_core::settings::load().ai;
+    let path = resolve_target(target)?;
+    let (rgba, w, h) = ai::load_image_rgba(&path)?;
+    let (profile, out) = ai::ask_image_rgba(&cfg, &rgba, w, h, q)?;
+    audit::record_ai(
+        "ai.ask",
+        out.latency_ms as u64,
+        0,
+        Some(&profile.provider),
+        Some(&profile.vision_model),
+        Some(true),
+    );
+    Ok(json!({
+        "question": q, "source": path.to_string_lossy(), "text": out.text,
+        "provider": profile.provider, "model": profile.vision_model,
+        "latency_ms": out.latency_ms as u64,
+    }))
+}
+
 fn cmd_status() -> Result<Value> {
     let s = once_core::settings::load();
     let count = history::count().unwrap_or(0);
+    let ai = &s.ai;
+    let def_text = ai
+        .default_text
+        .as_ref()
+        .and_then(|id| ai.profile(id))
+        .map(|p| p.name.clone());
+    let def_vision = ai
+        .default_vision
+        .as_ref()
+        .and_then(|id| ai.profile(id))
+        .map(|p| p.name.clone());
     Ok(json!({
         "app": "onceglance",
         "version": once_core::VERSION,
@@ -376,6 +518,12 @@ fn cmd_status() -> Result<Value> {
         "ocr_engine": ocr::engine_language(),
         "hotkeys": s.hotkeys,
         "history_count": count,
+        "ai": {
+            "profiles": ai.profiles.len(),
+            "default_text": def_text,
+            "default_vision": def_vision,
+            "translate_lang": ai.translate_lang,
+        },
     }))
 }
 
@@ -730,6 +878,12 @@ const CONFIG_KEYS: &[(&str, &str)] = &[
     ("hotkeys.ocr", "string"),
     ("hotkeys.scroll", "string"),
     ("hotkeys.panel", "string"),
+    ("hotkeys.pin", "string"),
+    ("hotkeys.translate", "string"),
+    ("hotkeys.ask", "string"),
+    ("ai.translate_lang", "string"),
+    ("ai.default_text", "string"),
+    ("ai.default_vision", "string"),
 ];
 
 fn config_get(key: &str) -> Result<Value> {
@@ -747,6 +901,15 @@ fn config_get(key: &str) -> Result<Value> {
         "hotkeys.ocr" => json!(s.hotkeys.ocr),
         "hotkeys.scroll" => json!(s.hotkeys.scroll),
         "hotkeys.panel" => json!(s.hotkeys.panel),
+        "hotkeys.pin" => json!(s.hotkeys.pin),
+        "hotkeys.translate" => json!(s.hotkeys.translate),
+        "hotkeys.ask" => json!(s.hotkeys.ask),
+        "ai.translate_lang" => json!(s.ai.translate_lang),
+        // 默认角色输出配置名（人话）；id 仅内部标识
+        "ai.default_text" => s.ai.default_text.as_ref()
+            .and_then(|id| s.ai.profile(id)).map(|p| json!(p.name)).unwrap_or(Value::Null),
+        "ai.default_vision" => s.ai.default_vision.as_ref()
+            .and_then(|id| s.ai.profile(id)).map(|p| json!(p.name)).unwrap_or(Value::Null),
         other => {
             return Err(OnceError::usage(format!("未知设置键：{other}")).with_hint(format!(
                 "可用键：{}",
@@ -772,6 +935,29 @@ fn config_set(key: &str, value: &str) -> Result<Value> {
         "null" => Value::Null,
         v if v.parse::<i64>().is_ok() => json!(v.parse::<i64>().unwrap()),
         v => json!(v),
+    };
+    // AI 默认角色：空/null=清除；否则按配置名或 id 预解析（update 闭包不能返回 Err）
+    let (resolved_default_id, clear_default) = if key == "ai.default_text" || key == "ai.default_vision" {
+        let raw = value.trim().to_string();
+        if raw.is_empty() || raw == "null" {
+            (None, true)
+        } else {
+            let s = once_core::settings::load();
+            match s.ai.profiles.iter().find(|p| p.name == raw || p.id == raw).map(|p| p.id.clone()) {
+                Some(id) => (Some(id), false),
+                None => {
+                    let names: Vec<String> = s.ai.profiles.iter().map(|p| p.name.clone()).collect();
+                    let hint = if names.is_empty() {
+                        "尚未配置模型——请先在 GUI「AI」页添加".to_string()
+                    } else {
+                        format!("可用配置：{}", names.join("、"))
+                    };
+                    return Err(OnceError::usage(format!("找不到模型配置：{raw}")).with_hint(hint));
+                }
+            }
+        }
+    } else {
+        (None, false)
     };
     once_core::settings::update(|s| {
         match key {
@@ -810,6 +996,27 @@ fn config_set(key: &str, value: &str) -> Result<Value> {
             }
             "hotkeys.panel" => {
                 if let Some(v) = parsed.as_str() { s.hotkeys.panel = v.into() }
+            }
+            "hotkeys.pin" => {
+                if let Some(v) = parsed.as_str() { s.hotkeys.pin = v.into() }
+            }
+            "hotkeys.translate" => {
+                if let Some(v) = parsed.as_str() { s.hotkeys.translate = v.into() }
+            }
+            "hotkeys.ask" => {
+                if let Some(v) = parsed.as_str() { s.hotkeys.ask = v.into() }
+            }
+            "ai.translate_lang" => {
+                if let Some(v) = parsed.as_str() { s.ai.translate_lang = v.into() }
+            }
+            // 默认角色：空/null=清除；否则按配置名或 id 解析（CLI 用人话名称，GUI 用 id）。
+            // 解析在 update 闭包外完成（闭包不能返回 Err）
+            "ai.default_text" | "ai.default_vision" => {
+                if let Some(id) = &resolved_default_id {
+                    if key == "ai.default_text" { s.ai.default_text = Some(id.clone()) } else { s.ai.default_vision = Some(id.clone()) }
+                } else if clear_default {
+                    if key == "ai.default_text" { s.ai.default_text = None } else { s.ai.default_vision = None }
+                }
             }
             _ => {}
         };
@@ -862,6 +1069,24 @@ fn cmd_doctor() -> Result<Value> {
         "ok": ocr_ok,
         "detail": format!("{} ({})", ocr::engine_language(), if ocr_ok { "可用" } else { "不可用，检查系统语言包" })
     }));
+    // 5.5 AI 模型（GUI doctor 同款检查键 ai_model）：默认双角色就绪即可翻译/问图
+    let ai_cfg = &s.ai;
+    let (dt, dv) = (
+        ai_cfg.default_text.as_ref().and_then(|id| ai_cfg.profile(id)),
+        ai_cfg.default_vision.as_ref().and_then(|id| ai_cfg.profile(id)),
+    );
+    let ai_ok = !ai_cfg.profiles.is_empty();
+    let ai_detail = if ai_cfg.profiles.is_empty() {
+        "未配置——GUI「AI」页添加模型后 translate/ask 可用".to_string()
+    } else {
+        format!(
+            "已配置 {} 套 · 默认文字 {} · 默认视觉 {}（translate/ask 即刻可用）",
+            ai_cfg.profiles.len(),
+            dt.map(|p| p.name.as_str()).unwrap_or("未指定"),
+            dv.map(|p| p.name.as_str()).unwrap_or("未指定"),
+        )
+    };
+    items.push(json!({ "check": "ai_model", "ok": ai_ok, "detail": ai_detail }));
     // 6 桥接
     let bridge = bridge_online();
     items.push(json!({ "check": "bridge", "ok": true, "detail": if bridge { "Named Pipe 在线" } else { "GUI 离线；CLI 直接驱动内核（共享历史与设置）" } }));
@@ -919,6 +1144,18 @@ pub(crate) fn cmd_capture_region_px_for_mcp(x: i32, y: i32, w: u32, h: u32) -> R
 
 pub(crate) fn cmd_ocr_for_mcp(target: &str) -> Result<Value> {
     cmd_ocr(target, "auto")
+}
+
+pub(crate) fn cmd_translate_for_mcp(target: &str, lang: &str) -> Result<Value> {
+    cmd_translate(Some(target), None, lang)
+}
+
+pub(crate) fn cmd_translate_text_for_mcp(text: &str, lang: &str) -> Result<Value> {
+    cmd_translate(None, Some(text), lang)
+}
+
+pub(crate) fn cmd_ask_for_mcp(target: &str, question: &str) -> Result<Value> {
+    cmd_ask(target, question)
 }
 
 pub(crate) fn cmd_annotate_for_mcp(

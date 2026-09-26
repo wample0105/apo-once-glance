@@ -188,6 +188,28 @@ fn call_tool(name: &str, args: &Value) -> std::result::Result<Value, Value> {
                 let target = args.get("path").and_then(|v| v.as_str()).unwrap_or("last");
                 crate::cmd_ocr_for_mcp(target)
             }
+            // AI 能力（v0.2 M3 三端同步）：与 GUI 翻译/问图同一内核 once_core::ai，调用入审计
+            "translate_image" => {
+                let target = args.get("path").and_then(|v| v.as_str()).unwrap_or("last");
+                let lang = args.get("lang").and_then(|v| v.as_str()).unwrap_or("");
+                crate::cmd_translate_for_mcp(target, lang)
+            }
+            "translate_text" => {
+                let text = args
+                    .get("text")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| OnceError::usage("translate_text 需要 text 参数"))?;
+                let lang = args.get("lang").and_then(|v| v.as_str()).unwrap_or("");
+                crate::cmd_translate_text_for_mcp(text, lang)
+            }
+            "ask_image" => {
+                let target = args.get("path").and_then(|v| v.as_str()).unwrap_or("last");
+                let question = args
+                    .get("question")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| OnceError::usage("ask_image 需要 question 参数"))?;
+                crate::cmd_ask_for_mcp(target, question)
+            }
             "annotate_image" => {
                 let target = args.get("path").and_then(|v| v.as_str()).unwrap_or("last");
                 let script = args.get("script").cloned().unwrap_or(Value::Null);
@@ -251,6 +273,41 @@ fn tool_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": { "path": { "type": "string", "description": "图片路径或省略（=last）" } }
+            }
+        },
+        {
+            "name": "translate_image",
+            "description": "截图翻译：图片（path 或省略=last）→ 本地 OCR → 云端翻译（与 GUI 同一内核）。lang 缺省用用户设置的目标语言。每次调用入审计（服务商/模型，不记录正文）；未配置 AI 模型时返回明确错误。仅在你调用时才发送 OCR 文本。",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "图片路径或省略（=last）" },
+                    "lang": { "type": "string", "description": "目标语言，缺省=用户设置（默认简体中文）" }
+                }
+            }
+        },
+        {
+            "name": "translate_text",
+            "description": "纯文本翻译（跳过 OCR，云端文字模型，与 GUI 同一内核）。lang 缺省用用户设置。调用入审计；只发送你提供的文本。",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "text": { "type": "string" },
+                    "lang": { "type": "string", "description": "目标语言，缺省=用户设置（默认简体中文）" }
+                },
+                "required": ["text"]
+            }
+        },
+        {
+            "name": "ask_image",
+            "description": "AI 问图：图片（path 或省略=last）发给云端视觉模型并返回回答（与 GUI 同一内核）。每次调用入审计（服务商/模型 + 已发送图像标记，不记录图片与提问正文）。",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "图片路径或省略（=last）" },
+                    "question": { "type": "string" }
+                },
+                "required": ["question"]
             }
         },
         {

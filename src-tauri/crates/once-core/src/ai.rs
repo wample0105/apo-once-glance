@@ -248,6 +248,52 @@ pub fn ask_messages(question: &str, image_data_url: &str) -> Vec<serde_json::Val
     ]})]
 }
 
+/// 默认角色补任（三端共用）：缺失或悬空时改任第一套有对应模型的配置
+/// （与「首套配置自动担任默认」同策）。返回本次补任的（角色，配置名）——删除迁移时用于告知。
+/// 只看模型名非空，不查 Key：Key 缺失在调用时报人话错误，不在补任路径做凭据查询。
+pub fn autofill_defaults(cfg: &mut AiConfig) -> Vec<(&'static str, String)> {
+    let mut roles = Vec::new();
+    let need_text = cfg
+        .default_text
+        .as_ref()
+        .map_or(true, |id| cfg.profile(id).is_none());
+    if need_text {
+        let cand = cfg
+            .profiles
+            .iter()
+            .find(|p| !p.text_model.is_empty())
+            .map(|c| (c.id.clone(), c.name.clone()));
+        if let Some((id, name)) = cand {
+            cfg.default_text = Some(id);
+            roles.push(("默认文字模型", name));
+        }
+    }
+    let need_vision = cfg
+        .default_vision
+        .as_ref()
+        .map_or(true, |id| cfg.profile(id).is_none());
+    if need_vision {
+        let cand = cfg
+            .profiles
+            .iter()
+            .find(|p| !p.vision_model.is_empty())
+            .map(|c| (c.id.clone(), c.name.clone()));
+        if let Some((id, name)) = cand {
+            cfg.default_vision = Some(id);
+            roles.push(("默认视觉模型", name));
+        }
+    }
+    roles
+}
+
+/// 加载本地图片为 RGBA（三端共用：CLI/MCP 的 translate/ask 以图片文件为输入）。
+pub fn load_image_rgba(path: &std::path::Path) -> Result<(Vec<u8>, u32, u32)> {
+    let img = image::open(path)
+        .map_err(|e| OnceError::io(format!("图片解码失败：{}", path.display())).with_source(e.to_string()))?;
+    let (w, h) = (img.width(), img.height());
+    Ok((img.to_rgba8().into_raw(), w, h))
+}
+
 /// 按角色取默认模型 + Key（未配置/配置缺失时报面向用户的人话错误）。
 pub fn default_profile(cfg: &AiConfig, kind: TestKind) -> Result<(AiProfile, String)> {
     let id = match kind {
@@ -602,7 +648,7 @@ mod tests {
     fn preset_lookup_and_shapes() {
         assert_eq!(preset("zhipu").unwrap().name, "智谱 GLM");
         assert!(preset("nope").is_none());
-        assert_eq!(PRESETS.len(), 4);
+        assert_eq!(PRESETS.len(), 8); // M1 起 8 家预设（zhipu/deepseek/openrouter/moonshot/dashscope/siliconflow/openai/custom）
         assert!(!preset("zhipu").unwrap().vision_models.is_empty());
     }
 

@@ -15,6 +15,12 @@ pub struct Hotkeys {
     pub ocr: String,
     pub scroll: String,
     pub panel: String,
+    /// 贴图（框选松手即贴桌面）。D 与编辑器内贴图键同记忆。
+    pub pin: String,
+    /// 截图翻译（框选松手即译）。「译」。
+    pub translate: String,
+    /// AI 问图（框选松手提问）。Question。
+    pub ask: String,
 }
 
 impl Default for Hotkeys {
@@ -26,6 +32,9 @@ impl Default for Hotkeys {
             ocr: "Alt+Shift+T".into(),
             scroll: "Alt+Shift+L".into(),
             panel: "Alt+Shift+H".into(),
+            pin: "Alt+Shift+D".into(),
+            translate: "Alt+Shift+Y".into(),
+            ask: "Alt+Shift+Q".into(),
         }
     }
 }
@@ -298,6 +307,22 @@ mod tests {
         assert!(s.agent_enabled);
         assert!(s.auto_capture_enabled);
         assert!(!s.blacklist.is_empty());
+    }
+
+    #[test]
+    fn ai_actions_have_hotkeys() {
+        // v0.2 起 AI 三件套有全局热键默认值（可改键）；缺省字段经 serde(default) 回填
+        let h = Hotkeys::default();
+        assert_eq!(h.pin, "Alt+Shift+D");
+        assert_eq!(h.translate, "Alt+Shift+Y");
+        assert_eq!(h.ask, "Alt+Shift+Q");
+        // 旧配置文件（无新字段）反序列化自动补默认
+        let legacy: Hotkeys = serde_json::from_str(
+            r#"{"region":"Alt+Shift+A","window":"Alt+Shift+W","fullscreen":"Alt+Shift+F",
+                "ocr":"Alt+Shift+T","scroll":"Alt+Shift+L","panel":"Alt+Shift+H"}"#,
+        )
+        .unwrap();
+        assert_eq!(legacy.pin, "Alt+Shift+D");
     }
 }
 

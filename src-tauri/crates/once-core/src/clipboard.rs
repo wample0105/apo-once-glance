@@ -91,8 +91,11 @@ fn write_once(payload: &ClipboardPayload) -> Result<()> {
             return Err(OnceError::io("剪贴板写入全部格式失败").with_hint("图片已落盘，可直接粘贴文件或重试"));
         }
 
-        // CLP-1 写入后读回校验
-        if GetClipboardData(CF_DIB.0 as u32).is_err() && GetClipboardData(CF_HDROP.0 as u32).is_err()
+        // CLP-1 写入后读回校验（三格式任一在场即可——此前漏校验文本：纯文本写入
+        // 实际成功却恒判失败，OCR 取字虽已复制却误报「剪贴板已有新内容」）
+        if GetClipboardData(CF_DIB.0 as u32).is_err()
+            && GetClipboardData(CF_HDROP.0 as u32).is_err()
+            && GetClipboardData(CF_UNICODETEXT.0 as u32).is_err()
         {
             return Err(OnceError::io("剪贴板读回校验失败"));
         }
