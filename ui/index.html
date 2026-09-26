@@ -272,11 +272,22 @@
   .doctor-item .d-bad { color: var(--error); font-weight: 500; }
 
   .hotkeyrow { display: flex; align-items: center; gap: 10px; }
+  /* 虚线边框=可点击录制的静态暗示（此前只有 hover title，不可发现） */
   .hotkeychip {
     font-family: var(--mono); font-size: 11.5px;
-    background: var(--bg-secondary); border: 1px solid var(--border);
-    border-radius: 6px; padding: 3px 10px;
+    background: var(--bg-secondary); border: 1px dashed var(--border-strong);
+    border-radius: 6px; padding: 3px 10px; cursor: pointer;
   }
+  /* 诊断总结态（补-6）：一眼见全局，列表降为明细 */
+  .doctor-sum {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13.5px; font-weight: 600;
+    padding: 10px 2px; margin-bottom: 2px;
+    border-bottom: 1px solid var(--border);
+  }
+  /* 查看全部 chevron（P2-1）：展开时旋转 180°，不再用 ↓ 字符 */
+  #recent-all .chev { width: 13px; height: 13px; transition: transform .15s; }
+  #recent-all .chev.up { transform: rotate(180deg); }
   table.ref { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.ref td, table.ref th {
     text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border);
@@ -395,9 +406,9 @@
               <span class="cap-ic" style="background:rgba(52,199,89,.12); color:#248A3D;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="1.5"/><path d="M10 7h4M10 11h4"/></svg></span>
               <span class="cap-tx"><span class="cap-name">长截图</span><span class="cap-key">Alt+Shift+L</span></span>
             </button>
-            <button class="cap" id="cap-pin" title="框选后按 D 贴到桌面">
+            <button class="cap" id="cap-pin" title="点击框选，松手即贴到桌面；截图内也可按 D 贴图">
               <span class="cap-ic" style="background:rgba(255,149,0,.12); color:#C93400;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="17" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg></span>
-              <span class="cap-tx"><span class="cap-name">贴图</span><span class="cap-key">D</span></span>
+              <span class="cap-tx"><span class="cap-name">贴图</span><span class="cap-key">松手即贴</span></span>
             </button>
             <button class="cap" id="cap-translate" title="点击框选，松手即译（目标语言在设置·AI 里选）">
               <span class="cap-ic" style="background:rgba(175,82,222,.1); color:#8944AB;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg></span>
@@ -411,7 +422,7 @@
           <div class="recenthead">
             <span class="rh-title">最近截图</span>
             <span style="flex:1"></span>
-            <button class="btn ghost" id="recent-all">查看全部 ↓</button>
+            <button class="btn ghost" id="recent-all"><span id="recent-all-label">查看全部</span><svg id="recent-all-chev" class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
           </div>
           <div id="recent-strip" class="grid"></div>
         </div>
@@ -542,8 +553,8 @@
         <div class="bridge-warn" id="bridge-status" style="display:none;margin-bottom:14px"></div>
         <div class="ptitle" style="font-size:13px">接入 MCP（推荐）</div>
         <div class="psub">把截图、取字、标注能力挂给你的 AI 助手；写入前自动备份原配置。</div>
-        <div class="group" id="agent-reg"><div class="row"><div class="label"><div class="d">检测中…</div></div></div></div>
         <div class="syntaxhint">同一家族的桌面端与 CLI 端配置互不相通，需分别接入。</div>
+        <div class="group" id="agent-reg"><div class="row"><div class="label"><div class="d">检测中…</div></div></div></div>
         <div class="ptitle" style="font-size:13px">第 1 步 · 安装 CLI 与 Skill（一次装齐）</div>
         <div class="psub">一条命令同时安装或更新 CLI 与 Agent Skill。</div>
         <div class="installcards">
@@ -718,7 +729,7 @@ curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wampl
         <div class="ptitle">诊断</div>
         <div class="psub">一键自检：捕获、落盘目录、OCR 引擎、桥接。诊断报告不含任何截图内容与 OCR 文字。</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-          <button class="btn primary" id="btn-doctor">重新自检</button>
+          <button class="btn solid" id="btn-doctor">重新自检</button>
           <span class="metaline" id="doctor-ran-at"></span>
         </div>
         <div class="group" id="doctor-list" style="margin-top:12px"></div>
