@@ -1,0 +1,25 @@
+const base = "http://127.0.0.1:9700";
+const list = await (await fetch(base + "/json")).json();
+console.log("targets:", list.filter(p=>p.type==="page").map(p=>p.url));
+const t = list.find((p) => p.type === "page" && /tauri\.localhost\/?$/.test(p.url));
+console.log("main target:", t && t.url);
+const ws = new WebSocket(t.webSocketDebuggerUrl);
+await new Promise((r, j) => { ws.onopen = r; ws.onerror = j; });
+console.log("ws open");
+let seq = 0; const pend = new Map();
+ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.id && pend.has(m.id)) { pend.get(m.id)(m); pend.delete(m.id); } };
+const call = (method, params) => { const id = ++seq; return new Promise((r) => { pend.set(id, r); ws.send(JSON.stringify({ id, method, params })); }); };
+const r1 = await call("Runtime.evaluate", { expression: "1+1", returnByValue: true });
+console.log("1+1 =", r1.result?.result?.value);
+const r2 = await call("Runtime.evaluate", { expression: `window.__TAURI__ ? "has tauri" : "no tauri"`, returnByValue: true });
+console.log("tauri:", r2.result?.result?.value);
+const r3 = await call("Runtime.evaluate", { expression: `(async function(){ try {
+  const T = window.__TAURI__;
+  const info = { win: !!T.window, dpi: !!T.dpi, ppInDpi: !!(T.dpi && T.dpi.PhysicalPosition) };
+  const PP = info.ppInDpi ? T.dpi.PhysicalPosition : null;
+  if (!PP) return "NO_PP";
+  await T.window.getCurrentWindow().setPosition(new PP(80, 80));
+  return "SET_OK";
+} catch(e) { return "ERR:" + (e && e.message || String(e)); } })()`, awaitPromise: true, returnByValue: true });
+console.log("set:", JSON.stringify(r3.result?.exceptionDetails || r3.result?.result?.value).slice(0, 200));
+process.exit(0);

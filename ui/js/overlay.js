@@ -50,6 +50,9 @@ let draft = null, editing = null, numNext = 1;
 let selectedObj = null; // 选择工具：当前选中的标注对象（P3）
 let escConfirm = { enabled: true, action: "" }; // Esc 退出确认（记住选择后不再弹窗）
 let ann = null; // 历史「编辑」完整编辑器模式的会话标记（annotate.js 维护）
+// 首页能力卡一步直达（v0.2）：本次会话选区完成后自动执行 translate|ask|pin|ocr；复位即作废。
+// 声明必须在 resetOverlayState 之前（其函数体首行引用；无头兜底 activate 也在脚本前部执行）
+let pendingAction = null;
 
 const MIN = 8; // css px 最小选区
 function dpr() { return window.devicePixelRatio || 1; }
@@ -61,6 +64,7 @@ function toPhys(v) { return Math.round(v * dpr()); }
 function resetOverlayState() {
   document.body.classList.remove("ls-mode"); // 退出长截图采集模式（选区框/蒙版还原）
   numGhostHide();
+  pendingAction = null; // 首页一步直达的预绑定动作：会话复位即作废（Esc 取消后下次热键恢复普通截图）
   layer.innerHTML = ""; layer.style.display = "none"; layer.className = "";
   selEl.style.display = "none"; sizechip.style.display = "none";
   toolbar.style.display = "none";
@@ -109,6 +113,8 @@ async function init() {
 async function activate(payload) {
   try { resetOverlayState(); }
   catch (err) { console.warn("resetOverlayState", err); }
+  // 首页 AI 卡一步直达：本次会话选区完成后自动执行（resetOverlayState 已清，这里重新注入）
+  pendingAction = (payload && payload.action) || null;
   if (payload.kind) { kind = payload.kind; document.body.dataset.kind = kind; }
   else {
     try {
@@ -444,6 +450,10 @@ window.addEventListener("mouseup", (e) => {
         applyCrop();
       } else {
         setState("selected"); hideDet();
+        // 长截图直达：拖选完成自动进入滚动采集（首页长截图卡一步直达）
+        if (kind === "scroll") { startLongshot(); return; }
+        // 一步直达：松手即执行预绑定动作（翻译/问图/pin/ocr）——一次性
+        if (pendingAction) { const a = pendingAction; pendingAction = null; runPendingAction(a); }
       }
     } else {
       setState("selected"); // move/resize 结束 → 工具栏恢复
@@ -605,12 +615,18 @@ function wireToolbar() {
     if (e.target.closest("#shape-menu")) return;
     setTool(shapeSlot);
   });
+  // 右下箭头=开合形状菜单（业界标配：点主体画图、点箭头展开）；右键同样可达
   document.getElementById("shape-tri").addEventListener("click", (e) => {
     e.stopPropagation();
-    // 内联 display 控制：不依赖外部 CSS 规则；槽位 .open 联动三角 ▼→▲
     const show = shapeMenu.style.display === "none";
     shapeMenu.style.display = show ? "flex" : "none";
-    document.getElementById("tb-shape").classList.toggle("open", show);
+    shapeBtn.classList.toggle("open", show);
+  });
+  shapeBtn.addEventListener("contextmenu", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const show = shapeMenu.style.display === "none";
+    shapeMenu.style.display = show ? "flex" : "none";
+    shapeBtn.classList.toggle("open", show);
   });
   shapeMenu.querySelectorAll("button").forEach((b) => {
     b.addEventListener("click", () => {
@@ -839,7 +855,24 @@ function wireToolbar() {
       syncSelProps();
     });
   });
-  document.getElementById("pr-num-size").addEventListener("change", (e) => { numDiameter = Number(e.target.value); syncSelProps(); });
+  document.getElementById("pr-num-size").addEventListener("change", (e) => {
+    numDiameter = Math.max(20, Math.min(96, Number(e.target.value) || 32));
+    e.target.value = String(numDiameter);
+    syncSelProps();
+  });
+  // 序号工具激活时滚轮调直径（Snipaste 同款）：盖章光标实时缩放，视线不离画面；
+  // ±4 步进、20–96 钳制，面板数值同步（即改即存走既有 SET-7 输出写回链）
+  window.addEventListener("wheel", (e) => {
+    if (tool !== "num" || editing || document.body.classList.contains("ls-mode")) return;
+    if (state !== "selected" && state !== "drawing") return;
+    const inLayer = e.target && (e.target === layer || (layer && layer.contains(e.target)));
+    if (!inLayer) return;
+    e.preventDefault();
+    numDiameter = Math.max(20, Math.min(96, numDiameter + (e.deltaY < 0 ? 4 : -4)));
+    document.getElementById("pr-num-size").value = String(numDiameter);
+    if (numGhostEl && numGhostEl.style.display === "block") numGhostRefresh();
+    syncSelProps();
+  }, { passive: false });
   document.getElementById("num-start").addEventListener("change", (e) => {
     numStart = Math.max(0, parseInt(e.target.value, 10) || 1);
     numNext = numStart;
@@ -919,8 +952,7 @@ function setTool(t) {
 }
 function setShapeSlot(s) {
   shapeSlot = s;
-  document.getElementById("shape-ic-rect").style.display = s === "rect" ? "" : "none";
-  document.getElementById("shape-ic-ellipse").style.display = s === "ellipse" ? "" : "none";
+  // 工具图标固定为「矩形+圆形」组合图形（寓意两形状都支持），不再随槽位切换
   document.querySelectorAll("#shape-menu button").forEach((b) => b.classList.toggle("on", b.dataset.shape === s));
 }
 
@@ -1187,6 +1219,13 @@ window.addEventListener("mousemove", (e) => {
   }
   draft.el.style.left = Math.min(draft.x, p.x) + "px"; draft.el.style.top = Math.min(draft.y, p.y) + "px";
   draft.el.style.width = Math.abs(p.x - draft.x) + "px"; draft.el.style.height = Math.abs(p.y - draft.y) + "px";
+  // 马赛克拖拽中即显示真实像素化（与落定同一逻辑，条纹占位退役）：90ms 节流重采样，
+  // 松手落定时 mosaicPreview 再精确采样一次。历史上拖拽中真实采样曾现空白帧而退回条纹——
+  // 真机复验通过即统一；若复现空白帧，退回条纹示意
+  if (draft.k === "mosaic") {
+    const now = performance.now();
+    if (now - (window.__mosaicPrevTs || 0) >= 90) { window.__mosaicPrevTs = now; mosaicPreview(draft.el); }
+  }
 });
 
 window.addEventListener("mouseup", () => {
@@ -1206,6 +1245,16 @@ window.addEventListener("mouseup", () => {
   pushUndo({ t: "add", el: d.el });
   mosaicPreview(d.el); // 马赛克：落定后换真实块化预览（拖动中为条纹示意）
   setObjSel(d.el); // 同款语义：画完即选中（手柄/锚点立即显示，可拖可改）
+  // 单次语义回落（PixPin 同款）：矩形/椭圆/箭头/画笔/荧光笔画完一笔回选择态，防工具粘滞误画；
+  // 马赛克例外（多块连打）；序号不在 draft 链路（连点自增天然粘滞）。
+  // 用轻量回落而非 setTool(null)：后者会清选中对象、关画布指针，破坏「画完即可拖角缩放」
+  if (false) { // TODO(回落专项)
+    tool = null;
+    document.querySelectorAll("[data-tool]").forEach((b) => b.classList.remove("on"));
+    layer.style.cursor = "default";
+    const tip = document.getElementById("pr-tip");
+    if (tip) tip.textContent = "";
+  }
 });
 
 /* 选择工具：对象拖动/手柄缩放 */
@@ -1497,6 +1546,12 @@ function finishText(el) {
     });
     pushUndo({ t: "add", el });
     setObjSel(el); // 文字确认后保持选中（可拖动/改属性）
+    // 新建文字确认后回选择态（轻量回落，不清选中；编辑已有文字不经此分支）
+    if (false) { // TODO(回落专项)
+      tool = null;
+      document.querySelectorAll("[data-tool]").forEach((b) => b.classList.remove("on"));
+      layer.style.cursor = "default";
+    }
   }
 }
 
@@ -2311,7 +2366,11 @@ window.addEventListener("keydown", (e) => {
     else if (k === "z") { e.preventDefault(); undoOp(); }
     return;
   }
-  if (k === "escape") { cancelAll(); return; }
+  if (k === "escape") {
+    // AI 生成中按 Esc：界面照常取消，但请求无法中断仍在后台——明说，避免「以为取消成功」
+    if (aiBusyFlag) showToast("✦ AI 生成仍在后台进行，完成后自动贴出");
+    cancelAll(); return;
+  }
   if (k === "delete" || k === "backspace") {
     if (selectedObj) {
       e.preventDefault();
@@ -2336,6 +2395,11 @@ window.addEventListener("keydown", (e) => {
   }
   if (k === "d") { e.preventDefault(); output("pin"); return; } // 贴图（D=钉）。曾也绑 F3（同款语义），因常被驻留的 同类产品/同类产品 全局热键抢占、且会误触它们的贴图，用户裁定去除
   if (k === "l") { e.preventDefault(); startLongshot(); return; } // 长截图（L=Long）：滚动采集，业界同款
+  if (k === "tab") {
+    e.preventDefault();
+    if (tool === "rect" || tool === "ellipse") { setShapeSlot(tool === "rect" ? "ellipse" : "rect"); setTool(shapeSlot); }
+    return;
+  } // Tab：矩形↔椭圆切换（形状工具激活时；按钮 title 一直如此承诺，此次补实现）
   if (k === "enter") { e.preventDefault(); if (!e.repeat && (state === "selected" || state === "drawing")) output("copy"); return; } // preventDefault：焦点在工具栏按钮时 Enter 会再触发一次 click；e.repeat：按住/键盘重复会在 ~58ms 内连发（用户实测同秒双输出）
   if (k === "tab") {
     e.preventDefault();
@@ -2596,3 +2660,232 @@ window.addEventListener("mousemove", (e) => {
   numGhostEl.style.display = "block";
   layer.style.cursor = "none"; // 盖章预览替代系统光标（注册最晚，覆盖 hover 暗示）
 });
+
+/* ================= AI：截图翻译 / 问图（v0.2 M2） ================= */
+// 双直达入口（特色功能直排工具栏，不收纳进菜单）；aiRun 入口统一防重
+const aiPop = document.getElementById("ai-pop");
+const aiBtnTranslate = document.getElementById("tb-ai-translate");
+const aiBtnAsk = document.getElementById("tb-ai-ask");
+let aiBusyFlag = false;
+let aiTimer = null;
+
+aiBtnTranslate.addEventListener("click", () => aiTranslateRun());
+aiBtnAsk.addEventListener("click", () => { if (!aiBusyFlag) aiOpenAsk(); });
+
+// 点击工具条其他位置收起 AI 浮层（浮层内部点击不受影响——同在 #toolbar 内受分发器保护）。
+// 生成中收起 = 转入后台：请求继续，完成后照常贴出（提示一句话，用户随时可以走开）。
+// 两个 AI 按钮自身不触发收起（点翻译时浮层要切换执行态，点问图时浮层要开输入态）。
+document.getElementById("toolbar").addEventListener("mousedown", (e) => {
+  if (e.target.closest("#tb-ai-translate") || e.target.closest("#tb-ai-ask") || e.target.closest("#ai-pop")) return;
+  if (aiPop && aiPop.style.display !== "none") {
+    aiPop.style.display = "none";
+    if (aiBusyFlag) showToast("✦ 已转入后台，生成完成后自动贴出");
+  }
+});
+// 覆盖层每次退场（park）后复位 AI 界面状态
+window.__TAURI__.event.listen("overlay-cleared", () => {
+  if (aiPop) aiPop.style.display = "none";
+  aiExitBusy();
+  aiBusyFlag = false;
+});
+
+// 预置问图指令（与 once-core BUILTIN_PROMPTS 保持一致）
+const AI_BUILTIN_PROMPTS = [
+  ["解释这段内容", "解释这张截图的内容，用简体中文，简明扼要。"],
+  ["提取成 Markdown 表格", "把图中的表格或数据提取成 Markdown 表格，只输出表格本身。"],
+  ["总结要点", "总结这张截图的要点，用简体中文条目式输出。"],
+  ["翻成中文", "把图中全部文字翻译成简体中文，只输出译文。"],
+];
+
+async function aiConfigured() {
+  try {
+    const list = await invoke("ai_list");
+    return (list || []).some((p) => p.has_key);
+  } catch (e) { return false; }
+}
+
+function aiShowGuide() {
+  aiPop.style.display = "block";
+  document.getElementById("ai-guide").style.display = "block";
+  document.getElementById("ai-ask-body").style.display = "none";
+}
+
+async function aiOpenAsk() {
+  if (!(await aiConfigured())) { aiShowGuide(); return; }
+  aiPop.style.display = "block";
+  document.getElementById("ai-guide").style.display = "none";
+  document.getElementById("ai-tr-body").style.display = "none";
+  document.getElementById("ai-ask-body").style.display = "block";
+  const status = document.getElementById("ai-status");
+  status.textContent = "";
+  status.style.color = "";
+  document.getElementById("ai-send").disabled = false;
+  const chips = document.getElementById("ai-chips");
+  chips.innerHTML = "";
+  const addChip = (name, prompt) => {
+    const b = document.createElement("button");
+    b.textContent = name;
+    b.style.cssText = "background:var(--ov-surface-2); color:var(--ov-fg); border:1px solid var(--ov-border); border-radius:14px; padding:4px 10px; font-size:11.5px; cursor:pointer;";
+    b.addEventListener("click", () => aiSend(prompt));
+    chips.appendChild(b);
+  };
+  for (const [n, p] of AI_BUILTIN_PROMPTS) addChip(n, p);
+  try {
+    const s = await invoke("get_settings");
+    ((s.ai && s.ai.templates) || []).forEach((t) => addChip(t.name, t.prompt));
+  } catch (e) {}
+  const q = document.getElementById("ai-q");
+  q.value = "";
+  setTimeout(() => q.focus(), 50);
+}
+
+// 一步直达的执行落点（与工具栏按钮同一入口：未配 Key 自然落入引导卡）。
+// pin/ocr 走 output() 既有输出链（OCR 自带「已复制 N 字」toast；pin 原位贴出）。
+function runPendingAction(a) {
+  if (a === "translate") aiTranslateRun();
+  else if (a === "ask") aiOpenAsk();
+  else if (a === "pin") output("pin");
+  else if (a === "ocr") output("ocr");
+}
+
+// 翻译执行态：与问图同一套浮层进度卡（同类 AI 操作同一等待语言——一致性启发式）。
+// 此前只有一条 3 秒即逝的 toast，生成期 8-10 秒全程无反馈，用户「傻等不知成败」。
+async function aiTranslateRun() {
+  if (aiBusyFlag) return;
+  if (!(await aiConfigured())) { aiShowGuide(); return; }
+  aiPop.style.display = "block";
+  document.getElementById("ai-guide").style.display = "none";
+  document.getElementById("ai-ask-body").style.display = "none";
+  document.getElementById("ai-tr-body").style.display = "block";
+  document.getElementById("ai-tr-err").style.display = "none";
+  document.getElementById("ai-tr-actions").style.display = "none";
+  try {
+    const s = await invoke("get_settings");
+    const lang = (s.ai && s.ai.translate_lang) || "简体中文";
+    document.getElementById("ai-tr-lang").textContent = "译为：" + lang;
+  } catch (e) { document.getElementById("ai-tr-lang").textContent = ""; }
+  await aiRun("translate", "");
+}
+
+async function aiSend(question) {
+  const q = (question || document.getElementById("ai-q").value).trim();
+  if (!q) {
+    const st = document.getElementById("ai-status");
+    st.textContent = "先输入问题，或点一个指令";
+    return;
+  }
+  await aiRun("ask", q);
+}
+
+// 执行态：浮层就地变进度卡——chips 隐藏、输入锁定回显、转圈+已等待秒数递增。
+// 点击瞬间必须有可感知的状态变化（Nielsen 反馈启发式），「没反应」必然招来重复点击。
+function aiEnterBusy(question) {
+  aiBusyFlag = true;
+  document.getElementById("ai-chips").style.display = "none";
+  const q = document.getElementById("ai-q");
+  if (question) q.value = question;
+  q.readOnly = true;
+  const send = document.getElementById("ai-send");
+  send.disabled = true;
+  send.textContent = "生成中";
+  document.getElementById("ai-spin").style.display = "inline-block";
+  const status = document.getElementById("ai-status");
+  status.style.color = "";
+  const t0 = Date.now();
+  status.textContent = "正在生成 · 0s";
+  aiTimer = setInterval(() => {
+    status.textContent = "正在生成 · " + Math.round((Date.now() - t0) / 1000) + "s";
+  }, 1000);
+}
+
+function aiExitBusy() {
+  if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
+  const spin = document.getElementById("ai-spin");
+  if (spin) spin.style.display = "none";
+  const chips = document.getElementById("ai-chips");
+  if (chips) chips.style.display = "flex";
+  const q = document.getElementById("ai-q");
+  if (q) q.readOnly = false;
+  const send = document.getElementById("ai-send");
+  if (send) { send.disabled = false; send.textContent = "发送"; }
+  const trSpin = document.getElementById("ai-tr-spin");
+  if (trSpin) trSpin.style.display = "none";
+}
+
+// 翻译执行态（浮层已在 aiTranslateRun 切到 tr-body）：spinner + 已等待秒数递增
+function aiEnterBusyTr() {
+  aiBusyFlag = true;
+  document.getElementById("ai-tr-spin").style.display = "inline-block";
+  const status = document.getElementById("ai-tr-status");
+  status.style.color = "";
+  const t0 = Date.now();
+  status.textContent = "正在翻译选区文字 · 0s";
+  aiTimer = setInterval(() => {
+    status.textContent = "正在翻译选区文字 · " + Math.round((Date.now() - t0) / 1000) + "s";
+  }, 1000);
+}
+
+async function aiRun(kind, question) {
+  if (aiBusyFlag) return; // 生成中所有触发路径（chip/回车/按钮/翻译）在此短路，杜绝重复请求
+  const rect = { screen: 1, x: toPhys(sel.x), y: toPhys(sel.y), w: toPhys(sel.w), h: toPhys(sel.h) };
+  if (kind === "ask") aiEnterBusy(question);
+  else aiEnterBusyTr();
+  try {
+    const r = kind === "translate"
+      ? await invoke("ai_translate_region", rect)
+      : await invoke("ai_ask_region", { ...rect, question });
+    // 成功：先关取景层，结果以贴图原位浮出（不写截图历史；调用已入审计）
+    await closeOverlay();
+    await invoke("pin_create_ai", { text: r.text, metaLine: r.meta, x: rect.x, y: rect.y, dpr: dprV });
+    aiBusyFlag = false;
+    if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
+  } catch (e) {
+    aiBusyFlag = false;
+    if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
+    const msg = typeof e === "string" ? e : (e && e.message) || String(e);
+    if (kind === "ask") {
+      if (aiPop.style.display !== "none") {
+        // 浮层还在：就地显示失败原因并恢复交互态，可改问题重试
+        aiExitBusy();
+        const status = document.getElementById("ai-status");
+        status.style.color = "#FF9187";
+        status.textContent = "失败：" + msg;
+      } else {
+        showToast("✕ 生成失败：" + msg);
+      }
+    } else {
+      // 翻译失败：浮层在=就地显示原因+重试按钮；已收起（后台模式）=toast
+      if (aiPop.style.display !== "none" && document.getElementById("ai-tr-body").style.display === "block") {
+        const trSpin = document.getElementById("ai-tr-spin");
+        if (trSpin) trSpin.style.display = "none";
+        const trStatus = document.getElementById("ai-tr-status");
+        trStatus.style.color = "#FF9187";
+        trStatus.textContent = "翻译失败";
+        const err = document.getElementById("ai-tr-err");
+        err.textContent = msg;
+        err.style.display = "block";
+        document.getElementById("ai-tr-actions").style.display = "flex";
+      } else {
+        showToast("✕ 翻译失败：" + msg);
+      }
+    }
+  }
+}
+
+// 问图浮层键盘：Enter 发送 / Shift+Enter 换行 / Esc 收起（INPUT/TEXTAREA 本就被全局热键过滤）。
+// 生成中 Esc = 转入后台而非取消（请求无法中断，收起后完成后仍会贴出）。
+document.getElementById("ai-q").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    e.stopPropagation();
+    aiPop.style.display = "none";
+    if (aiBusyFlag) showToast("✦ 已转入后台，生成完成后自动贴出");
+  }
+  else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); aiSend(); }
+});
+document.getElementById("ai-send").addEventListener("click", () => aiSend());
+document.getElementById("ai-tr-retry").addEventListener("click", () => aiTranslateRun());
+document.getElementById("ai-guide-open").addEventListener("click", async () => {
+  try { await invoke("ai_open_settings"); } catch (e) {}
+  await closeOverlay();
+});
+document.getElementById("ai-guide-later").addEventListener("click", () => { aiPop.style.display = "none"; });

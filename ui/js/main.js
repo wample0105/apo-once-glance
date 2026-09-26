@@ -48,19 +48,30 @@ $("#btn-close").onclick = async () => {
   }
 })();
 
-// ===== 导航 =====
-$$(".nav-item").forEach((btn) => {
-  btn.onclick = () => {
-    $$(".nav-item").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    $$(".page").forEach((p) => p.classList.remove("on"));
-    $("#page-" + btn.dataset.page).classList.add("on");
-    if (btn.dataset.page === "history") refreshCurrentView();
-    if (btn.dataset.page === "theme") loadThemeValues().catch(reportErr);
-    if (btn.dataset.page === "agent") { refreshBridgeStatus(); loadAgentRegistry().catch(reportErr); refreshAudit(); }
-    if (btn.dataset.page === "doctor") runDoctor();
-  };
+// ===== 导航（设置收敛版）：首页=常驻工作台；设置视图=返回+分组 tab =====
+// 低频设置（AI/通用/AI 助手/诊断）收敛进齿轮入口，首页只留核心高频功能
+let lastSettingPage = "general"; // 记住上次访问的设置分组，齿轮直达
+function gotoPage(page) {
+  $$(".page").forEach((p) => p.classList.remove("on"));
+  $("#page-" + page).classList.add("on");
+  const isSetting = page !== "history";
+  $("#settings-tabs").style.display = isSetting ? "flex" : "none";
+  $("#btn-settings-open").style.display = isSetting ? "none" : "inline-flex";
+  $("#btn-back-home").style.display = isSetting ? "inline-flex" : "none";
+  $$(".nav-item[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
+  if (isSetting) lastSettingPage = page;
+  if (page === "history") refreshCurrentView();
+  if (page === "ai") loadAiPage().catch(reportErr);
+  if (page === "general") loadThemeValues().catch(reportErr);
+  if (page === "agent") { refreshBridgeStatus(); loadAgentRegistry().catch(reportErr); refreshAudit(); }
+  if (page === "doctor") runDoctor();
+}
+$$(".nav-item[data-page]").forEach((btn) => {
+  btn.onclick = () => gotoPage(btn.dataset.page);
 });
+$("#btn-back-home").onclick = () => gotoPage("history");
+$("#btn-settings-open").onclick = () => gotoPage(lastSettingPage);
+$("#status-dot").onclick = () => gotoPage("doctor"); // 诊断状态点：异常时点击直达诊断
 
 // ===== 操作条 =====
 function reportErr(e) {
@@ -71,6 +82,16 @@ function reportErr(e) {
 }
 $("#act-region").onclick = () => invoke("start_overlay", { kind: "region" }).catch(reportErr);
 $("#card-agent").onclick = () => document.querySelector('.nav-item[data-page="agent"]').click();
+$("#card-ai").onclick = () => document.querySelector('.nav-item[data-page="ai"]').click();
+// 核心能力速览行：全部一步直达（点击→框选→松手即得结果；action 经 payload 预绑定）
+// 未配 Key 的 AI 能力自然落入取景层引导卡；窗口截图=点选窗口即复制
+$("#cap-window").onclick = () => invoke("start_overlay", { kind: "window" }).catch(reportErr);
+$("#cap-ocr").onclick = () => invoke("start_overlay", { kind: "region", action: "ocr" }).catch(reportErr);
+$("#cap-scroll").onclick = () => invoke("start_overlay", { kind: "scroll" }).catch(reportErr);
+$("#cap-pin").onclick = () => invoke("start_overlay", { kind: "region", action: "pin" }).catch(reportErr);
+// AI 两卡一步直达：点击框选，松手自动执行（ai_action 经 payload 传给取景层；未配 Key 走取景层引导）
+$("#cap-translate").onclick = () => invoke("start_overlay", { kind: "region", action: "translate" }).catch(reportErr);
+$("#cap-ask").onclick = () => invoke("start_overlay", { kind: "region", action: "ask" }).catch(reportErr);
 
 // 注册中心事件委托（轻量补丁会替换按钮节点，委托才不会丢事件）
 $("#agent-reg").addEventListener("click", async (e) => {
@@ -155,8 +176,30 @@ function refreshCurrentView() {
   else refreshHistory();
 }
 
+// 首页 AI 卡状态自适应（业界同款：未配置=引导态「3 步开启」；已配置=绿色就绪态）
+async function refreshAiCard() {
+  try {
+    const profiles = await invoke("ai_list");
+    const ready = (profiles || []).some((p) => p.has_key);
+    const name = $("#ai-card-name"), desc = $("#ai-card-desc"), chip = $("#ai-card-chip");
+    if (ready) {
+      const def = profiles.find((p) => p.is_default_text || p.is_default_vision) || profiles[0];
+      name.textContent = "AI 能力已就绪";
+      desc.textContent = `${def.name} · 云端识别可用`;
+      chip.textContent = "已就绪";
+      chip.classList.add("ready");
+    } else {
+      name.textContent = "开启 AI 能力";
+      desc.textContent = "选服务商 → 贴 Key → 测试，一分钟接入";
+      chip.textContent = "未配置";
+      chip.classList.remove("ready");
+    }
+  } catch (e) { /* AI 后端异常不阻塞首页 */ }
+}
+
 // 首页“最近截图”横排（8 张，业界同款动作导向下的记录速达）
 async function loadRecent() {
+  refreshAiCard();
   try {
     const rows = await invoke("list_history", { query: "", limit: 8 });
     const list = $("#recent-strip");
@@ -174,8 +217,13 @@ async function loadRecent() {
 }
 
 // 抽出单卡 HTML（首页横排与全量网格共用）
+// 文件名显示（P1）：路径按正反斜杠统一切分；OCR 行只在有识别文本时渲染——
+// 「未识别」是每卡一行零信息噪音（2026-09-25 UI 评审 P1-1/P1-2）
+function fileNameOf(p) { return p.split(/[\\/]+/).pop(); }
+function ocrLineOf(r) { return r.ocr_preview ? `<div class="cardocr">「${escapeHtml(r.ocr_preview)}」</div>` : ""; }
+
 function cardHtml(r) {
-  const name = r.path.split(/[\/]/).pop();
+  const name = fileNameOf(r.path);
   return `
         <div class="card" data-path="${r.path}" data-name="${name}">
           <div class="thumb">
@@ -189,7 +237,7 @@ function cardHtml(r) {
           <div class="cardinfo">
             <div class="cardname" title="${name}">${name}</div>
             <div class="cardmeta">${fmtTime(r.created_at)} · ${r.width}×${r.height}</div>
-            <div class="cardocr">${r.ocr_status === "none" ? "未识别" : r.ocr_status === "empty" ? "未发现文字" : "「" + escapeHtml(r.ocr_preview) + "」"}</div>
+            ${ocrLineOf(r)}
           </div>
         </div>`;
 }
@@ -242,7 +290,7 @@ async function refreshHistory() {
     for (const [g, items] of Object.entries(groups)) {
       html += `<div class="datehead">${g}</div><div class="grid">`;
       for (const r of items) {
-        const name = r.path.split(/[\\\\/]/).pop();
+        const name = fileNameOf(r.path);
         html += `
         <div class="card" data-path="${r.path}" data-name="${name}">
           <div class="thumb">
@@ -256,7 +304,7 @@ async function refreshHistory() {
           <div class="cardinfo">
             <div class="cardname" title="${name}">${name}</div>
             <div class="cardmeta">${fmtTime(r.created_at)} · ${r.width}×${r.height}</div>
-            <div class="cardocr">${r.ocr_status === "none" ? "未识别" : r.ocr_status === "empty" ? "未发现文字" : "「" + escapeHtml(r.ocr_preview) + "」"}</div>
+            ${ocrLineOf(r)}
           </div>
         </div>`;
       }
@@ -303,7 +351,7 @@ async function loadSettingsUI() {
   dot.classList.toggle("off", !s.agent_enabled);
   const stat = $("#agent-stat");
   if (s.agent_enabled) {
-    stat.textContent = "当前状态：允许（Agent 可调用截图、OCR、标注）";
+    stat.textContent = "当前状态：允许（AI 助手可调用截图、OCR、标注）";
     stat.className = "statline ok";
   } else {
     stat.textContent = "当前状态：已切断（截图类调用返回退出码 5，历史与状态查询不受影响）";
@@ -613,6 +661,304 @@ $("#bl-add").onclick = async () => {
   renderBlacklist(s.blacklist);
 };
 
+// ===== AI 配置中心（v0.2 M1：BYOK 模型配置，Key 只进系统凭据管理器）=====
+let aiPresets = [];
+let aiEditingId = null; // null=新建，否则为编辑中的 profile id
+
+async function loadAiPage() {
+  if (!aiPresets.length) {
+    try { aiPresets = await invoke("ai_presets"); } catch (e) { reportErr(e); }
+  }
+  await renderAiProfiles();
+  await renderAiTemplates();
+  try {
+    const s = await invoke("get_settings");
+    const lang = $("#ai-trans-lang");
+    if (lang) lang.value = (s.ai && s.ai.translate_lang) || "简体中文";
+  } catch (e) {}
+}
+
+function aiPreset(id) { return aiPresets.find((p) => p.id === id); }
+
+async function renderAiProfiles() {
+  const box = $("#ai-profiles");
+  let list = [];
+  try {
+    list = await invoke("ai_list");
+  } catch (e) {
+    box.innerHTML = `<div class="row"><div class="label"><div class="d">加载失败：${e && e.message ? e.message : e}</div></div></div>`;
+    return;
+  }
+  if (!list.length) {
+    box.innerHTML = `<div class="row"><div class="label"><div class="d">还没有模型配置——添加一套即可开启 AI 增强（截图翻译、问图等）</div></div></div>`;
+  } else {
+    box.innerHTML = list.map((p) => {
+      const badges = [
+        p.is_default_text ? '<span class="tagok">默认文字</span>' : "",
+        p.is_default_vision ? '<span class="tagok">默认视觉</span>' : "",
+      ].filter(Boolean).join(" ");
+      const models = [p.text_model ? `文字 ${escapeHtml(p.text_model)}` : "", p.vision_model ? `视觉 ${escapeHtml(p.vision_model)}` : ""]
+        .filter(Boolean).join(" · ") || "未配置模型";
+      return `
+      <div class="row">
+        <div class="label"><div class="t">${escapeHtml(p.name)} <span style="color:var(--text-tertiary)">· ${p.provider_name}</span> ${badges}</div>
+          <div class="d">${models} · <span style="color:${p.has_key ? "var(--success)" : "var(--error)"}">${p.has_key ? "Key 已保存" : "未配 Key"}</span></div>
+          <div class="d" data-ai-test="${p.id}" style="min-height:14px"></div>
+        </div>
+        <div class="ctl">
+          <button class="btn" data-ai-test-btn="${p.id}">测试连接</button>
+          <button class="btn ghost" data-ai-edit="${p.id}">编辑</button>
+          <button class="btn ghost danger" data-ai-del="${p.id}">删除</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  const mkDefaults = (sel, role) => {
+    const el = $(sel);
+    el.innerHTML = `<option value="">未指定</option>` + list.map((p) =>
+      `<option value="${p.id}" ${(role === "text" ? p.is_default_text : p.is_default_vision) ? "selected" : ""}>${escapeHtml(p.name)}（${p.provider_name}）</option>`).join("");
+  };
+  mkDefaults("#ai-default-text", "text");
+  mkDefaults("#ai-default-vision", "vision");
+  const cloud = $("#ai-cloud-state");
+  if (cloud) cloud.textContent = list.some((p) => p.vision_model && p.has_key) ? "可用（主动触发时才发送截图）" : "未配置";
+  refreshAiCard(); // 配置变化后同步首页 AI 卡状态
+}
+
+function openAiForm(profile = null) {
+  aiEditingId = profile ? profile.id : null;
+  $("#ai-form").style.display = "";
+  $("#ai-f-name").value = profile ? profile.name : "";
+  const sel = $("#ai-f-provider");
+  sel.innerHTML = aiPresets.map((p) => `<option value="${p.id}">${p.name}</option>`).join("");
+  sel.value = profile ? profile.provider : "zhipu";
+  $("#ai-f-url").value = profile ? profile.base_url : (aiPreset(sel.value) || {}).base_url || "";
+  $("#ai-f-key").value = "";
+  $("#ai-f-key").placeholder = profile && profile.has_key ? "已保存——留空表示不修改" : "";
+  $("#ai-f-text").value = profile ? profile.text_model : "";
+  $("#ai-f-vision").value = profile ? profile.vision_model : "";
+  aiSyncKeyLink(sel.value);
+  // 拉取模型按钮：仅已保存且 Key 就绪的配置可用（凭据库才有 Key 可调 /models）
+  const fetchBtn = $("#ai-f-fetch");
+  fetchBtn.style.display = profile && profile.has_key ? "" : "none";
+  fetchBtn.disabled = false;
+  fetchBtn.textContent = "拉取模型列表";
+  const stat = $("#ai-f-stat");
+  stat.textContent = "";
+  stat.style.color = "";
+  aiFillDatalist(sel.value);
+  $("#ai-f-name").focus();
+}
+
+// 「获取 Key →」链接：按所选服务商跳转对应控制台
+function aiSyncKeyLink(providerId) {
+  const p = aiPreset(providerId);
+  const a = $("#ai-f-keyurl");
+  if (p && p.key_url) {
+    a.href = p.key_url;
+    a.style.display = "";
+  } else {
+    a.style.display = "none";
+  }
+}
+
+// 一键拉取该配置的可用模型（OpenAI 兼容 /models），填充文字/视觉两个 datalist
+async function aiFetchModels() {
+  const id = aiEditingId;
+  if (!id) return;
+  const btn = $("#ai-f-fetch");
+  btn.disabled = true;
+  btn.textContent = "拉取中…";
+  try {
+    const models = await invoke("ai_fetch_models", { profileId: id });
+    const opts = (models || []).map((m) => `<option value="${m}">`).join("");
+    $("#ai-dl-text").innerHTML = opts;
+    $("#ai-dl-vision").innerHTML = opts;
+    btn.textContent = `已拉取 ${(models || []).length} 个模型`;
+  } catch (e) {
+    btn.textContent = "拉取失败，点重试";
+    reportErr(e);
+    return;
+  }
+  btn.disabled = false;
+}
+
+function aiFillDatalist(providerId) {
+  const p = aiPreset(providerId);
+  $("#ai-f-hint").textContent = p ? p.hint : "";
+  $("#ai-dl-text").innerHTML = ((p && p.text_models) || []).map((m) => `<option value="${m}">`).join("");
+  $("#ai-dl-vision").innerHTML = ((p && p.vision_models) || []).map((m) => `<option value="${m}">`).join("");
+}
+
+function closeAiForm() {
+  $("#ai-form").style.display = "none";
+  aiEditingId = null;
+}
+
+$("#ai-add").onclick = () => { if (aiPresets.length) openAiForm(); else loadAiPage().catch(reportErr); };
+$("#ai-f-cancel").onclick = closeAiForm;
+$("#ai-f-provider").onchange = () => {
+  const p = aiPreset($("#ai-f-provider").value);
+  if (p && p.base_url) $("#ai-f-url").value = p.base_url;
+  aiFillDatalist($("#ai-f-provider").value);
+  aiSyncKeyLink($("#ai-f-provider").value);
+};
+$("#ai-f-fetch").onclick = () => aiFetchModels();
+$("#ai-f-save").onclick = async () => {
+  const keyVal = $("#ai-f-key").value.trim();
+  const payload = {
+    id: aiEditingId || "",
+    name: $("#ai-f-name").value,
+    provider: $("#ai-f-provider").value,
+    base_url: $("#ai-f-url").value,
+    text_model: $("#ai-f-text").value,
+    vision_model: $("#ai-f-vision").value,
+  };
+  try {
+    await invoke("ai_save_profile", { profile: payload, apiKey: keyVal || null });
+    closeAiForm();
+    await renderAiProfiles();
+  } catch (e) {
+    const stat = $("#ai-f-stat");
+    stat.textContent = "保存失败：" + (e && e.message ? e.message : e);
+    stat.style.color = "var(--error)";
+  }
+};
+
+// 配置行操作（事件委托：行内容会整体重绘）
+$("#ai-profiles").addEventListener("click", async (e) => {
+  const testBtn = e.target.closest("[data-ai-test-btn]");
+  const editBtn = e.target.closest("[data-ai-edit]");
+  const delBtn = e.target.closest("[data-ai-del]");
+  if (testBtn) {
+    const id = testBtn.dataset.aiTestBtn;
+    const out = document.querySelector(`[data-ai-test="${id}"]`);
+    if (!out) return;
+    const list = await invoke("ai_list").catch(() => []);
+    const v = list.find((x) => x.id === id);
+    const kinds = [];
+    if (v && v.text_model) kinds.push("text");
+    if (v && v.vision_model) kinds.push("vision");
+    if (!kinds.length) {
+      out.textContent = "未配置模型——先「编辑」填写文字或视觉模型";
+      out.style.color = "var(--error)";
+      return;
+    }
+    if (!v.has_key) {
+      out.textContent = "未配 Key——点「编辑」填写 API Key";
+      out.style.color = "var(--error)";
+      return;
+    }
+    testBtn.disabled = true;
+    out.style.color = "";
+    out.textContent = "测试中…";
+    const lines = [];
+    const label = (k) => (k === "text" ? "文字" : "视觉");
+    for (const k of kinds) {
+      try {
+        const r = await invoke("ai_test", { id, kind: k });
+        lines.push(`${label(k)} ${r.ok ? "✓ " + r.latency_ms + "ms" : "✕ " + r.message}`);
+      } catch (err) {
+        lines.push(`${label(k)} ✕ ${err && err.message ? err.message : err}`);
+      }
+    }
+    testBtn.disabled = false;
+    out.textContent = lines.join("  ");
+    out.style.color = lines.every((l) => l.includes("✓")) ? "var(--success)" : "var(--error)";
+  } else if (editBtn) {
+    const list = await invoke("ai_list").catch(() => []);
+    const v = list.find((x) => x.id === editBtn.dataset.aiEdit);
+    if (v) openAiForm(v);
+  } else if (delBtn) {
+    // 内联二次确认（P3-8）：首击变「确认删除？」，3 秒不点回落；替代突兀的原生 confirm 弹窗
+    const id = delBtn.dataset.aiDel;
+    if (delBtn.dataset.armed === "1") {
+      await invoke("ai_delete_profile", { id });
+      if (aiEditingId === id) closeAiForm();
+      renderAiProfiles().catch(reportErr);
+    } else {
+      delBtn.dataset.armed = "1";
+      delBtn.classList.add("armed");
+      delBtn.textContent = "确认删除？";
+      setTimeout(() => {
+        if (!document.body.contains(delBtn)) return; // 行已被重绘
+        delBtn.dataset.armed = "";
+        delBtn.classList.remove("armed");
+        delBtn.textContent = "删除";
+      }, 3000);
+    }
+  }
+});
+
+$("#ai-default-text").onchange = async () => {
+  try { await invoke("ai_set_default", { role: "text", id: $("#ai-default-text").value || null }); } catch (e) { reportErr(e); }
+  renderAiProfiles().catch(() => {});
+};
+$("#ai-default-vision").onchange = async () => {
+  try { await invoke("ai_set_default", { role: "vision", id: $("#ai-default-vision").value || null }); } catch (e) { reportErr(e); }
+  renderAiProfiles().catch(() => {});
+};
+
+// ===== AI 页·截图翻译目标语言 + 指令模板 =====
+async function renderAiTemplates() {
+  const box = $("#ai-tpl-rows");
+  let tpls = [];
+  try {
+    const s = await invoke("get_settings");
+    tpls = (s.ai && s.ai.templates) || [];
+  } catch (e) { box.innerHTML = `<div class="row"><div class="label"><div class="d">加载失败</div></div></div>`; return; }
+  if (!tpls.length) {
+    box.innerHTML = `<div class="row"><div class="label"><div class="d">还没有自定义模板——添加后会在问图指令中出现</div></div></div>`;
+    return;
+  }
+  box.innerHTML = tpls.map((t, i) => `
+    <div class="row" data-tpl-id="${escapeHtml(t.id)}">
+      <div class="label" style="display:flex;flex-direction:column;gap:6px">
+        <input type="text" class="formin" data-tpl-name="${i}" value="${escapeHtml(t.name)}" placeholder="名称（问图指令上显示的文字）" style="width:100%">
+        <input type="text" class="formin" data-tpl-prompt="${i}" value="${escapeHtml(t.prompt)}" placeholder="指令内容（如 把图中内容整理成周报格式）" style="width:100%">
+      </div>
+      <div class="ctl"><button class="btn ghost danger" data-tpl-del="${escapeHtml(t.id)}">删除</button></div>
+    </div>`).join("");
+  box.querySelectorAll("input").forEach((inp) => inp.addEventListener("change", aiSaveTemplates));
+  box.querySelectorAll("[data-tpl-del]").forEach((b) => b.addEventListener("click", async () => {
+    if (b.dataset.armed === "1") {
+      const s = await invoke("get_settings");
+      const tpls = ((s.ai && s.ai.templates) || []).filter((t) => t.id !== b.dataset.tplDel);
+      await invoke("ai_templates_set", { templates: tpls });
+      renderAiTemplates().catch(reportErr);
+    } else {
+      b.dataset.armed = "1";
+      b.textContent = "确认删除？";
+      setTimeout(() => { b.dataset.armed = ""; b.textContent = "删除"; }, 3000);
+    }
+  }));
+}
+async function aiSaveTemplates() {
+  const tpls = [];
+  document.querySelectorAll("#ai-tpl-rows .row[data-tpl-id]").forEach((row) => {
+    tpls.push({
+      id: row.dataset.tplId || "",
+      name: (row.querySelector("[data-tpl-name]") || {}).value || "",
+      prompt: (row.querySelector("[data-tpl-prompt]") || {}).value || "",
+    });
+  });
+  const cfg = await invoke("ai_templates_set", { templates: tpls });
+  // 回写后端分配的 id，避免继续编辑时重复建档
+  document.querySelectorAll("#ai-tpl-rows .row[data-tpl-id]").forEach((row, i) => {
+    const t = (cfg.templates || [])[i];
+    if (t) row.dataset.tplId = t.id;
+  });
+}
+$("#ai-tpl-add").onclick = async () => {
+  const s = await invoke("get_settings");
+  const tpls = ((s.ai && s.ai.templates) || []).concat([{ id: "", name: "", prompt: "" }]);
+  await invoke("ai_templates_set", { templates: tpls });
+  renderAiTemplates().catch(reportErr);
+};
+$("#ai-trans-lang").onchange = async () => {
+  try { await invoke("set_setting", { key: "translate_lang", value: $("#ai-trans-lang").value }); } catch (e) { reportErr(e); }
+};
+
 // ===== 审计 =====
 let auditCache = [];
 async function refreshAudit() {
@@ -625,7 +971,9 @@ function renderAudit() {
   $("#audit-list").innerHTML = rows.length
     ? rows.map((a) => {
         const cls = a.status === 0 ? "l-ok" : "l-err";
-        return `<div class="${cls}">${a.time.slice(11, 19)} · ${escapeHtml(a.command)} · ${a.elapsed_ms}ms · 退出码 ${a.status}${a.target_process ? " · " + escapeHtml(a.target_process) : ""}</div>`;
+        const ai = (a.provider ? " · " + escapeHtml(a.provider) + (a.model ? "/" + escapeHtml(a.model) : "") : "")
+          + (a.sent_image ? " · 已发送图像" : "");
+        return `<div class="${cls}">${a.time.slice(11, 19)} · ${escapeHtml(a.command)} · ${a.elapsed_ms}ms · 退出码 ${a.status}${ai}${a.target_process ? " · " + escapeHtml(a.target_process) : ""}</div>`;
       }).join("")
     : "暂无调用记录 · Agent 还没有调用过定影";
 }
@@ -638,6 +986,15 @@ $("#audit-clear").onclick = async () => {
 };
 
 // ===== 诊断 =====
+// 检查项中文化（P1-3）：Rust 侧 check 键是冻结的机器标识，仅 GUI 层做标签映射
+const DOCTOR_LABEL = {
+  capture: "捕获",
+  save_dir: "保存目录",
+  ocr_engine: "OCR 引擎",
+  runtime: "运行时",
+  mcp: "MCP 连接",
+  ai_model: "AI 模型",
+};
 async function runDoctor() {
   const btn = $("#btn-doctor");
   if (btn) { btn.disabled = true; btn.textContent = "自检中…"; }
@@ -646,7 +1003,7 @@ async function runDoctor() {
     $("#doctor-list").innerHTML = r.items.map((it) => `
     <div class="doctor-item">
       <span class="${it.ok ? "d-ok" : "d-bad"}">${it.ok ? "✓" : "✕"}</span>
-      <span style="width:90px">${it.check}</span>
+      <span style="width:90px">${DOCTOR_LABEL[it.check] || it.check}</span>
       <span style="color:var(--text-secondary)">${it.detail || ""}</span>
     </div>`).join("");
     const dot = $("#status-dot");
@@ -669,11 +1026,27 @@ event.listen("nav-to", (e) => {
   if (btn) btn.click();
 });
 event.listen("toast-shown", () => refreshHistory());
-// 主面板从托盘/后台回到前台：标注主题页重拉一次（截图时改了工具属性，回来即见最新值）
+// 主面板从托盘/后台回到前台：标注默认值重拉一次（截图时改了工具属性，回来即见最新值）
 event.listen("tauri://focus", () => {
-  if ($("#page-theme") && $("#page-theme").classList.contains("on")) loadThemeValues().catch(reportErr);
+  if ($("#page-general") && $("#page-general").classList.contains("on")) loadThemeValues().catch(reportErr);
 });
 
+
+// ===== 窗口尺寸记忆（P3-9）：详情页会临时改窗口尺寸，那些变化不计入记忆 =====
+let mainWindowSize = null;
+let winSizeTimer = null;
+invoke("get_settings").then((s) => {
+  if (Array.isArray(s.win_size) && s.win_size.length === 2) mainWindowSize = s.win_size;
+}).catch(() => {});
+window.addEventListener("resize", () => {
+  if (detailState) return;
+  clearTimeout(winSizeTimer);
+  winSizeTimer = setTimeout(() => {
+    const sz = [window.innerWidth, window.innerHeight];
+    mainWindowSize = sz;
+    invoke("set_setting", { key: "win_size", value: sz }).catch(() => {});
+  }, 800);
+});
 
 // ===== 资产详情（§4.6：文字块与图片联动、版本时间线）=====
 let detailState = null; // { basePath, scale, fit, data }——fit=适应窗口；free 时 scale=显示宽/原图宽
@@ -819,10 +1192,17 @@ function highlightBlock(i, on, lock = false) {
 function closeDetail() {
   try {
     const LS = (tauri.window && tauri.window.LogicalSize) || (tauri.dpi && tauri.dpi.LogicalSize);
-    if (LS) getCurrentWindow().setSize(new LS(780, 560));
+    // 回到主面板记忆尺寸（P3-9）；无记忆值时回落默认
+    const sz = mainWindowSize || [780, 560];
+    if (LS) getCurrentWindow().setSize(new LS(sz[0], sz[1]));
   } catch (e) { console.error(e); }
   $$(".page").forEach((p) => p.classList.remove("on"));
   $("#page-history").classList.add("on");
+  // 顶行同步回首页视图（详情只能从首页进入，直接套用 gotoPage 的顶行状态）
+  $("#settings-tabs").style.display = "none";
+  $("#btn-settings-open").style.display = "inline-flex";
+  $("#btn-back-home").style.display = "none";
+  $$(".nav-item[data-page]").forEach((b) => b.classList.remove("active"));
   refreshCurrentView();
   // 详情页可能改过视图显示状态，按 homeView 恢复
   $("#home-view").style.display = homeView === "home" ? "" : "none";

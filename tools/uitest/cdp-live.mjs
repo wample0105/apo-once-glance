@@ -1,7 +1,7 @@
-// 连接运行中的生产 exe（WebView2 --remote-debugging-port=9222），
+// 连接运行中的生产 exe（WebView2 --remote-debugging-port=9700），
 // 读取 overlay 窗口真实 DOM，判断加载的 UI 是新版还是旧版。
 // 用法: node tools/uitest/cdp-live.mjs
-const base = "http://127.0.0.1:9222";
+const base = "http://127.0.0.1:9700";
 const list = await (await fetch(base + "/json")).json();
 const t = list.find((p) => p.url.includes("overlay"));
 if (!t) {

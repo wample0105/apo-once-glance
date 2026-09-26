@@ -36,10 +36,85 @@
     display: none; pointer-events: none;
     transition: opacity 0.25s ease-out;
   }
+  /* AI 结果贴图（v0.2 M2）：文本卡片形态，复用贴图窗口与交互 */
+  #ai-card {
+    width: 100%; height: 100%;
+    display: none; flex-direction: column;
+    background: #FAFAFC;
+    border-radius: 10px;
+    box-shadow: 0 5px 16px rgba(0, 0, 0, 0.50), 0 1px 4px rgba(0, 0, 0, 0.38);
+    overflow: hidden;
+    cursor: move;
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  }
+  #ai-text {
+    flex: 1; min-height: 0; overflow: auto;
+    padding: 14px 18px 8px;
+    font-size: 14px; line-height: 1.55; color: #26262B;
+    word-break: break-word;
+    user-select: text; cursor: auto;
+  }
+  /* Markdown 渲染排版：模型输出按富文本呈现（标题/列表/表格/代码块），不显示源码 */
+  #ai-text p { margin: 5px 0; }
+  #ai-text h1, #ai-text h2, #ai-text h3, #ai-text h4 {
+    margin: 12px 0 6px; line-height: 1.4; font-weight: 600; color: #1C1C1F;
+  }
+  #ai-text h1 { font-size: 17px; }
+  #ai-text h2 { font-size: 15.5px; }
+  #ai-text h3 { font-size: 14.5px; }
+  #ai-text h4 { font-size: 14px; }
+  #ai-text > :first-child { margin-top: 0; }
+  #ai-text ul, #ai-text ol { margin: 5px 0; padding-left: 22px; }
+  #ai-text li { margin: 3px 0; }
+  #ai-text li > ul, #ai-text li > ol { margin: 2px 0; }
+  #ai-text code {
+    background: #F0F0F3; border-radius: 4px; padding: 1px 5px;
+    font-family: Consolas, "Courier New", monospace; font-size: 12.5px;
+  }
+  #ai-text pre {
+    background: #2D2D33; color: #E8E8ED; border-radius: 8px;
+    padding: 10px 12px; overflow-x: auto; margin: 8px 0;
+  }
+  #ai-text pre code { background: none; color: inherit; padding: 0; font-size: 12.5px; }
+  #ai-text table {
+    border-collapse: collapse; margin: 8px 0; font-size: 13px;
+    display: block; max-width: 100%; overflow-x: auto;
+  }
+  #ai-text th, #ai-text td { border: 1px solid #E5E5EA; padding: 5px 10px; text-align: left; }
+  #ai-text th { background: #F5F5F8; font-weight: 600; }
+  #ai-text tr:nth-child(even) td { background: #FAFAFC; }
+  #ai-text blockquote {
+    border-left: 3px solid #E5E5EA; margin: 8px 0; padding: 2px 12px; color: #6C6C72;
+  }
+  #ai-text hr { border: none; border-top: 1px solid #E5E5EA; margin: 10px 0; }
+  #ai-text a { color: #0A66C2; }
+  #ai-meta {
+    padding: 0 18px 6px;
+    font-size: 10.5px; color: #8E8E93;
+  }
+  #ai-bar {
+    display: flex; gap: 8px; justify-content: flex-end;
+    padding: 7px 12px 10px;
+  }
+  #ai-bar button {
+    border: 1px solid #E5E5EA; background: #fff; color: #55555A;
+    font-size: 11.5px; padding: 4px 12px; border-radius: 7px; cursor: pointer;
+  }
+  #ai-bar button:hover { border-color: #FF3B30; color: #FF3B30; }
+  #ai-bar button.primary { background: #FF3B30; border-color: #FF3B30; color: #fff; }
+  #ai-bar button.primary:hover { background: #E8372C; }
 </style>
 </head>
 <body>
   <img id="img" alt="">
+  <div id="ai-card">
+    <div id="ai-text"></div>
+    <div id="ai-meta"></div>
+    <div id="ai-bar">
+      <button id="ai-copy" class="primary">复制文本</button>
+      <button id="ai-close">关闭</button>
+    </div>
+  </div>
   <div id="hint">双击关闭 · 滚轮缩放 · Ctrl+滚轮透明度</div>
   <div id="ophud">100%</div>
   <script src="js/pin.js"></script>
