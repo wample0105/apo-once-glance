@@ -513,8 +513,22 @@ fn base64_encode(data: &[u8]) -> String {
 }
 
 #[tauri::command]
-fn get_settings() -> Settings {
-    settings::load()
+fn get_settings() -> Result<serde_json::Value, String> {
+    // save_root / save_dir_writable 是 Rust 计算方法、不进 Settings 序列化——
+    // 通用页「落盘目录」灰条读的就是这两个字段（缺失时灰条从上线起一直空白）
+    let s = settings::load();
+    let mut v = serde_json::to_value(&s).map_err(|e| e.to_string())?;
+    if let Some(obj) = v.as_object_mut() {
+        obj.insert(
+            "save_root".into(),
+            serde_json::Value::String(s.save_root().to_string_lossy().into_owned()),
+        );
+        obj.insert(
+            "save_dir_writable".into(),
+            serde_json::Value::Bool(s.save_dir_writable()),
+        );
+    }
+    Ok(v)
 }
 
 #[tauri::command]
@@ -1027,6 +1041,8 @@ pub fn run() {
         ])
         .setup(|app| {
             let handle = app.handle().clone();
+            // 启动自愈：AI 默认角色缺失/悬空时补任（历史数据 default_vision=None 会让问图必报错）
+            ai::heal_default_roles();
             bridge::start(handle.clone());
             setup_tray(&handle)?;
             // 预驻留覆盖层：启动即建隐藏窗口+预载页面，热键只做定位+冻结+显示（秒开）

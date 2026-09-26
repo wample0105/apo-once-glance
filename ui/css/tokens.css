@@ -93,6 +93,16 @@ button { font-family: inherit; }
   min-height: 32px;
 }
 .btn.primary:hover { background: var(--accent-hover); }
+/* 中性实心按钮：主动健康检查等「强调但非危险」场景——品牌红与 danger 红同屏时
+   用户无法靠色相区分强调与危险，danger 红仅保留给删除/移除（评审补-1） */
+.btn.solid {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: #fff;
+  font-weight: 500;
+  min-height: 32px;
+}
+.btn.solid:hover { background: #3A3A40; }
 .btn:disabled { opacity: .55; cursor: default; pointer-events: none; }
 .btn.ghost {
   border-color: transparent;
@@ -128,8 +138,8 @@ button { font-family: inherit; }
 .switch.on::after { left: 20px; }
 .switch:disabled { opacity: 0.55; cursor: default; }
 
-/* 检测徽标（tagok / tagwarn） */
-.tagok, .tagwarn {
+/* 检测徽标（tagok / tagwarn / tagdim） */
+.tagok, .tagwarn, .tagdim {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -139,6 +149,8 @@ button { font-family: inherit; }
 }
 .tagok { background: #E6F6EF; color: #0E6E4E; }
 .tagwarn { background: #FFF3D6; color: #8A5A00; }
+/* 中性灰：可选但未启用的状态（「未接入」），不该借成功徽章的绿底 */
+.tagdim { background: var(--bg-tertiary); color: var(--text-tertiary); }
 
 /* 只读 pathchip */
 .pathchip {

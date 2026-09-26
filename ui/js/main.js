@@ -176,22 +176,32 @@ function refreshCurrentView() {
   else refreshHistory();
 }
 
-// 首页 AI 卡状态自适应（业界同款：未配置=引导态「3 步开启」；已配置=绿色就绪态）
+// 首页 AI 卡状态自适应（引导态「3 步开启」/ 部分就绪 / 绿色就绪态）。
+// 就绪判定必须「文字+视觉双角色都有可用默认」：只查「有 Key」会误报——
+// 默认视觉缺失时问图调用必报「未设置默认模型」，与徽章宣称矛盾（P0）
 async function refreshAiCard() {
   try {
-    const profiles = await invoke("ai_list");
-    const ready = (profiles || []).some((p) => p.has_key);
+    const list = (await invoke("ai_list")) || [];
+    const defT = list.find((p) => p.is_default_text);
+    const defV = list.find((p) => p.is_default_vision);
+    const textOk = !!(defT && defT.has_key && defT.text_model);
+    const visionOk = !!(defV && defV.has_key && defV.vision_model);
     const name = $("#ai-card-name"), desc = $("#ai-card-desc"), chip = $("#ai-card-chip");
-    if (ready) {
-      const def = profiles.find((p) => p.is_default_text || p.is_default_vision) || profiles[0];
+    if (textOk && visionOk) {
       name.textContent = "AI 能力已就绪";
-      desc.textContent = `${def.name} · 云端识别可用`;
+      desc.textContent = `${defT.name} · 翻译、问图可用`;
       chip.textContent = "已就绪";
       chip.classList.add("ready");
-    } else {
+    } else if (!list.some((p) => p.has_key)) {
       name.textContent = "开启 AI 能力";
       desc.textContent = "选服务商 → 贴 Key → 测试，一分钟接入";
       chip.textContent = "未配置";
+      chip.classList.remove("ready");
+    } else {
+      // 有 Key 但角色不全：缺哪个如实说（缺省角色 / 缺 Key / 缺模型名都算未就绪）
+      name.textContent = "AI 能力部分就绪";
+      desc.textContent = `翻译${textOk ? "可用" : "未就绪"} · 问图${visionOk ? "可用" : "未就绪"}，点击到 AI 页补全`;
+      chip.textContent = "部分就绪";
       chip.classList.remove("ready");
     }
   } catch (e) { /* AI 后端异常不阻塞首页 */ }
@@ -343,6 +353,13 @@ function escapeHtml(s) {
   return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
 
+// 长路径中段省略（补-5）：保头尾可辨识（盘符/目录头 + 文件名），中段以 … 代替
+function middleEllipsis(s, max = 56) {
+  if (s.length <= max) return s;
+  const keep = max - 1;
+  return s.slice(0, Math.ceil(keep / 2)) + "…" + s.slice(s.length - Math.floor(keep / 2));
+}
+
 // ===== 设置加载 =====
 async function loadSettingsUI() {
   const s = await invoke("get_settings");
@@ -405,15 +422,17 @@ async function loadSettingsUI() {
   renderBlacklist(s.blacklist);
 
   // MCP 配置（once.exe 路径由后端解析：安装目录 → 资源目录 → install.sh 标准位 → 开发构建）
+  // 长路径中段省略展示，复制按钮仍带完整配置（此前 textContent 整写还会顺手丢掉静态复制按钮）
   const onceExe = await invoke("once_exe_path").catch(() => null);
-  $("#mcp-config").textContent = JSON.stringify({
-    mcpServers: {
-      onceglance: {
-        command: onceExe || "<安装 OnceGlance 后自动解析>",
-        args: ["mcp"],
-      },
-    },
-  }, null, 2);
+  const cmdShown = onceExe ? middleEllipsis(onceExe, 56) : "<安装 OnceGlance 后自动解析>";
+  const fullJson = JSON.stringify({ mcpServers: { onceglance: { command: onceExe || "<安装 OnceGlance 后自动解析>", args: ["mcp"] } } }, null, 2);
+  const mcpBox = $("#mcp-config");
+  mcpBox.textContent = JSON.stringify({ mcpServers: { onceglance: { command: cmdShown, args: ["mcp"] } } }, null, 2);
+  const mcpCopy = document.createElement("span");
+  mcpCopy.className = "copy";
+  mcpCopy.textContent = "复制";
+  mcpCopy.dataset.copy = fullJson;
+  mcpBox.appendChild(mcpCopy);
   // 接入页复制按钮（事件委托）
   document.querySelectorAll(".codebox .copy").forEach((c) => {
     if (c.dataset.wired) return;
@@ -514,7 +533,7 @@ function agentCtlHtml(a) {
         ? '<span class="pulse">连接中…</span>'
         : '<span style="color:var(--ov-fg-dim)" title="配置已写入；该客户端首次连接 MCP 后自动转为已接入">已写入 · 等待首次连接</span>')
       : (a.client_installed
-        ? '<span class="tagok" style="color:var(--error)">未接入</span>'
+        ? '<span class="tagdim">未接入</span>'
         : '<span style="color:var(--ov-fg-dim)">未检测到客户端</span>');
   let btn;
   if (connecting) btn = '<button class="btn" disabled>连接中…</button>';
@@ -908,7 +927,7 @@ async function renderAiTemplates() {
     tpls = (s.ai && s.ai.templates) || [];
   } catch (e) { box.innerHTML = `<div class="row"><div class="label"><div class="d">加载失败</div></div></div>`; return; }
   if (!tpls.length) {
-    box.innerHTML = `<div class="row"><div class="label"><div class="d">还没有自定义模板——添加后会在问图指令中出现</div></div></div>`;
+    box.innerHTML = `<div class="row"><div class="label"><div class="d">还没有自定义模板——添加后会出现在问图快捷指令里</div></div></div>`;
     return;
   }
   box.innerHTML = tpls.map((t, i) => `
@@ -1000,7 +1019,12 @@ async function runDoctor() {
   if (btn) { btn.disabled = true; btn.textContent = "自检中…"; }
   try {
     const r = await invoke("doctor_run");
-    $("#doctor-list").innerHTML = r.items.map((it) => `
+    // 总结态置顶（补-6）：一眼见全局，下方列表降为明细
+    const bad = r.items.filter((it) => !it.ok).length;
+    const sum = bad
+      ? `<div class="doctor-sum bad"><span class="d-bad">✕</span><span>${bad} 项异常</span></div>`
+      : `<div class="doctor-sum ok"><span class="d-ok">✓</span><span>一切正常</span></div>`;
+    $("#doctor-list").innerHTML = sum + r.items.map((it) => `
     <div class="doctor-item">
       <span class="${it.ok ? "d-ok" : "d-bad"}">${it.ok ? "✓" : "✕"}</span>
       <span style="width:90px">${DOCTOR_LABEL[it.check] || it.check}</span>
@@ -1008,7 +1032,8 @@ async function runDoctor() {
     </div>`).join("");
     const dot = $("#status-dot");
     dot.className = "statusdot " + (r.ok_all ? "" : "warn");
-    dot.title = r.ok_all ? "全部正常" : "有可修复项，点击直达诊断";
+    // tooltip 带当前状态文字（补-7）：「绿=正常」对色弱/新用户不自明
+    dot.title = r.ok_all ? "诊断状态：一切正常，点击查看" : "诊断状态：有可修复项，点击直达诊断";
   } catch (e) {
     reportErr(e);
   } finally {
@@ -1207,7 +1232,7 @@ function closeDetail() {
   // 详情页可能改过视图显示状态，按 homeView 恢复
   $("#home-view").style.display = homeView === "home" ? "" : "none";
   $("#history-full").style.display = homeView === "home" ? "none" : "";
-  $("#recent-all").textContent = homeView === "home" ? "查看全部 ↓" : "↑ 收起";
+  syncRecentAllBtn();
 }
 
 // 详情页事件
@@ -1341,18 +1366,24 @@ async function refreshBridgeStatus() {
 }
 
 // ===== 首页/全量历史视图切换 =====
+// 箭头用 chevron 图标旋转（P2-1：↓ 字符小字号形似数字 1，曾被误读成「查看全部 1」）
+function syncRecentAllBtn() {
+  $("#recent-all-label").textContent = homeView === "home" ? "查看全部" : "收起";
+  const chev = $("#recent-all-chev");
+  if (chev) chev.classList.toggle("up", homeView !== "home");
+}
 function showHomeView() {
   homeView = "home";
   $("#home-view").style.display = "";
   $("#history-full").style.display = "none";
-  $("#recent-all").textContent = "查看全部 ↓";
+  syncRecentAllBtn();
   loadRecent();
 }
 function showFullView() {
   homeView = "full";
   $("#home-view").style.display = "none";
   $("#history-full").style.display = "";
-  $("#recent-all").textContent = "↑ 收起";
+  syncRecentAllBtn();
   refreshHistory();
 }
 $("#recent-all").onclick = () => (homeView === "home" ? showFullView() : showHomeView());

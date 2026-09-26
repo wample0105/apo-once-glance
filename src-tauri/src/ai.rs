@@ -21,6 +21,55 @@ pub struct AiProfileView {
     pub is_default_vision: bool,
 }
 
+/// 默认角色补任：缺失或悬空时改任第一套有对应模型的配置（与「首套配置自动担任默认」同策）。
+/// 返回本次补任的（角色，配置名）——删除迁移时用于 toast 告知。
+/// 只看模型名非空，不查 Key：Key 缺失在调用时报人话错误，不在补任路径做凭据查询。
+fn autofill_defaults(cfg: &mut once_core::ai::AiConfig) -> Vec<(&'static str, String)> {
+    let mut roles = Vec::new();
+    let need_text = cfg
+        .default_text
+        .as_ref()
+        .map_or(true, |id| cfg.profile(id).is_none());
+    if need_text {
+        let cand = cfg
+            .profiles
+            .iter()
+            .find(|p| !p.text_model.is_empty())
+            .map(|c| (c.id.clone(), c.name.clone()));
+        if let Some((id, name)) = cand {
+            cfg.default_text = Some(id);
+            roles.push(("默认文字模型", name));
+        }
+    }
+    let need_vision = cfg
+        .default_vision
+        .as_ref()
+        .map_or(true, |id| cfg.profile(id).is_none());
+    if need_vision {
+        let cand = cfg
+            .profiles
+            .iter()
+            .find(|p| !p.vision_model.is_empty())
+            .map(|c| (c.id.clone(), c.name.clone()));
+        if let Some((id, name)) = cand {
+            cfg.default_vision = Some(id);
+            roles.push(("默认视觉模型", name));
+        }
+    }
+    roles
+}
+
+/// 启动自愈：历史数据默认角色缺失/悬空（如有视觉模型却未指定默认）时补任，幂等；无需修复不落盘。
+pub fn heal_default_roles() {
+    let mut probe = settings::load();
+    if autofill_defaults(&mut probe.ai).is_empty() {
+        return;
+    }
+    let _ = settings::update(|s| {
+        autofill_defaults(&mut s.ai);
+    });
+}
+
 fn views() -> Vec<AiProfileView> {
     let cfg = settings::load().ai;
     cfg.profiles
@@ -106,8 +155,6 @@ fn save_profile_inner(mut profile: AiProfile, api_key: Option<String>) -> once_c
         }
     }
     let id = profile.id.clone();
-    let has_text = !profile.text_model.is_empty();
-    let has_vision = !profile.vision_model.is_empty();
     settings::update(|s| {
         let cfg = &mut s.ai;
         if let Some(slot) = cfg.profiles.iter_mut().find(|p| p.id == id) {
@@ -115,27 +162,39 @@ fn save_profile_inner(mut profile: AiProfile, api_key: Option<String>) -> once_c
         } else {
             cfg.profiles.push(profile.clone());
         }
-        // 首套配置自动担任默认角色（用户可改）
-        if cfg.default_text.is_none() && has_text {
-            cfg.default_text = Some(id.clone());
-        }
-        if cfg.default_vision.is_none() && has_vision {
-            cfg.default_vision = Some(id.clone());
-        }
+        // 默认角色自动补任：缺失/悬空时改任有对应模型的配置（用户可改）——
+        // 保存任意配置即自愈历史遗留的空默认（如配了视觉模型却没指定默认视觉）
+        autofill_defaults(cfg);
     })
     .map(|_| ())
 }
 
-/// 删除配置：连带清理凭据库中的 Key 与悬空的默认角色。
+/// 删除配置：连带清理凭据库中的 Key；默认角色悬空时自动迁移到下一套可用配置并 toast 告知
+/// （不迁移会让翻译/问图在下次调用才报「未设置默认模型」，用户无从归因到这次删除）。
+/// 必须 async：toast() 建窗口不能在同步 command 的主线程里做（死锁，见 deliver 同族坑）。
 #[tauri::command]
-pub fn ai_delete_profile(id: String) -> Result<AiConfig, String> {
+pub async fn ai_delete_profile(app: AppHandle, id: String) -> Result<once_core::ai::AiConfig, String> {
     ai::delete_key(&id);
-    settings::update(|s| {
+    let mut migrated: Vec<(&'static str, String)> = Vec::new();
+    let r = settings::update(|s| {
         s.ai.profiles.retain(|p| p.id != id);
         s.ai.prune_defaults();
-    })
-    .map(|s| s.ai)
-    .map_err(|e| e.to_string())
+        migrated = autofill_defaults(&mut s.ai);
+    });
+    match r {
+        Ok(s) => {
+            let moved = migrated;
+            if !moved.is_empty() {
+                let parts: Vec<String> = moved
+                    .iter()
+                    .map(|(role, name)| format!("{role}→{name}"))
+                    .collect();
+                crate::deliver::toast(&app, "ok", &format!("已自动迁移：{}", parts.join("、")));
+            }
+            Ok(s.ai)
+        }
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 /// 默认角色指定（role: text|vision；id=None 清除）。
