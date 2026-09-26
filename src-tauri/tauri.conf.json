@@ -13,13 +13,13 @@
         "label": "main",
         "title": "定影 Onceglance",
         "url": "index.html",
-        "width": 780,
-        "height": 560,
+        "width": 900,
+        "height": 640,
         "minWidth": 680,
         "minHeight": 520,
         "decorations": false,
         "center": true,
-        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port=9222"
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port=9700"
       }
     ],
     "security": {

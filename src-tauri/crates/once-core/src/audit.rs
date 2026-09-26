@@ -15,6 +15,13 @@ pub struct AuditEntry {
     pub status: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target_process: Option<String>,
+    // v0.2 AI 调用扩展（隐私透明化：发了什么给哪个服务商），旧记录无这些字段自然为空
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sent_image: Option<bool>,
 }
 
 pub fn audit_file() -> PathBuf {
@@ -43,6 +50,30 @@ pub fn record(command: &str, elapsed_ms: u64, status: i32, target_process: Optio
         elapsed_ms,
         status,
         target_process: target_process.map(|s| s.to_string()),
+        provider: None,
+        model: None,
+        sent_image: None,
+    });
+}
+
+/// AI 调用审计（v0.2 隐私设计）：记录服务商、模型、是否发送图像；永不记录图片内容与提示词正文。
+pub fn record_ai(
+    command: &str,
+    elapsed_ms: u64,
+    status: i32,
+    provider: Option<&str>,
+    model: Option<&str>,
+    sent_image: Option<bool>,
+) {
+    append(&AuditEntry {
+        time: crate::storage::now_iso(),
+        command: command.into(),
+        elapsed_ms,
+        status,
+        target_process: None,
+        provider: provider.map(|s| s.to_string()),
+        model: model.map(|s| s.to_string()),
+        sent_image,
     });
 }
 
