@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>Let AI agents see your screen, and turn your workflow into tutorials.</b><br />
-  AI-native screenshot tool · Windows-first · Local-first · No API Key / No Cloud / No Telemetry
+  AI-native screenshot tool · Windows-first · Local-first · No Telemetry
 </p>
 
 <p align="center">
@@ -24,7 +24,7 @@
 
 **Onceglance** is an AI-native screenshot tool for Windows: any agent that speaks MCP or shell (Claude, Codex, Cursor, etc.) can complete the full perception pipeline — *capture → OCR → annotate → persist* — through standardized interfaces. For humans, it is a keyboard-friendly screenshot & pin tool; for agents, it is the standard gateway to your machine's visual capabilities.
 
-- **Local-first, three zeros**: no API key, no cloud upload, no telemetry. OCR runs entirely on-device.
+- **Local-first**: everyday features run entirely on-device, with zero telemetry. Optional AI enhancement is bring-your-own-key — keys are encrypted in the OS credential store, screenshots are only sent when you explicitly trigger it, and every call lands in the audit log.
 - **One core, three frontends**: GUI, CLI and MCP share the same kernel — install once, use it three ways.
 - **No daemon required**: agents can call capture, OCR and annotation even when the GUI is not running.
 
