@@ -26,6 +26,13 @@ pub struct PinMeta {
     pub scale: f32,
     pub opacity: f32,
     pub clickthrough: bool,
+    /// 贴图形态：capture=普通截图贴图；ai=AI 结果文本卡（v0.2 M2）
+    pub kind: String,
+    /// AI 结果：原文（复制用）与来源行（服务商 · 模型 · 耗时）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ai_text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ai_meta: Option<String>,
 }
 
 fn pins() -> std::sync::MutexGuard<'static, HashMap<u32, PinMeta>> {
@@ -122,6 +129,85 @@ pub async fn pin_create(
             scale,
             opacity: 1.0,
             clickthrough: false,
+            kind: "capture".into(),
+            ai_text: None,
+            ai_meta: None,
+        },
+    );
+    Ok(id)
+}
+
+/// AI 结果贴图（v0.2 M2）：文本卡片形态，复用贴图窗口与交互（拖动/置顶/关闭）。
+/// 不写截图历史；文本卡片由 pin.html 的 #ai-card 渲染（文字可选中复制，任意缩放不糊）。
+/// 宽度固定 460 逻辑像素，高度按内容估算并设上下限；x/y 为物理坐标（选区原位浮出）。
+#[tauri::command]
+pub async fn pin_create_ai(
+    app: AppHandle,
+    text: String,
+    meta_line: String,
+    x: i32,
+    y: i32,
+    dpr: f32,
+) -> Result<u32, String> {
+    let dpr = if dpr > 0.1 { dpr } else { 1.0 };
+    let w_css = 460.0f32;
+    let per_line = ((w_css - 36.0) / 14.5).max(10.0);
+    let mut lines = 0.0f32;
+    for seg in text.split('\n') {
+        let units: f32 = seg.chars().map(|c| if (c as u32) < 0x80 { 0.55 } else { 1.0 }).sum();
+        lines += (units / per_line).ceil().max(1.0);
+    }
+    let lines = lines.max(1.0);
+    let h_css = (14.0 + lines * 21.0 + 10.0 + 22.0 + 12.0 + 40.0 + 12.0).min(720.0).max(150.0);
+    let id = PIN_SEQ.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let pw = (w_css * dpr).round() as u32;
+    let ph = (h_css * dpr).round() as u32;
+
+    let label = format!("pin-{id}");
+    let win = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("pin.html".into()))
+        .title("AI 结果")
+        .decorations(false)
+        .transparent(true)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .resizable(false)
+        .maximizable(false)
+        .minimizable(false)
+        .shadow(false)
+        .visible(false)
+        .additional_browser_args(crate::DEBUG_BROWSER_ARGS)
+        .build()
+        .map_err(|e| e.to_string())?;
+    let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
+    let _ = win.set_size(tauri::PhysicalSize::new(pw, ph));
+    let _ = win.eval(&format!("window.__PIN_ID={id};"));
+    let _ = win.eval(&format!(
+        "window.__PIN_TEXT={};",
+        serde_json::to_string(&text).unwrap_or_default()
+    ));
+    let _ = win.eval(&format!(
+        "window.__PIN_AIMETA={};",
+        serde_json::to_string(&meta_line).unwrap_or_default()
+    ));
+    let _ = win.show();
+    let _ = win.set_always_on_top(true);
+
+    pins().insert(
+        id,
+        PinMeta {
+            id,
+            path: String::new(),
+            x,
+            y,
+            w: pw,
+            h: ph,
+            pad: 0,
+            scale: 1.0,
+            opacity: 1.0,
+            clickthrough: false,
+            kind: "ai".into(),
+            ai_text: Some(text),
+            ai_meta: Some(meta_line),
         },
     );
     Ok(id)
@@ -131,6 +217,22 @@ pub async fn pin_create(
 #[tauri::command]
 pub fn pin_meta(id: u32) -> Result<PinMeta, String> {
     pins().get(&id).cloned().ok_or_else(|| "贴图不存在".into())
+}
+
+/// AI 结果贴图：前端 Markdown 渲染完成后按实际内容高度回调窗口尺寸（h=内容区逻辑像素）。
+/// 建窗高是纯文本估算且 clamp 720，渲染后排版会变化；同步更新 PinMeta，
+/// 保证后续滚轮缩放仍按正确的内容高度计算。
+#[tauri::command]
+pub fn pin_resize_ai(app: AppHandle, id: u32, h: f64) -> Result<(), String> {
+    let mut m = pins();
+    let Some(meta) = m.get_mut(&id) else { return Err("贴图不存在".into()) };
+    let Some(win) = pin_window(&app, id) else { return Err("贴图窗口不存在".into()) };
+    let scale = win.scale_factor().unwrap_or(1.0);
+    let h_css = h.clamp(150.0, 1000.0);
+    let ph = (h_css * scale).round() as u32;
+    let _ = win.set_size(tauri::PhysicalSize::new(meta.w + 2 * meta.pad, ph + 2 * meta.pad));
+    meta.h = ph;
+    Ok(())
 }
 
 /// 贴图缩放（滚轮 / 管理面板）——按图像内容尺寸缩放，窗口同步补上阴影边距

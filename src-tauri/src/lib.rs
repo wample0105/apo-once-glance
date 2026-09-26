@@ -18,6 +18,7 @@ mod bridge;
 mod detect;
 mod pin;
 mod deliver;
+pub mod ai;
 pub mod scrollcmd;
 
 use deliver::DeliverOutcome;
@@ -92,17 +93,31 @@ fn get_overlay_kind() -> Option<String> {
 
 /// 供其它模块复用的覆盖层启动入口（真实逻辑在 start_overlay 命令内）。
 pub(crate) async fn launch_overlay(app: AppHandle, kind: String) -> Result<(), String> {
-    start_overlay(app, kind).await
+    start_overlay(app, kind, None).await
 }
 
 /// 唤起覆盖层（kind: region|ocr|annotate|scroll）。
+/// action: Some("translate"|"ask"|"pin"|"ocr") = 首页能力卡一步直达——选区完成自动执行对应输出。
 #[tauri::command]
-async fn start_overlay(app: AppHandle, kind: String) -> Result<(), String> {
-    eprintln!("start_overlay called kind={kind}");
+async fn start_overlay(app: AppHandle, kind: String, action: Option<String>) -> Result<(), String> {
+    eprintln!("start_overlay called kind={kind} action={action:?}");
+    let action = action.filter(|a| ["translate", "ask", "pin", "ocr"].contains(&a.as_str()));
     let app2 = app.clone();
     let kind2 = kind.clone();
+    let act2 = action.clone();
     // 窗口操作放到独立线程，避免主线程事件循环重入死锁
-    let r = std::thread::spawn(move || show_overlay(&app2, &kind2)).join();
+    let r = std::thread::spawn(move || {
+        // 主面板退场（业界铁律：发起截图后主窗口让路，否则自己被截进冻结帧）。
+        // 仅命令路径（面板可见）需要；热键路径主面板本就隐藏，且不进此分支。
+        if !OVERLAY_ACTIVE.load(Ordering::SeqCst) {
+            if let Some(main) = app2.get_webview_window("main") {
+                let _ = main.hide();
+                std::thread::sleep(std::time::Duration::from_millis(220)); // 等 DWM 消隐，防面板残影入冻结帧
+            }
+        }
+        show_overlay(&app2, &kind2, act2)
+    })
+    .join();
     match &r {
         Err(e) => eprintln!("start_overlay({kind}) panic: {e:?}"),
         Ok(Err(e)) => eprintln!("start_overlay({kind}) 失败: {e}"),
@@ -135,9 +150,9 @@ pub(crate) fn park_overlay_offscreen(win: &tauri::WebviewWindow) {
     let _ = win.set_position(PhysicalPosition::new(-20000, -20000));
 }
 
-fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
+fn show_overlay(app: &AppHandle, kind: &str, action: Option<String>) -> tauri::Result<()> {
     let t0 = std::time::Instant::now();
-    eprintln!("show_overlay kind={kind}");
+    eprintln!("show_overlay kind={kind} action={action:?}");
     // 截图态再按一次热键/卡片 = 退出（同类产品 手感）。toggle 必须在本函数：
     // 热键路径直调 show_overlay（不经 start_overlay 命令），此前两入口状态分裂——
     // 热键激活的取景层 ACTIVE=false，卡片路径与热键路径互相打架（用户实测"无法退出"）
@@ -222,6 +237,9 @@ fn show_overlay(app: &AppHandle, kind: &str) -> tauri::Result<()> {
     eprintln!("[ov-t] move-back {:?}", t0.elapsed());
     // 热键路径：冻结图已在移回前截好（纯净画面），随后推送激活事件（JS 已驻留，收事件即渲染蒙版）
     let mut payload = serde_json::json!({ "kind": kind });
+    if let Some(a) = action {
+        payload["action"] = serde_json::Value::String(a);
+    }
     if let Some(f) = frozen {
         payload["url"] = serde_json::Value::String(f.0);
         payload["width"] = serde_json::Value::from(f.1);
@@ -539,6 +557,21 @@ fn set_setting(key: String, value: serde_json::Value) -> Result<Settings, String
                     s.esc_exit_confirm = v;
                 }
             }
+            "win_size" => {
+                // 主面板窗口尺寸记忆（P3-9）：逻辑像素 [w,h]，带下限防呆
+                if let Some(arr) = value.as_array() {
+                    let v: Vec<f64> = arr.iter().filter_map(|x| x.as_f64()).collect();
+                    if v.len() == 2 && v[0] >= 400.0 && v[1] >= 300.0 {
+                        s.win_size = Some(v);
+                    }
+                }
+            }
+            "translate_lang" => {
+                // 截图翻译目标语言（AI 页下拉；空串回落默认简体中文）
+                if let Some(v) = value.as_str() {
+                    s.ai.translate_lang = v.into();
+                }
+            }
             _ => {}
         };
     })
@@ -702,6 +735,14 @@ fn doctor_run(app: AppHandle) -> serde_json::Value {
         "detail": once_exe.map(|p| p.to_string_lossy().into_owned())
             .unwrap_or_else(|| "once.exe 未找到（重新安装客户端或在「Agent 接入」页安装 CLI）".into())
     }));
+    // AI 配置状态（v0.2）：只报配置事实，不联网验证（连接测试在「AI」页显式触发）；
+    // 永不计入 ok_all——未配置是正常态，不是故障
+    let ai_detail = if s.ai.profiles.is_empty() {
+        "未配置（可选增强；本地功能不受影响）".to_string()
+    } else {
+        format!("已配置 {} 套（连接测试见「AI」页）", s.ai.profiles.len())
+    };
+    items.push(serde_json::json!({ "check": "ai_model", "ok": true, "detail": ai_detail }));
     serde_json::json!({ "ok_all": capture_ok && dir_ok && ocr_ok && runtime_ok && mcp_ok, "items": items })
 }
 
@@ -741,7 +782,7 @@ fn register_hotkeys(app: &AppHandle) -> Vec<(String, String)> {
             "region",
             &s.hotkeys.region,
             Box::new(|app: &AppHandle| {
-                let _ = show_overlay(app, "region");
+                let _ = show_overlay(app, "region", None);
             }),
         ),
         (
@@ -762,14 +803,14 @@ fn register_hotkeys(app: &AppHandle) -> Vec<(String, String)> {
             "ocr",
             &s.hotkeys.ocr,
             Box::new(|app: &AppHandle| {
-                let _ = show_overlay(app, "ocr");
+                let _ = show_overlay(app, "ocr", None);
             }),
         ),
         (
             "scroll",
             &s.hotkeys.scroll,
             Box::new(|app: &AppHandle| {
-                let _ = show_overlay(app, "scroll");
+                let _ = show_overlay(app, "scroll", None);
             }),
         ),
         (
@@ -812,7 +853,7 @@ fn tray_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     let scroll = MenuItem::with_id(app, "scroll", "长截图", true, Some("Alt+Shift+L"))?;
     let sep1 = PredefinedMenuItem::separator(app)?;
     let panel = MenuItem::with_id(app, "panel", "打开主面板", true, Some("Alt+Shift+H"))?;
-    let agent = CheckMenuItem::with_id(app, "agent", "Agent 调用：允许", true, settings::load().agent_enabled, None::<&str>)?;
+    let agent = CheckMenuItem::with_id(app, "agent", "AI 助手调用：允许", true, settings::load().agent_enabled, None::<&str>)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
     let settings_item = MenuItem::with_id(app, "settings", "设置…", true, None::<&str>)?;
     let diag = MenuItem::with_id(app, "doctor", "诊断", true, None::<&str>)?;
@@ -835,7 +876,7 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "region" | "ocr" | "scroll" => {
-                let _ = show_overlay(app, event.id().as_ref());
+                let _ = show_overlay(app, event.id().as_ref(), None);
             }
             "window" => {
                 let _ = run_capture_blocking(app, "window", "copy");
@@ -877,6 +918,9 @@ pub fn run() {
                 Some(bytes) => tauri::http::Response::builder()
                     .header("Content-Type", "image/bmp")
                     .header("Cache-Control", "no-store")
+                    // CORS 放行：冻结帧与页面跨源，无此头会污染 canvas——马赛克/模糊的
+                    // toDataURL 预览采样全部静默失败退回条纹（img 端还需 crossorigin=anonymous）
+                    .header("Access-Control-Allow-Origin", "*")
                     .body(std::borrow::Cow::Owned(bytes))
                     .unwrap(),
                 None => tauri::http::Response::builder()
@@ -966,7 +1010,20 @@ pub fn run() {
             agent_register,
             agent_unregister,
             read_audit,
-            clear_audit
+            clear_audit,
+            ai::ai_presets,
+            ai::ai_fetch_models,
+            ai::ai_list,
+            ai::ai_save_profile,
+            ai::ai_delete_profile,
+            ai::ai_set_default,
+            ai::ai_test,
+            ai::ai_translate_region,
+            ai::ai_ask_region,
+            ai::ai_open_settings,
+            ai::ai_templates_set,
+            pin::pin_create_ai,
+            pin::pin_resize_ai
         ])
         .setup(|app| {
             let handle = app.handle().clone();
@@ -1034,9 +1091,15 @@ pub fn run() {
                     }
                 });
             }
-            // 主窗口关闭 → 隐藏到托盘（D-2 默认）
+            // 主窗口关闭 → 隐藏到托盘（D-2 默认）；启动时恢复记忆的窗口尺寸（P3-9）
             if let Some(win) = app.get_webview_window("main") {
                 let h = handle.clone();
+                let saved_size = once_core::settings::load().win_size;
+                if let Some(sz) = saved_size {
+                    if sz.len() == 2 {
+                        let _ = win.set_size(tauri::LogicalSize::new(sz[0], sz[1]));
+                    }
+                }
                 win.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                         let close_quits = !once_core::settings::load().close_to_tray;
@@ -1168,7 +1231,9 @@ const TASK_NAME: &str = "OnceglanceAutostart";
 
 /// 所有窗口统一的 WebView2 启动参数（含 CDP 调试端口；与 tauri.conf.json main 窗口逐字符一致，
 /// 否则 WebView2 按参数差异分裂出第二个 browser process，调试端口看不到 overlay/pin 页面）。
-pub(crate) const DEBUG_BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port=9222";
+/// 端口 9700：本机 Hyper-V/WSL 保留区间（netsh excludedportrange）吞掉了旧端口 9222——
+/// Chromium 绑定保留区端口静默失败，表现为 release/debug 全部 Connection refused。
+pub(crate) const DEBUG_BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port=9700";
 
 #[tauri::command]
 fn autostart_status() -> bool {

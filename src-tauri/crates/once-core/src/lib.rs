@@ -2,6 +2,7 @@
 //! 人类 UI 与 Agent 接口（CLI / MCP）共享同一内核（PRD §3.3-6）。
 
 pub mod agents;
+pub mod ai;
 pub mod annotate;
 pub mod audit;
 pub mod blacklist;

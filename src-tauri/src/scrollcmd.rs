@@ -1343,6 +1343,11 @@ fn freeze_crop(x: i32, y: i32, w: u32, h: u32) -> Result<(Vec<u8>, u32, u32), St
     Ok((cropped, w, h))
 }
 
+/// 无损冻结帧区域裁剪（RGBA，不落历史）——AI 翻译/问图取图专用（freeze_deliver 会落历史，不适用）。
+pub fn freeze_region_rgba(x: i32, y: i32, w: u32, h: u32) -> Result<(Vec<u8>, u32, u32), String> {
+    freeze_crop(x, y, w, h)
+}
+
 /// 冻结交付：从冻结帧裁剪选区 → 走标准 deliver（落盘+剪贴板+取字/OCR+审计）。
 /// action: copy | save | ocr | saveas。保证"所见即所得"——不受实时桌面已变化影响。
 /// 必须为 async：deliver 内部 toast 会创建窗口，同步命令阻塞主线程会造成死锁。

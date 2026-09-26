@@ -152,6 +152,10 @@ pub struct Settings {
     pub close_to_tray: bool,
     /// Esc 退出确认记忆：enabled=弹窗询问；action=记住的选择（discard|save），勾选后不再询问。
     pub esc_exit_confirm: EscExitConfirm,
+    /// AI 模型配置（v0.2）：全部非敏感字段；API Key 只存系统凭据管理器。
+    pub ai: crate::ai::AiConfig,
+    /// 主面板窗口尺寸记忆（逻辑像素 [w,h]）。
+    pub win_size: Option<Vec<f64>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -184,6 +188,8 @@ impl Default for Settings {
             onboarding_done: false,
             close_to_tray: true,
             esc_exit_confirm: EscExitConfirm::default(),
+            ai: crate::ai::AiConfig::default(),
+            win_size: None,
         }
     }
 }
