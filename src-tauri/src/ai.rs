@@ -21,52 +21,17 @@ pub struct AiProfileView {
     pub is_default_vision: bool,
 }
 
-/// 默认角色补任：缺失或悬空时改任第一套有对应模型的配置（与「首套配置自动担任默认」同策）。
-/// 返回本次补任的（角色，配置名）——删除迁移时用于 toast 告知。
-/// 只看模型名非空，不查 Key：Key 缺失在调用时报人话错误，不在补任路径做凭据查询。
-fn autofill_defaults(cfg: &mut once_core::ai::AiConfig) -> Vec<(&'static str, String)> {
-    let mut roles = Vec::new();
-    let need_text = cfg
-        .default_text
-        .as_ref()
-        .map_or(true, |id| cfg.profile(id).is_none());
-    if need_text {
-        let cand = cfg
-            .profiles
-            .iter()
-            .find(|p| !p.text_model.is_empty())
-            .map(|c| (c.id.clone(), c.name.clone()));
-        if let Some((id, name)) = cand {
-            cfg.default_text = Some(id);
-            roles.push(("默认文字模型", name));
-        }
-    }
-    let need_vision = cfg
-        .default_vision
-        .as_ref()
-        .map_or(true, |id| cfg.profile(id).is_none());
-    if need_vision {
-        let cand = cfg
-            .profiles
-            .iter()
-            .find(|p| !p.vision_model.is_empty())
-            .map(|c| (c.id.clone(), c.name.clone()));
-        if let Some((id, name)) = cand {
-            cfg.default_vision = Some(id);
-            roles.push(("默认视觉模型", name));
-        }
-    }
-    roles
-}
+// 默认角色补任/自愈（autofill_defaults）已上移 once_core::ai 三端共用：
+// GUI setup 的 heal_default_roles、删除迁移与本模块保存路径均调用内核版。
 
 /// 启动自愈：历史数据默认角色缺失/悬空（如有视觉模型却未指定默认）时补任，幂等；无需修复不落盘。
 pub fn heal_default_roles() {
     let mut probe = settings::load();
-    if autofill_defaults(&mut probe.ai).is_empty() {
+    if once_core::ai::autofill_defaults(&mut probe.ai).is_empty() {
         return;
     }
     let _ = settings::update(|s| {
-        autofill_defaults(&mut s.ai);
+        once_core::ai::autofill_defaults(&mut s.ai);
     });
 }
 
@@ -164,7 +129,7 @@ fn save_profile_inner(mut profile: AiProfile, api_key: Option<String>) -> once_c
         }
         // 默认角色自动补任：缺失/悬空时改任有对应模型的配置（用户可改）——
         // 保存任意配置即自愈历史遗留的空默认（如配了视觉模型却没指定默认视觉）
-        autofill_defaults(cfg);
+        once_core::ai::autofill_defaults(cfg);
     })
     .map(|_| ())
 }
@@ -179,7 +144,7 @@ pub async fn ai_delete_profile(app: AppHandle, id: String) -> Result<once_core::
     let r = settings::update(|s| {
         s.ai.profiles.retain(|p| p.id != id);
         s.ai.prune_defaults();
-        migrated = autofill_defaults(&mut s.ai);
+        migrated = once_core::ai::autofill_defaults(&mut s.ai);
     });
     match r {
         Ok(s) => {

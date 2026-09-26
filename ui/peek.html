@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>定影截图</title>
+<style>
+  /* 全屏截图缩略图卡（Rust peek.rs 注入 __PEEK__）：body 深色兜底防 WebView2 白边（endbar 教训） */
+  html, body { margin: 0; height: 100%; background: #1D1D21; overflow: hidden; }
+  body {
+    font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    color: #F5F5F7;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+  }
+  #card { flex: 1; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,.14); }
+  #shot { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #000; display: block; }
+  #cap {
+    flex: none; display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 10px; background: #26262B; font-size: 12px;
+  }
+  #cap .dim { color: #9A9AA2; font-size: 11px; font-family: Consolas, monospace; }
+  #cap .hint { color: #8AB4FF; font-size: 10.5px; }
+  #cap .txt { display: flex; flex-direction: column; line-height: 1.35; }
+</style>
+</head>
+<body>
+  <div id="card" title="点击标注">
+    <img id="shot" alt="">
+    <div id="cap">
+      <div class="txt">
+        <span>截图成功 · 已复制</span>
+        <span class="hint">点击可编辑</span>
+      </div>
+      <span class="dim" id="dim"></span>
+    </div>
+  </div>
+<script>
+  // 数据来源：Rust 侧 eval 直灌 __peekApply（预驻留窗页面长驻已加载，eval 不受
+  // 遮挡节流影响——轮询在屏外待命数分钟后被 Chromium 节流到近乎停摆，曾致整卡死壳）。
+  let payload = null;
+  let busy = false;
+  window.__peekApply = function (d) {
+    payload = d;
+    busy = false;
+    document.getElementById("shot").src = d.img;
+    document.getElementById("dim").textContent = d.w + "×" + d.h;
+  };
+  document.body.addEventListener("mousedown", async () => {
+    if (!payload || busy) return;
+    busy = true;
+    try { await window.__TAURI__.core.invoke("annotate_open_file", { path: payload.path }); } catch (e) {}
+    try { await window.__TAURI__.core.invoke("peek_dismiss"); } catch (e) {} // 预驻留窗回屏外待命，不销毁
+  });
+  // 就绪握手：Rust 等此命令后才首次 eval（防页面未加载完成时注入丢失）
+  try { window.__TAURI__.core.invoke("peek_page_ready"); } catch (e) {}
+</script>
+</body>
+</html>

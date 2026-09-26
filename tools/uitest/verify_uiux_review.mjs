@@ -106,14 +106,15 @@ if (tplEmpty.rows === 0 && tplEmpty.emptyText) {
   console.log(`SKIP P3-2 空态文案（已有 ${tplEmpty.rows} 个模板，空态不可见；源码已改）`);
 }
 
-// ===== P2-2：能力卡语义统一（贴图=松手即贴）=====
+// ===== P2-2：能力卡键位（贴图已有全局热键 Alt+Shift+D；窗口卡已移除）=====
 await ev(`document.getElementById("btn-back-home").click()`);
 await sleep(300);
 const capPin = await ev(`(() => {
   const el = document.getElementById("cap-pin");
-  return { key: el.querySelector(".cap-key").textContent, title: el.title };
+  return { key: el.querySelector(".cap-key").textContent, title: el.title,
+           winGone: !document.getElementById("cap-window") };
 })()`);
-check("P2-2 贴图卡语义统一", capPin.key === "松手即贴" && capPin.title.includes("松手即贴"), JSON.stringify(capPin));
+check("P2-2 贴图卡键位", capPin.key === "Alt+Shift+D" && capPin.winGone, JSON.stringify(capPin));
 
 // ===== P2-1：查看全部 chevron =====
 const chev1 = await ev(`(() => {

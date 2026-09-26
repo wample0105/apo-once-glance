@@ -17,6 +17,12 @@ pub struct DeliverOutcome {
     /// 取字结果的字符数（action=ocr 时）。
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ocr_chars: Option<usize>,
+    /// 取字全文（action=ocr 且识别到文字时）——取景层结果面板就地显示。
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub ocr_text: String,
+    /// 取字状态：copied（已复制）| clipboard_busy（写入失败，面板给复制按钮兜底）| empty（未发现文字）。
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub ocr_status: String,
 }
 
 pub fn deliver_capture(
@@ -88,11 +94,13 @@ pub fn deliver_capture(
         width: bmp.width,
         height: bmp.height,
         ocr_chars: None,
+        ocr_text: String::new(),
+        ocr_status: String::new(),
     };
 
     match action {
         "ocr" => {
-            // §9：引擎异常重试 1 次 → 降级为仅复制图片（toast 已由错误路径处理）
+            // §9：引擎异常重试 1 次 → 仍失败则返回 Err（取景层面板显示错误，不再走角落 toast）
             let ocr_result = ocr::provider().recognize_png(&png).or_else(|_| ocr::provider().recognize_png(&png));
             match ocr_result {
                 Ok(r) => {
@@ -117,35 +125,27 @@ pub fn deliver_capture(
                     let status = if empty { "empty" } else { "done" };
                     history::update_ocr(&outcome.id, status, &r.full_text).ok();
                     if !empty {
-                        // CLP-2：不覆盖识别期间用户新写入的剪贴板
-                        let seq_before = clipboard::sequence_number();
+                        // CLP-2：不覆盖识别期间用户新写入的剪贴板（写入失败的兜底=面板「复制」按钮）
                         let text_clip = clipboard::ClipboardPayload {
                             png: None,
                             rgba: None,
                             files: vec![],
                             text: Some(r.full_text.clone()),
                         };
-                        if clipboard::write(&text_clip).is_ok() {
-                            let _ = seq_before;
-                            toast(app, "success", &format!("已复制 {chars} 字 · 本地完成"));
+                        outcome.ocr_text = r.full_text;
+                        outcome.ocr_status = if clipboard::write(&text_clip).is_ok() {
+                            "copied"
                         } else {
-                            toast(
-                                app,
-                                "warn",
-                                &format!(
-                                    "剪贴板已有新内容，文字已保存至 {}",
-                                    ocr_json.display()
-                                ),
-                            );
+                            "clipboard_busy"
                         }
+                        .into();
                         outcome.ocr_chars = Some(chars);
                     } else {
-                        toast(app, "success", "未发现文字 · 已复制图片");
+                        outcome.ocr_status = "empty".into(); // 图片已在剪贴板（clip_result 先行写入）
                     }
+                    // 反馈由取景层结果面板承接（与翻译/问图同一语言），角落 toast 不再发
                 }
-                Err(e) => {
-                    toast_error(app, &e);
-                }
+                Err(e) => return Err(e),
             }
         }
         _ => {
@@ -153,6 +153,9 @@ pub fn deliver_capture(
                 toast(app, "success", &format!("已保存 · {}", paths.png.display()));
             } else {
                 match clip_result {
+                    Ok(()) if kind == "fullscreen" => {
+                        // 全屏 GUI 反馈由「闪光+缩略图卡」承接（peek.rs），角落 toast 不再发
+                    }
                     Ok(()) => {
                         let msg = match kind {
                             "scroll" => "长截图已保存 · 本地完成",

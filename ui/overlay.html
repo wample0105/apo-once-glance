@@ -470,7 +470,18 @@
         <div id="ai-tr-actions" style="display:none; justify-content:flex-end; margin-bottom:4px;">
           <button id="ai-tr-retry" style="background:var(--accent); color:#fff; border:none; border-radius:8px; padding:5px 14px; font-size:12px; cursor:pointer;">重试</button>
         </div>
-        <div style="font-size:10.5px; color:var(--ov-fg-dim);">生成中点击浮层外可转入后台，完成后自动贴出</div>
+        <div style="font-size:10.5px; color:var(--ov-fg-dim);">生成中点击浮层外可转入后台，完成后自动复制</div>
+      </div>
+      <!-- 结果态（2026-09-26）：翻译/问图结果就地留在浮层内——看、复制、关闭闭环，不再贴出 -->
+      <div id="ai-result-body" style="display:none;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+          <span id="ai-result-title" style="flex:1; font-size:12.5px; font-weight:600; color:var(--ov-fg);"></span>
+          <button id="ai-result-copy" style="background:var(--ov-surface-2); color:var(--ov-fg); border:1px solid var(--ov-border); border-radius:8px; padding:4px 12px; font-size:11.5px; cursor:pointer;">复制</button>
+          <button id="ai-result-close" title="关闭（Esc）" style="background:transparent; color:var(--ov-fg-dim); border:none; border-radius:6px; padding:2px 8px; font-size:14px; cursor:pointer;">✕</button>
+        </div>
+        <div id="ai-result-q" style="display:none; font-size:11px; color:var(--ov-fg-dim); margin-bottom:6px; line-height:1.5;"></div>
+        <div id="ai-result-text" style="max-height:220px; overflow:auto; background:var(--ov-surface-2); border:1px solid var(--ov-border); border-radius:8px; padding:10px; font-size:12.5px; line-height:1.7; color:var(--ov-fg); white-space:pre-wrap; word-break:break-word;"></div>
+        <div id="ai-result-status" style="margin-top:6px; font-size:11.5px; color:#7BD8AE; min-height:16px;"></div>
       </div>
     </div>
     <div class="row" id="tb-props">

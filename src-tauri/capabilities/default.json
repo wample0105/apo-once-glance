@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "定影主面板 / 覆盖层 / toast / 贴图的默认权限",
-  "windows": ["main", "overlay", "toast", "onboarding", "quality", "endbar", "pin-*"],
+  "description": "定影主面板 / 覆盖层 / toast / 贴图 / 截图缩略图的默认权限",
+  "windows": ["main", "overlay", "toast", "onboarding", "quality", "endbar", "pin-*", "peek"],
   "permissions": [
     "core:default",
     "core:window:allow-minimize",

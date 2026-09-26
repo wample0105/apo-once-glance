@@ -19,6 +19,7 @@ mod detect;
 mod pin;
 mod deliver;
 pub mod ai;
+pub mod peek;
 pub mod scrollcmd;
 
 use deliver::DeliverOutcome;
@@ -453,7 +454,12 @@ fn run_capture_blocking(
                     .find(|m| cx >= m.rect.0 && cx < m.rect.0 + m.rect.2 && cy >= m.rect.1 && cy < m.rect.1 + m.rect.3)
                     .ok_or_else(|| once_core::OnceError::capture("未找到光标所在屏幕"))?;
                 let bmp = capture::capture_monitor(m.index)?;
-                deliver::deliver_capture(app, kind, action, &bmp, Some(m.index), None)
+                let outcome = deliver::deliver_capture(app, kind, action, &bmp, Some(m.index), None)?;
+                // 拍摄反馈（S1/T1/400ms，用户拍板）：闪光 + 全屏画面收缩飞入右下角卡位，
+                // 缩略图卡标注「截图成功 · 已复制 · 点击可编辑」——角落 toast 对全屏已抑制
+                crate::peek::flash_monitor(&m);
+                crate::peek::shrink_and_peek(app, &m, &bmp, &outcome);
+                Ok(outcome)
             }
             _ => Err(once_core::OnceError::usage("未知捕获类型")),
         }
@@ -498,7 +504,7 @@ impl DynamicImageExt {
     }
 }
 
-fn base64_encode(data: &[u8]) -> String {
+pub(crate) fn base64_encode(data: &[u8]) -> String {
     const TBL: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
     for chunk in data.chunks(3) {
@@ -531,8 +537,21 @@ fn get_settings() -> Result<serde_json::Value, String> {
     Ok(v)
 }
 
+/// 纯文本进剪贴板（AI 结果浮层的自动复制/复制按钮用）。
 #[tauri::command]
-fn set_setting(key: String, value: serde_json::Value) -> Result<Settings, String> {
+fn copy_text(text: String) -> Result<(), String> {
+    once_core::clipboard::write(&once_core::clipboard::ClipboardPayload {
+        png: None,
+        rgba: None,
+        files: vec![],
+        text: Some(text),
+    })
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_setting(app: AppHandle, key: String, value: serde_json::Value) -> Result<Settings, String> {
     settings::update(|s| {
         match key.as_str() {
             "agent_enabled" => s.agent_enabled = value.as_bool().unwrap_or(s.agent_enabled),
@@ -588,6 +607,13 @@ fn set_setting(key: String, value: serde_json::Value) -> Result<Settings, String
             }
             _ => {}
         };
+    })
+    .map(|s| {
+        // 设置页开关 → 托盘菜单即时回写（文案+勾选态），两个入口任一改动都同步
+        if key == "agent_enabled" {
+            sync_tray_agent(&app);
+        }
+        s
     })
     .map_err(|e| e.to_string())
 }
@@ -799,13 +825,8 @@ fn register_hotkeys(app: &AppHandle) -> Vec<(String, String)> {
                 let _ = show_overlay(app, "region", None);
             }),
         ),
-        (
-            "window",
-            &s.hotkeys.window,
-            Box::new(|app: &AppHandle| {
-                let _ = run_capture_blocking(app, "window", "copy");
-            }),
-        ),
+        // 窗口截图热键已移除（2026-09-26 用户裁定）：GUI 入口同步拆除，
+        // hotkeys.window 字段保留（serde 兼容旧配置），CLI capture window 不受影响
         (
             "fullscreen",
             &s.hotkeys.fullscreen,
@@ -834,6 +855,27 @@ fn register_hotkeys(app: &AppHandle) -> Vec<(String, String)> {
                 show_main(app);
             }),
         ),
+        (
+            "pin",
+            &s.hotkeys.pin,
+            Box::new(|app: &AppHandle| {
+                let _ = show_overlay(app, "region", Some("pin".into()));
+            }),
+        ),
+        (
+            "translate",
+            &s.hotkeys.translate,
+            Box::new(|app: &AppHandle| {
+                let _ = show_overlay(app, "region", Some("translate".into()));
+            }),
+        ),
+        (
+            "ask",
+            &s.hotkeys.ask,
+            Box::new(|app: &AppHandle| {
+                let _ = show_overlay(app, "region", Some("ask".into()));
+            }),
+        ),
     ];
     for (name, hk, handler) in bindings {
         let hk = hk.to_string();
@@ -860,22 +902,44 @@ pub fn show_main(app: &AppHandle) {
 
 fn tray_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     use tauri::menu::*;
+    // 与首页核心能力保持同一功能集（贴图/截图翻译/AI 问图 v0.2 起）；
+    // 窗口截图已从 GUI 移除（2026-09-26 用户裁定：与区域截图感知无差异；
+    // CLI 的 once capture window 属冻结契约，保留不受影响）
+    // 热键写法与全产品统一为 Alt+Shift+X
     let region = MenuItem::with_id(app, "region", "区域截图", true, Some("Alt+Shift+A"))?;
-    let window = MenuItem::with_id(app, "window", "窗口截图", true, Some("Alt+Shift+W"))?;
     let fullscreen = MenuItem::with_id(app, "fullscreen", "全屏截图", true, Some("Alt+Shift+F"))?;
     let ocr = MenuItem::with_id(app, "ocr", "自动取字", true, Some("Alt+Shift+T"))?;
     let scroll = MenuItem::with_id(app, "scroll", "长截图", true, Some("Alt+Shift+L"))?;
+    let pin = MenuItem::with_id(app, "pin", "贴图", true, Some(&settings::load().hotkeys.pin))?;
+    let translate = MenuItem::with_id(app, "translate", "截图翻译", true, Some(&settings::load().hotkeys.translate))?;
+    let ask = MenuItem::with_id(app, "ask", "AI 问图", true, Some(&settings::load().hotkeys.ask))?;
     let sep1 = PredefinedMenuItem::separator(app)?;
     let panel = MenuItem::with_id(app, "panel", "打开主面板", true, Some("Alt+Shift+H"))?;
-    let agent = CheckMenuItem::with_id(app, "agent", "AI 助手调用：允许", true, settings::load().agent_enabled, None::<&str>)?;
+    let agent_enabled = settings::load().agent_enabled;
+    let agent = CheckMenuItem::with_id(
+        app, "agent",
+        if agent_enabled { "AI 助手调用：允许" } else { "AI 助手调用：已切断" },
+        true, agent_enabled, None::<&str>,
+    )?;
     let sep2 = PredefinedMenuItem::separator(app)?;
     let settings_item = MenuItem::with_id(app, "settings", "设置…", true, None::<&str>)?;
     let diag = MenuItem::with_id(app, "doctor", "诊断", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
     Menu::with_items(
         app,
-        &[&region, &window, &fullscreen, &ocr, &scroll, &sep1, &panel, &agent, &sep2, &settings_item, &diag, &quit],
+        &[&region, &fullscreen, &ocr, &scroll, &pin, &translate, &ask,
+          &sep1, &panel, &agent, &sep2, &settings_item, &diag, &quit],
     )
+}
+
+/// 托盘「AI 助手调用」项与权限状态双向同步：菜单由当前设置整体重建（文案+勾选态一并刷新）。
+/// （此前文案写死「允许」，取消勾选后仍显示允许，误导用户——见 2026-09-26 反馈）
+fn sync_tray_agent(app: &AppHandle) {
+    if let Some(tray) = app.tray_by_id("main-tray") {
+        if let Ok(menu) = tray_menu(app) {
+            let _ = tray.set_menu(Some(menu));
+        }
+    }
 }
 
 fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
@@ -892,6 +956,16 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             "region" | "ocr" | "scroll" => {
                 let _ = show_overlay(app, event.id().as_ref(), None);
             }
+            // 与首页能力卡同款一步直达：框选松手自动执行（未配 AI 时取景层内出引导卡）
+            "pin" => {
+                let _ = show_overlay(app, "region", Some("pin".into()));
+            }
+            "translate" => {
+                let _ = show_overlay(app, "region", Some("translate".into()));
+            }
+            "ask" => {
+                let _ = show_overlay(app, "region", Some("ask".into()));
+            }
             "window" => {
                 let _ = run_capture_blocking(app, "window", "copy");
             }
@@ -900,8 +974,13 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             }
             "panel" | "settings" => show_main(app),
             "agent" => {
-                let cur = settings::load().agent_enabled;
-                let _ = settings::update(|s| s.agent_enabled = !cur);
+                let next = !settings::load().agent_enabled;
+                let _ = settings::update(|s| s.agent_enabled = next);
+                sync_tray_agent(app);
+                // 打开着的主面板即时回填（设置页开关/状态行此前不刷新，显示旧态）
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.emit("agent-permission-changed", next);
+                }
             }
             "doctor" => {
                 show_main(app);
@@ -951,6 +1030,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_overlay_kind,
             get_monitors,
+            copy_text,
+            peek::peek_page_ready,
+            peek::peek_dismiss,
             scrollcmd::scroll_start,
             scrollcmd::scroll_grab,
             scrollcmd::scroll_finish,
@@ -1101,7 +1183,10 @@ pub fn run() {
             {
                 let h2 = handle.clone();
                 std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_millis(600));
+                    // 截图缩略卡预驻留（屏外待命，消灭动画末帧期的点击穿透幻影）
+                    std::thread::sleep(std::time::Duration::from_millis(300));
+                    crate::peek::prewarm(&h2);
+                    std::thread::sleep(std::time::Duration::from_millis(300));
                     if !once_core::settings::load().onboarding_done {
                         let _ = open_onboarding(h2);
                     }
@@ -1115,6 +1200,16 @@ pub fn run() {
                     if sz.len() == 2 {
                         let _ = win.set_size(tauri::LogicalSize::new(sz[0], sz[1]));
                     }
+                }
+                // 尺寸恢复只改大小不改位置，窗口会从创建时的中心点向右下扩张——
+                // 启动一律重新居中（set_size 后调用才按新尺寸算）
+                let _ = win.center();
+                // 静默启动（业界共识：截图工具本体=热键+取景框+托盘）：主窗 conf 默认
+                // visible:false，仅首次运行弹主窗配合引导；之后启动只进托盘，
+                // Alt+Shift+H / 托盘「打开主面板」/ 二次启动（单实例激活）随时唤出
+                if !once_core::settings::load().onboarding_done {
+                    let _ = win.show();
+                    let _ = win.set_focus();
                 }
                 win.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -1138,7 +1233,7 @@ pub fn run() {
 /// 热键改键（SYS-2/3）：更新设置并整体重注册，返回冲突列表。
 #[tauri::command]
 fn set_hotkey(app: AppHandle, name: String, combo: String) -> Result<serde_json::Value, String> {
-    const VALID: &[&str] = &["region", "window", "fullscreen", "ocr", "scroll", "panel"];
+    const VALID: &[&str] = &["region", "window", "fullscreen", "ocr", "scroll", "panel", "pin", "translate", "ask"];
     if !VALID.contains(&name.as_str()) {
         return Err(format!("未知热键功能：{name}"));
     }
@@ -1161,6 +1256,9 @@ fn set_hotkey(app: AppHandle, name: String, combo: String) -> Result<serde_json:
         "ocr" => s.hotkeys.ocr = combo.clone(),
         "scroll" => s.hotkeys.scroll = combo.clone(),
         "panel" => s.hotkeys.panel = combo.clone(),
+        "pin" => s.hotkeys.pin = combo.clone(),
+        "translate" => s.hotkeys.translate = combo.clone(),
+        "ask" => s.hotkeys.ask = combo.clone(),
         _ => {}
     })
     .map_err(|e| e.to_string())?;

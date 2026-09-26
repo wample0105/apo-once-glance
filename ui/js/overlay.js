@@ -127,8 +127,7 @@ async function activate(payload) {
     stage.style.display = "none";
     cancelhint.style.display = "none";
     try {
-      const p = await invoke("annotate_file_payload");
-      if (p) { startAnnotateFromFile(p); return; }
+      const p = await invoke("annotate_file_payload");      if (p) { startAnnotateFromFile(p); return; }
     } catch (e) {}
     await closeOverlay();
     return;
@@ -160,6 +159,9 @@ async function activate(payload) {
   if (kind === "scroll") {
     cancelhint.textContent = "长截图：拖出滚动区域（只调上下边界）· Esc 取消";
   }
+  // H1：取字热键（Alt+Shift+T）松手即取字——与首页卡片路径同一 pendingAction 机制，
+  // 消除「卡片松手即执行、热键松手只进编辑态」的双入口行为分裂
+  if (kind === "ocr" && !pendingAction) pendingAction = "ocr";
   // 标注属性：默认值来自 settings.annotation（跟随主题记忆）
   try {
     const s = await invoke("get_settings");
@@ -2254,7 +2256,41 @@ async function output(action) {
       return; // 渲染失败不关覆盖层，避免看起来像输出成功
     }
   } else if (action === "ocr") {
-    await invoke("freeze_deliver", { ...rect, action: "ocr" });
+    // R1：识别期进度卡 + 结果就地面板（与翻译/问图同一语言），不再关取景层、不再角落 toast
+    aiPop.style.display = "block";
+    aiHideResult();
+    document.getElementById("ai-guide").style.display = "none";
+    document.getElementById("ai-ask-body").style.display = "none";
+    document.getElementById("ai-tr-body").style.display = "block";
+    document.getElementById("ai-tr-err").style.display = "none";
+    document.getElementById("ai-tr-actions").style.display = "none";
+    document.getElementById("ai-tr-lang").textContent = "";
+    aiEnterBusyTr("正在识别选区文字");
+    try {
+      const oc = await invoke("freeze_deliver", { ...rect, action: "ocr" });
+      aiBusyFlag = false;
+      if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
+      if (oc.ocr_status === "copied") {
+        if (aiPop.style.display !== "none") {
+          aiShowResult("ocr", oc.ocr_text, "", { statusText: `已复制 ${oc.ocr_chars} 字 · 本地完成` });
+        } else {
+          showToast(`✦ 识别完成 · 已复制 ${oc.ocr_chars} 字`); // B1：面板被收起=后台完成
+        }
+      } else if (oc.ocr_status === "clipboard_busy") {
+        aiShowResult("ocr", oc.ocr_text, "", { error: "剪贴板写入未确认——点「复制」重试" });
+      } else if (oc.ocr_status === "empty") {
+        aiShowResult("ocr", "", "", { statusText: "未发现文字 · 选区图片已复制", statusColor: "var(--ov-fg-dim)" });
+      } else {
+        aiShowResult("ocr", "", "", { error: String(oc.ocr_status || "识别失败") });
+      }
+      return; // 会话保持：Esc/✕ 收面板回选区，再 Esc 退出
+    } catch (e) {
+      aiBusyFlag = false;
+      if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
+      const msg = typeof e === "string" ? e : (e && e.message) || String(e);
+      aiShowResult("ocr", "", "", { error: "识别失败：" + msg });
+      return;
+    }
   } else if (action === "pin") {
     // 业界同款贴图：选区图是物理像素，scale=1 → 贴图原位原大覆盖选区；
     // pad=24 逻辑像素的物理值，给四边阴影留绘制区（窗口比图像大一圈）
@@ -2367,8 +2403,14 @@ window.addEventListener("keydown", (e) => {
     return;
   }
   if (k === "escape") {
-    // AI 生成中按 Esc：界面照常取消，但请求无法中断仍在后台——明说，避免「以为取消成功」
-    if (aiBusyFlag) showToast("✦ AI 生成仍在后台进行，完成后自动贴出");
+    // Esc 分层（C1）：AI 浮层（结果/进度/输入）开着 → 先关面板回选区编辑态，再 Esc 才退出截图
+    if (aiPop && aiPop.style.display !== "none") {
+      aiPop.style.display = "none";
+      if (aiBusyFlag) showToast("✦ AI 生成仍在后台进行，完成后自动处理");
+      return;
+    }
+    // AI 生成中（面板已收起=后台）按 Esc：请求无法中断仍在后台——明说，避免「以为取消成功」
+    if (aiBusyFlag) showToast("✦ AI 生成仍在后台进行，完成后自动处理");
     cancelAll(); return;
   }
   if (k === "delete" || k === "backspace") {
@@ -2668,9 +2710,19 @@ const aiBtnTranslate = document.getElementById("tb-ai-translate");
 const aiBtnAsk = document.getElementById("tb-ai-ask");
 let aiBusyFlag = false;
 let aiTimer = null;
+let aiResult = null; // 后台完成后的未读结果 { kind, text, meta }——点对应 AI 按钮查看
+let aiShownText = ""; // 结果面板当前展示的文本（复制按钮用）
 
-aiBtnTranslate.addEventListener("click", () => aiTranslateRun());
-aiBtnAsk.addEventListener("click", () => { if (!aiBusyFlag) aiOpenAsk(); });
+aiBtnTranslate.addEventListener("click", () => {
+  if (aiBusyFlag) return;
+  if (aiResult && aiResult.kind === "translate") { const r = aiResult; aiResult = null; aiShowResult(r.kind, r.text, r.meta, {}); return; }
+  aiTranslateRun();
+});
+aiBtnAsk.addEventListener("click", () => {
+  if (aiBusyFlag) return;
+  if (aiResult && aiResult.kind === "ask") { const r = aiResult; aiResult = null; aiShowResult(r.kind, r.text, r.meta, {}); return; }
+  aiOpenAsk();
+});
 
 // 点击工具条其他位置收起 AI 浮层（浮层内部点击不受影响——同在 #toolbar 内受分发器保护）。
 // 生成中收起 = 转入后台：请求继续，完成后照常贴出（提示一句话，用户随时可以走开）。
@@ -2679,7 +2731,7 @@ document.getElementById("toolbar").addEventListener("mousedown", (e) => {
   if (e.target.closest("#tb-ai-translate") || e.target.closest("#tb-ai-ask") || e.target.closest("#ai-pop")) return;
   if (aiPop && aiPop.style.display !== "none") {
     aiPop.style.display = "none";
-    if (aiBusyFlag) showToast("✦ 已转入后台，生成完成后自动贴出");
+    if (aiBusyFlag) showToast("✦ 已转入后台，完成后自动处理");
   }
 });
 // 覆盖层每次退场（park）后复位 AI 界面状态
@@ -2687,6 +2739,7 @@ window.__TAURI__.event.listen("overlay-cleared", () => {
   if (aiPop) aiPop.style.display = "none";
   aiExitBusy();
   aiBusyFlag = false;
+  aiResult = null;
 });
 
 // 预置问图指令（与 once-core BUILTIN_PROMPTS 保持一致）
@@ -2704,15 +2757,25 @@ async function aiConfigured() {
   } catch (e) { return false; }
 }
 
+// 任何 AI 面板切换（引导/问图输入/翻译进度）都必须先收起上一轮的结果面板——
+// 否则旧译文叠在新会话上（用户实测：点翻译还留着上一次的内容）
+function aiHideResult() {
+  const b = document.getElementById("ai-result-body");
+  if (b) b.style.display = "none";
+}
+
 function aiShowGuide() {
   aiPop.style.display = "block";
+  aiHideResult();
   document.getElementById("ai-guide").style.display = "block";
   document.getElementById("ai-ask-body").style.display = "none";
+  document.getElementById("ai-tr-body").style.display = "none";
 }
 
 async function aiOpenAsk() {
   if (!(await aiConfigured())) { aiShowGuide(); return; }
   aiPop.style.display = "block";
+  aiHideResult();
   document.getElementById("ai-guide").style.display = "none";
   document.getElementById("ai-tr-body").style.display = "none";
   document.getElementById("ai-ask-body").style.display = "block";
@@ -2754,6 +2817,7 @@ async function aiTranslateRun() {
   if (aiBusyFlag) return;
   if (!(await aiConfigured())) { aiShowGuide(); return; }
   aiPop.style.display = "block";
+  aiHideResult();
   document.getElementById("ai-guide").style.display = "none";
   document.getElementById("ai-ask-body").style.display = "none";
   document.getElementById("ai-tr-body").style.display = "block";
@@ -2812,16 +2876,16 @@ function aiExitBusy() {
   if (trSpin) trSpin.style.display = "none";
 }
 
-// 翻译执行态（浮层已在 aiTranslateRun 切到 tr-body）：spinner + 已等待秒数递增
-function aiEnterBusyTr() {
+// 翻译/识别执行态（浮层已在对应入口切到 tr-body）：spinner + 已等待秒数递增
+function aiEnterBusyTr(label = "正在翻译选区文字") {
   aiBusyFlag = true;
   document.getElementById("ai-tr-spin").style.display = "inline-block";
   const status = document.getElementById("ai-tr-status");
   status.style.color = "";
   const t0 = Date.now();
-  status.textContent = "正在翻译选区文字 · 0s";
+  status.textContent = label + " · 0s";
   aiTimer = setInterval(() => {
-    status.textContent = "正在翻译选区文字 · " + Math.round((Date.now() - t0) / 1000) + "s";
+    status.textContent = label + " · " + Math.round((Date.now() - t0) / 1000) + "s";
   }, 1000);
 }
 
@@ -2834,11 +2898,27 @@ async function aiRun(kind, question) {
     const r = kind === "translate"
       ? await invoke("ai_translate_region", rect)
       : await invoke("ai_ask_region", { ...rect, question });
-    // 成功：先关取景层，结果以贴图原位浮出（不写截图历史；调用已入审计）
-    await closeOverlay();
-    await invoke("pin_create_ai", { text: r.text, metaLine: r.meta, x: rect.x, y: rect.y, dpr: dprV });
+    // 成功（C1/D1/A1）：结果就地留在浮层内——不再关取景层、不再贴出。
+    // 翻译=自动复制+面板标注「已复制」（A1）；问图=面板展示+手动复制（要读的内容）
     aiBusyFlag = false;
     if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
+    if (aiPop.style.display !== "none") {
+      if (kind === "translate") {
+        const ok = await copyText(r.text);
+        aiShowResult(kind, r.text, r.meta, { copied: ok, error: ok ? "" : "复制失败，点「复制」重试", question: "" });
+      } else {
+        aiShowResult(kind, r.text, r.meta, { question });
+      }
+    } else {
+      // 后台完成（B1）：译文自动进剪贴板+toast；问图提示回浮层查看（点按钮显示未读结果）
+      aiResult = { kind, text: r.text, meta: r.meta };
+      if (kind === "translate") {
+        await copyText(r.text);
+        showToast("✦ 翻译完成 · 已复制 " + r.text.length + " 字");
+      } else {
+        showToast("✦ 问图完成 · 点工具栏「问图」查看答案");
+      }
+    }
   } catch (e) {
     aiBusyFlag = false;
     if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
@@ -2872,13 +2952,79 @@ async function aiRun(kind, question) {
   }
 }
 
+// 结果面板（C1/D1）：翻译/问图结果就地渲染——看、复制、关闭，生命周期在浮层内闭环。
+// 翻译纯文本 pre-wrap；问图走轻量 Markdown（先转义再渲染，杜绝注入）。
+function aiRenderMd(text) {
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const inline = (s) => s
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,.08);border-radius:4px;padding:1px 4px;">$1</code>');
+  const lines = esc(text).split(/\r?\n/);
+  let html = "", inUl = false;
+  for (const ln of lines) {
+    const t = ln.trimEnd();
+    const li = t.match(/^\s*[-*]\s+(.*)$/);
+    const ol = t.match(/^\s*\d+[.、]\s+(.*)$/);
+    const hd = t.match(/^#{1,4}\s+(.*)$/);
+    if (li) {
+      if (!inUl) { html += "<ul style='margin:4px 0;padding-left:18px;'>"; inUl = true; }
+      html += "<li>" + inline(li[1]) + "</li>"; continue;
+    }
+    if (inUl) { html += "</ul>"; inUl = false; }
+    if (hd) { html += "<div style='font-weight:600;margin:8px 0 4px;'>" + inline(hd[1]) + "</div>"; continue; }
+    if (ol) { html += "<div style='margin:2px 0;'>" + inline(t) + "</div>"; continue; }
+    if (!t) { html += "<div style='height:6px'></div>"; continue; }
+    html += "<div style='margin:2px 0;'>" + inline(t) + "</div>";
+  }
+  if (inUl) html += "</ul>";
+  return html;
+}
+
+async function copyText(t) {
+  try { await invoke("copy_text", { text: t }); return true; } catch (e) { return false; }
+}
+
+function aiShowResult(kind, text, meta, opts = {}) {
+  aiShownText = text;
+  aiPop.style.display = "block";
+  aiHideResult();
+  document.getElementById("ai-guide").style.display = "none";
+  document.getElementById("ai-ask-body").style.display = "none";
+  document.getElementById("ai-tr-body").style.display = "none";
+  document.getElementById("ai-result-body").style.display = "block";
+  document.getElementById("ai-result-title").textContent =
+    kind === "translate" ? "译文" : kind === "ocr" ? "识别结果" : "回答";
+  const q = document.getElementById("ai-result-q");
+  if (kind === "ask" && opts.question) { q.style.display = "block"; q.textContent = "问：" + opts.question; }
+  else q.style.display = "none";
+  const box = document.getElementById("ai-result-text");
+  box.style.display = text ? "" : "none";
+  if (kind === "ask") box.innerHTML = aiRenderMd(text); else box.textContent = text;
+  const st = document.getElementById("ai-result-status");
+  if (opts.statusText) { st.style.color = opts.statusColor || "#7BD8AE"; st.textContent = opts.statusText; }
+  else if (opts.copied) { st.style.color = "#7BD8AE"; st.textContent = "已复制 · 本地完成"; }
+  else if (opts.error) { st.style.color = "#FF9187"; st.textContent = opts.error; }
+  else { st.style.color = "var(--ov-fg-dim)"; st.textContent = meta || ""; }
+}
+
+document.getElementById("ai-result-copy").addEventListener("click", async (e) => {
+  e.stopPropagation();
+  const st = document.getElementById("ai-result-status");
+  const ok = await copyText(aiShownText);
+  st.style.color = ok ? "#7BD8AE" : "#FF9187";
+  st.textContent = ok ? "已复制" : "复制失败，请重试";
+});
+document.getElementById("ai-result-close").addEventListener("click", () => {
+  aiPop.style.display = "none"; // C1：只关面板，回选区编辑态；再 Esc 才退出截图
+});
+
 // 问图浮层键盘：Enter 发送 / Shift+Enter 换行 / Esc 收起（INPUT/TEXTAREA 本就被全局热键过滤）。
-// 生成中 Esc = 转入后台而非取消（请求无法中断，收起后完成后仍会贴出）。
+// 生成中 Esc = 转入后台而非取消（请求无法中断，收起后完成后自动处理）。
 document.getElementById("ai-q").addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     e.stopPropagation();
     aiPop.style.display = "none";
-    if (aiBusyFlag) showToast("✦ 已转入后台，生成完成后自动贴出");
+    if (aiBusyFlag) showToast("✦ 已转入后台，完成后自动处理");
   }
   else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); aiSend(); }
 });

@@ -112,22 +112,27 @@ const busy1 = await evOf(c1, `(function(){
 check("松手自动执行：翻译浮层执行态", busy1.trShown === true && busy1.spin === "inline-block", JSON.stringify(busy1));
 check("预绑定动作已消费（一次性）", busy1.consumed === true);
 await shotOf(c1, "p2-direct-tr-busy");
-// 等结果贴图（真 Key 全链路）
-let pinId = null;
+// 等结果面板（真 Key 全链路；2026-09-26 起结果就地留在浮层内，不再贴出）
+let res = null;
 for (let i = 0; i < 150; i++) {
   await sleep(500);
-  pinId = await mEv(`window.__TAURI__.core.invoke("pin_list")`).then((l) => {
-    const ai = (l || []).filter((p) => p.kind === "ai");
-    return ai.length ? ai[ai.length - 1].id : null;
-  }).catch(() => null);
-  if (pinId) break;
+  res = await evOf(c1, `(function(){
+    const b = document.getElementById("ai-result-body");
+    if (!b || b.style.display !== "block") return null;
+    return { text: document.getElementById("ai-result-text").textContent,
+             status: document.getElementById("ai-result-status").textContent,
+             pop: document.getElementById("ai-pop").style.display };
+  })()`).catch(() => null);
+  if (res && res.text) break;
 }
-check("翻译直达：结果贴图贴出", Boolean(pinId), `pin=${pinId}`);
+check("翻译直达：结果就地留在浮层", Boolean(res && res.text), res ? `len=${res.text.length}` : "no-result");
+check("翻译完成自动复制标注", Boolean(res && res.status.includes("已复制")), res ? res.status : "");
+const aiPins = await mEv(`window.__TAURI__.core.invoke("pin_list")`).then((l) => (l || []).filter((p) => p.kind === "ai").length).catch(() => -1);
+check("不再产生 AI 结果贴图", aiPins === 0, `pins=${aiPins}`);
 await sleep(800);
 const trNow = ((await mEv(`window.__TAURI__.core.invoke("read_audit", { limit: 60 })`)) || []).filter((a) => a.command === "ai.translate").length;
 check("审计 ai.translate +1", trNow - trBase === 1, `基线${trBase} → ${trNow}`);
-if (pinId) await mEv(`window.__TAURI__.core.invoke("pin_close", { id: ${pinId} })`);
-// 会话已被成功路径关闭（closeOverlay）；若残留则关掉
+// 会话保持打开（C1：结果面板关闭后回选区态）；若残留则关掉
 await ensureClosed();
 
 // ---------- 场景 2：首页点「AI 问图」→ 松手自动弹输入浮层 ----------
@@ -139,9 +144,11 @@ await dragOn(c2, 90, 60, 620, 320);
 await sleep(400);
 const busy2 = await evOf(c2, `(function(){
   return { pop: document.getElementById("ai-pop").style.display,
-           ask: document.getElementById("ai-ask-body").style.display };
+           ask: document.getElementById("ai-ask-body").style.display,
+           staleResult: document.getElementById("ai-result-body").style.display };
 })()`);
 check("松手自动执行：问图输入浮层弹出", busy2.pop === "block" && busy2.ask === "block", JSON.stringify(busy2));
+check("上一轮结果面板已收起（不残留旧内容）", busy2.staleResult !== "block", JSON.stringify(busy2));
 await shotOf(c2, "p2-direct-ask-pop");
 await escSession(c2);
 

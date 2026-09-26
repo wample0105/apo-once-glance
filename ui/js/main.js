@@ -84,14 +84,47 @@ $("#act-region").onclick = () => invoke("start_overlay", { kind: "region" }).cat
 $("#card-agent").onclick = () => document.querySelector('.nav-item[data-page="agent"]').click();
 $("#card-ai").onclick = () => document.querySelector('.nav-item[data-page="ai"]').click();
 // 核心能力速览行：全部一步直达（点击→框选→松手即得结果；action 经 payload 预绑定）
-// 未配 Key 的 AI 能力自然落入取景层引导卡；窗口截图=点选窗口即复制
-$("#cap-window").onclick = () => invoke("start_overlay", { kind: "window" }).catch(reportErr);
+// 未配 Key 的 AI 能力自然落入取景层引导卡
 $("#cap-ocr").onclick = () => invoke("start_overlay", { kind: "region", action: "ocr" }).catch(reportErr);
 $("#cap-scroll").onclick = () => invoke("start_overlay", { kind: "scroll" }).catch(reportErr);
 $("#cap-pin").onclick = () => invoke("start_overlay", { kind: "region", action: "pin" }).catch(reportErr);
 // AI 两卡一步直达：点击框选，松手自动执行（ai_action 经 payload 传给取景层；未配 Key 走取景层引导）
 $("#cap-translate").onclick = () => invoke("start_overlay", { kind: "region", action: "translate" }).catch(reportErr);
 $("#cap-ask").onclick = () => invoke("start_overlay", { kind: "region", action: "ask" }).catch(reportErr);
+
+// 效率态动作条（与能力卡同款直达语义：点击即框选执行）+ 状态行入口
+const STRIP_ACTIONS = [
+  ["strip-region", { kind: "region" }],
+  ["strip-ocr", { kind: "region", action: "ocr" }],
+  ["strip-scroll", { kind: "scroll" }],
+  ["strip-pin", { kind: "region", action: "pin" }],
+  ["strip-translate", { kind: "region", action: "translate" }],
+  ["strip-ask", { kind: "region", action: "ask" }],
+];
+for (const [id, payload] of STRIP_ACTIONS) {
+  const el = document.getElementById(id);
+  if (el) el.onclick = () => invoke("start_overlay", payload).catch(reportErr);
+}
+$("#strip-ai").onclick = () => document.querySelector('.nav-item[data-page="ai"]').click();
+$("#strip-agent").onclick = () => document.querySelector('.nav-item[data-page="agent"]').click();
+
+// 首页双态切换：有历史=效率态（动作条+状态行，最近截图为主内容）；无历史=引导态（三卡+能力速览）
+function syncHomeMode(hasShots) {
+  const g = $("#home-guide"), e = $("#home-eff");
+  if (g) g.style.display = hasShots ? "none" : "";
+  if (e) e.style.display = hasShots ? "" : "none";
+}
+
+// 状态行·AI 助手 chip（权限态轻提示；详情在 AI 助手页管理）
+async function refreshAgentChip() {
+  const chip = $("#strip-agent");
+  if (!chip) return;
+  try {
+    const s = await invoke("get_settings");
+    $("#strip-agent-text").textContent = s.agent_enabled ? "AI 助手 · 允许调用" : "AI 助手 · 已切断";
+    chip.className = "statchip " + (s.agent_enabled ? "ok" : "warn");
+  } catch (e) { /* 不阻塞首页 */ }
+}
 
 // 注册中心事件委托（轻量补丁会替换按钮节点，委托才不会丢事件）
 $("#agent-reg").addEventListener("click", async (e) => {
@@ -204,14 +237,23 @@ async function refreshAiCard() {
       chip.textContent = "部分就绪";
       chip.classList.remove("ready");
     }
+    // 效率态状态行同步（chip 不存在=引导态 DOM 缺失，跳过）
+    const aiChip = $("#strip-ai");
+    if (aiChip) {
+      const anyKey = list.some((p) => p.has_key);
+      $("#strip-ai-text").textContent = textOk && visionOk ? "AI 已就绪" : anyKey ? "AI 部分就绪" : "AI 未配置";
+      aiChip.className = "statchip " + (textOk && visionOk ? "ok" : anyKey ? "warn" : "");
+    }
   } catch (e) { /* AI 后端异常不阻塞首页 */ }
 }
 
 // 首页“最近截图”横排（8 张，业界同款动作导向下的记录速达）
 async function loadRecent() {
   refreshAiCard();
+  refreshAgentChip();
   try {
     const rows = await invoke("list_history", { query: "", limit: 8 });
+    syncHomeMode(rows.length > 0);
     const list = $("#recent-strip");
     if (!rows.length) {
       list.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">还没有截图</div>按 Alt+Shift+A 试一次</div>`;
@@ -397,8 +439,9 @@ async function loadSettingsUI() {
   // 快捷键展示 + 录制（SYS-2/3：点击 chip 录制，Esc 退出不改动，冲突即时反馈）
   const hk = s.hotkeys;
   const rows = [
-    ["region", "区域截图", hk.region], ["window", "窗口截图", hk.window], ["fullscreen", "全屏截图", hk.fullscreen],
+    ["region", "区域截图", hk.region], ["fullscreen", "全屏截图", hk.fullscreen],
     ["ocr", "自动取字", hk.ocr], ["scroll", "长截图", hk.scroll], ["panel", "打开主面板", hk.panel],
+    ["pin", "贴图", hk.pin], ["translate", "截图翻译", hk.translate], ["ask", "AI 问图", hk.ask],
   ];
   $("#hotkey-rows").innerHTML = rows.map(([id, n, k]) =>
     `<div class="row hotkeyrow"><div class="label"><div class="t">${n}</div></div>
@@ -1049,6 +1092,12 @@ event.listen("nav-to", (e) => {
   const page = e.payload;
   const btn = document.querySelector(`.nav-item[data-page="${page}"]`);
   if (btn) btn.click();
+});
+// 托盘「AI 助手调用」勾选变化：设置页开关/状态行与首页状态 chip 即时回填
+// （此前只在落盘、页面不刷新，显示旧态误导用户）
+event.listen("agent-permission-changed", () => {
+  loadSettingsUI().catch(() => {});
+  refreshAgentChip().catch(() => {});
 });
 event.listen("toast-shown", () => refreshHistory());
 // 主面板从托盘/后台回到前台：标注默认值重拉一次（截图时改了工具属性，回来即见最新值）
