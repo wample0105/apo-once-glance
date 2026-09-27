@@ -2,7 +2,7 @@
   "name": "onceglance",
   "private": true,
   "version": "0.1.0",
-  "description": "定影 Onceglance · AI 原生截图工具（Agent 视觉层）",
+  "description": "定影 Onceglance · AI 原生截图工具（截图翻译 / AI 问图 / Agent 视觉层）",
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",

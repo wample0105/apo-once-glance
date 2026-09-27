@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <b>让 Agent 看见你的屏幕，替你把操作变成教程。</b><br />
+  <b>让 AI 替你看屏幕，把重点直接标给你看。</b><br />
   AI 原生截图工具 · Windows 优先 · 本地优先 · 零遥测
 </p>
 
@@ -22,7 +22,7 @@
 
 ---
 
-**定影 Onceglance** 是一款 AI 原生的 Windows 截图工具：任何支持 MCP 或 Shell 的 Agent（Claude、Codex、Cursor 等）都可以通过标准化接口，完成「截屏 → 取字 → 标注 → 落盘」的完整感知链路。对人，它是键盘手感极佳的截图+贴图工具；对 Agent，它是本机视觉能力的标准出口。
+**定影 Onceglance** 是一款 AI 原生的 Windows 截图工具。对 Agent（Claude、Codex、Cursor 等），它是本机视觉能力的标准出口——通过 MCP 或 Shell 完成「截屏 → 取字 → 标注 → 落盘」的完整感知链路；对人，它是键盘手感极佳的截图+贴图工具，并自带截图翻译与 AI 问图（BYOK，Key 只存本机凭据管理器）。
 
 - **本地优先**：普通功能全部在本机完成、零遥测；AI 增强（可选）自带 Key——Key 加密存于系统凭据管理器，只有你主动触发才发送截图，调用全程入审计日志；
 - **三端同源**：GUI、CLI、MCP 共享同一内核，装一次客户端，三种用法；
@@ -33,9 +33,10 @@
 - **📸 智能截图**：区域框选（窗口/控件自动识别高亮）、窗口截图、全屏、多显示器物理像素支持；冻结式取景层预驻留，热键到蒙版 ~44ms。
 - **🖍️ 专业标注**：覆盖层直接画——箭头/矩形/椭圆/序号/文字/高亮/马赛克/裁剪，8 个键盘快捷键 + 撤销；保存走确定性渲染引擎，衍生图永不覆盖原图。
 - **🔤 本地 OCR**：Windows.Media.Ocr 引擎离线取字，输出文字块 + 坐标框 + 置信度；主面板内 OCR 结果与原图坐标联动。
+- **🌐 AI 增强（BYOK）**：截图翻译（框选松手即译）、AI 问图（框选提问，Markdown 回答）；Key 加密存于系统凭据管理器，只有你主动触发才发送截图，调用入审计日志。
 - **📜 长截图**：框选松手即采、滚轮穿透采集（帧稳定检测消除动画重影）、自动接缝拼接、到底提示、接缝质检页。
 - **📌 贴图**：截图原位贴回屏幕，支持拖动、滚轮缩放、透明度调节。
-- **🤖 Agent 能力**：CLI `once` 全命令 JSON 输出 + stdio MCP Server；标注属性全量继承客户端主题记忆，Agent 未显式传参即继承。
+- **🤖 Agent 能力**：CLI `once` 全命令 JSON 输出（含 `translate` / `ask`）+ stdio MCP Server（9 个工具）；标注属性全量继承客户端主题记忆，Agent 未显式传参即继承。
 - **🛡️ 隐私防线**：Agent 总开关 + 无感自动截图开关 + 隐私 App 黑名单（密码管理器/银行类命中即拒，无「本次放行」）+ 元数据审计日志（30 天自动清理）。
 
 ## 🚀 安装
@@ -57,7 +58,7 @@ curl -fsSL --retry 3 https://github.com/wample0105/apo-once-glance/releases/late
 
 ### 3. MCP 接入（推荐在客户端内一键完成）
 
-打开客户端「Agent」页 → 对 Claude Desktop / Claude Code / Cursor / Codex / ZCode 等点击「一键接入」，自动写入 MCP 配置（写入前自动备份原配置）。也可以手动把 `once mcp` 加进你的 MCP 配置。
+打开客户端「AI 助手」页 → 对 Claude Desktop / Claude Code / Cursor / Codex / ZCode 等点击「一键接入」，自动写入 MCP 配置（写入前自动备份原配置）。也可以手动把 `once mcp` 加进你的 MCP 配置。
 
 ## 📝 使用方法
 
@@ -66,18 +67,22 @@ curl -fsSL --retry 3 https://github.com/wample0105/apo-once-glance/releases/late
 | 快捷键 | 功能 |
 |--------|------|
 | `Alt+Shift+A` | 区域截图 |
-| `Alt+Shift+W` | 窗口截图 |
 | `Alt+Shift+F` | 全屏截图 |
 | `Alt+Shift+T` | 自动取字 |
 | `Alt+Shift+L` | 长截图 |
+| `Alt+Shift+D` | 贴图 |
+| `Alt+Shift+Y` | 截图翻译 |
+| `Alt+Shift+Q` | AI 问图 |
 | `Alt+Shift+H` | 打开主面板 |
 
 ### 命令行（给 Agent 用）
 
 ```bash
-once status                  # 实例/落盘/OCR/热键状态
+once status                  # 实例/AI/落盘/OCR/热键状态
 once capture window --json   # 截前台窗口
 once ocr last --json         # 取字：文字块 + 坐标
+once translate last --json   # 截图翻译：本地 OCR → 云端译文
+once ask last --question "图中有什么" --json   # AI 问图
 once annotate last --script s.json --out r.png   # 指令驱动标注
 once history --query "kind:window after:昨天"     # 历史检索
 once mcp                     # stdio MCP Server
@@ -85,7 +90,7 @@ once mcp                     # stdio MCP Server
 
 全部命令输出统一 JSON envelope（`{ok, data, error, meta}`），退出码冻结：`0` 成功 / `1` 参数 / `2` 捕获 / `3` OCR / `4` 读写 / `5` 权限 / `6` 黑名单。
 
-MCP 工具：`capture_screen` / `ocr_image` / `annotate_image` / `list_history` / `doctor`。
+MCP 工具：`capture_screen` / `scroll_capture` / `ocr_image` / `translate_image` / `translate_text` / `ask_image` / `annotate_image` / `list_history` / `doctor`。
 
 ## ❓ 常见问题
 
@@ -102,7 +107,7 @@ MCP 工具：`capture_screen` / `ocr_image` / `annotate_image` / `list_history` 
 
 1. 客户端：退出托盘程序，删除程序目录；落盘图片在 `图片\Onceglance`，按需保留。
 2. CLI：删除 `~/.onceglance` 目录。
-3. MCP 配置：在客户端「Agent」页对已接入的客户端点击「移除」。
+3. MCP 配置：在客户端「AI 助手」页对已接入的客户端点击「移除」。
 
 ## ☕ 关注与交流
 

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <b>Let AI agents see your screen, and turn your workflow into tutorials.</b><br />
+  <b>Let AI watch your screen — and mark up the key points for you.</b><br />
   AI-native screenshot tool · Windows-first · Local-first · No Telemetry
 </p>
 
@@ -22,7 +22,7 @@
 
 ---
 
-**Onceglance** is an AI-native screenshot tool for Windows: any agent that speaks MCP or shell (Claude, Codex, Cursor, etc.) can complete the full perception pipeline — *capture → OCR → annotate → persist* — through standardized interfaces. For humans, it is a keyboard-friendly screenshot & pin tool; for agents, it is the standard gateway to your machine's visual capabilities.
+**Onceglance** is an AI-native screenshot tool for Windows. For agents (Claude, Codex, Cursor, etc.), it is the standard gateway to your machine's visual capabilities — the full perception pipeline of *capture → OCR → annotate → persist* over MCP or shell. For humans, it is a keyboard-friendly screenshot & pin tool with built-in screenshot translation and ask-the-image AI (BYOK — keys stay in the OS credential store).
 
 - **Local-first**: everyday features run entirely on-device, with zero telemetry. Optional AI enhancement is bring-your-own-key — keys are encrypted in the OS credential store, screenshots are only sent when you explicitly trigger it, and every call lands in the audit log.
 - **One core, three frontends**: GUI, CLI and MCP share the same kernel — install once, use it three ways.
@@ -33,9 +33,10 @@
 - **📸 Smart capture**: region selection with automatic window/widget detection, window & fullscreen capture, multi-monitor physical-pixel support. Resident viewfinder overlay: ~44ms from hotkey to dimmed screen.
 - **🖍️ Pro annotation**: draw directly on the frozen screen — arrow / rectangle / ellipse / numbered step / text / highlight / mosaic / crop, with 8 keyboard shortcuts and undo. Saves go through a deterministic renderer; derived images never overwrite the original.
 - **🔤 On-device OCR**: Windows.Media.Ocr engine, fully offline. Returns text blocks with bounding boxes and confidence; OCR results are linked to image coordinates in the main panel.
+- **🌐 AI enhancement (BYOK)**: screenshot translation (frame & release to translate) and ask-the-image (frame & ask, Markdown answers); keys are encrypted in the OS credential store, screenshots are only sent when you explicitly trigger it, and every call lands in the audit log.
 - **📜 Scrolling capture**: release-to-capture, scroll-through collection with frame-stability detection, automatic stitch seam QA page.
 - **📌 Pin to screen**: pin captures back onto the screen with drag, wheel zoom and opacity control.
-- **🤖 Agent-ready**: `once` CLI with JSON output on every command + stdio MCP Server. Annotation parameters inherit the theme remembered by the GUI client whenever the agent doesn't pass explicit values.
+- **🤖 Agent-ready**: `once` CLI with JSON output on every command (including `translate` / `ask`) + stdio MCP Server with 9 tools. Annotation parameters inherit the theme remembered by the GUI client whenever the agent doesn't pass explicit values.
 - **🛡️ Privacy guardrails**: agent master switch + silent-capture switch + privacy app blocklist (password managers & banking apps are rejected on hit — no "allow once") + metadata-only audit log (auto-cleaned after 30 days).
 
 ## 🚀 Installation
@@ -56,7 +57,7 @@ Downloads the platform-specific `once` CLI with SHA-256 verification into `~/.on
 
 ### 3. MCP integration (one-click from the client)
 
-Open the client's **Agent** page → click "Connect" for Claude Desktop / Claude Code / Cursor / Codex / ZCode, etc. The MCP config is written automatically (original files are backed up first). You can also add `once mcp` to your MCP config manually.
+Open the client's **AI Assistants** page → click "Connect" for Claude Desktop / Claude Code / Cursor / Codex / ZCode, etc. The MCP config is written automatically (original files are backed up first). You can also add `once mcp` to your MCP config manually.
 
 ## 📝 Usage
 
@@ -65,18 +66,22 @@ Open the client's **Agent** page → click "Connect" for Claude Desktop / Claude
 | Shortcut | Action |
 |----------|--------|
 | `Alt+Shift+A` | Region capture |
-| `Alt+Shift+W` | Window capture |
 | `Alt+Shift+F` | Fullscreen capture |
 | `Alt+Shift+T` | OCR |
 | `Alt+Shift+L` | Scrolling capture |
+| `Alt+Shift+D` | Pin to screen |
+| `Alt+Shift+Y` | Screenshot translation |
+| `Alt+Shift+Q` | Ask the image (AI) |
 | `Alt+Shift+H` | Open main panel |
 
 ### Command line (for agents)
 
 ```bash
-once status                  # instance / storage / OCR / hotkey status
+once status                  # instance / AI / storage / OCR / hotkey status
 once capture window --json   # capture foreground window
 once ocr last --json         # OCR: text blocks + bounding boxes
+once translate last --json   # screenshot translation: on-device OCR → cloud translation
+once ask last --question "what's in this image" --json   # ask the image (AI)
 once annotate last --script s.json --out r.png   # instruction-driven annotation
 once history --query "kind:window"               # search history
 once mcp                     # stdio MCP server
@@ -84,7 +89,7 @@ once mcp                     # stdio MCP server
 
 Every command prints a unified JSON envelope (`{ok, data, error, meta}`). Exit codes are frozen: `0` success / `1` usage / `2` capture / `3` OCR / `4` IO / `5` permission / `6` blocklist.
 
-MCP tools: `capture_screen` / `ocr_image` / `annotate_image` / `list_history` / `doctor`.
+MCP tools: `capture_screen` / `scroll_capture` / `ocr_image` / `translate_image` / `translate_text` / `ask_image` / `annotate_image` / `list_history` / `doctor`.
 
 ## ❓ FAQ
 
@@ -101,7 +106,7 @@ MCP tools: `capture_screen` / `ocr_image` / `annotate_image` / `list_history` / 
 
 1. Client: quit from the tray and delete the app folder; captures live in `Pictures\Onceglance`.
 2. CLI: delete `~/.onceglance`.
-3. MCP config: click "Remove" on the Agent page for each connected client.
+3. MCP config: click "Remove" on the AI Assistants page for each connected client.
 
 ## ☕ Connect & Support
 

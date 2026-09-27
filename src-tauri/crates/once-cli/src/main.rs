@@ -17,7 +17,7 @@ use std::time::Instant;
 #[command(
     name = "once",
     version = once_core::VERSION,
-    about = "定影 Onceglance · Agent 视觉层（截图 / OCR / 标注）",
+    about = "定影 Onceglance · Agent 视觉层（截图 / OCR / 标注 / 翻译 / 问图）",
     after_help = "所有命令支持 --json（envelope：{ok,data,error,meta}）。退出码：0 成功 / 1 参数 / 2 捕获 / 3 OCR / 4 读写 / 5 权限 / 6 黑名单"
 )]
 struct Cli {
