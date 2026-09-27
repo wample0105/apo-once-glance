@@ -33,7 +33,7 @@
 - **📸 Smart capture**: region selection with automatic window/widget detection, window & fullscreen capture, multi-monitor physical-pixel support. Resident viewfinder overlay: ~44ms from hotkey to dimmed screen.
 - **🖍️ Pro annotation**: draw directly on the frozen screen — arrow / rectangle / ellipse / numbered step / text / highlight / mosaic / crop, with 8 keyboard shortcuts and undo. Saves go through a deterministic renderer; derived images never overwrite the original.
 - **🔤 On-device OCR**: Windows.Media.Ocr engine, fully offline. Returns text blocks with bounding boxes and confidence; OCR results are linked to image coordinates in the main panel.
-- **🌐 AI enhancement (BYOK)**: screenshot translation (frame & release to translate) and ask-the-image (frame & ask, Markdown answers); keys are encrypted in the OS credential store, screenshots are only sent when you explicitly trigger it, and every call lands in the audit log.
+- **🌐 AI enhancement (BYOK)**: screenshot translation (frame & release to translate), ask-the-image (frame & ask, Markdown answers), and a recognition engine in three flavors (built-in offline / PaddleOCR local pack downloaded on demand · ModelScope by default / online models such as DeepSeek-OCR); model services manage connections only — each feature picks its own "service + model", never bound together; keys are encrypted in the OS credential store, screenshots are only sent when you explicitly trigger it, and every call lands in the audit log.
 - **📜 Scrolling capture**: release-to-capture, scroll-through collection with frame-stability detection, automatic stitch seam QA page.
 - **📌 Pin to screen**: pin captures back onto the screen with drag, wheel zoom and opacity control.
 - **🤖 Agent-ready**: `once` CLI with JSON output on every command (including `translate` / `ask`) + stdio MCP Server with 9 tools. Annotation parameters inherit the theme remembered by the GUI client whenever the agent doesn't pass explicit values.
@@ -80,7 +80,9 @@ Open the client's **AI Assistants** page → click "Connect" for Claude Desktop 
 once status                  # instance / AI / storage / OCR / hotkey status
 once capture window --json   # capture foreground window
 once ocr last --json         # OCR: text blocks + bounding boxes
-once translate last --json   # screenshot translation: on-device OCR → cloud translation
+once translate last --json   # screenshot translate: text extraction (follows OCR engine) -> cloud translation
+once ocr-engine status --json     # recognition engine status (builtin/paddle/online)
+once ocr-engine download --json   # download PaddleOCR local pack (ModelScope by default)
 once ask last --question "what's in this image" --json   # ask the image (AI)
 once annotate last --script s.json --out r.png   # instruction-driven annotation
 once history --query "kind:window"               # search history

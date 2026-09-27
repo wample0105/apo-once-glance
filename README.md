@@ -33,7 +33,7 @@
 - **📸 智能截图**：区域框选（窗口/控件自动识别高亮）、窗口截图、全屏、多显示器物理像素支持；冻结式取景层预驻留，热键到蒙版 ~44ms。
 - **🖍️ 专业标注**：覆盖层直接画——箭头/矩形/椭圆/序号/文字/高亮/马赛克/裁剪，8 个键盘快捷键 + 撤销；保存走确定性渲染引擎，衍生图永不覆盖原图。
 - **🔤 本地 OCR**：Windows.Media.Ocr 引擎离线取字，输出文字块 + 坐标框 + 置信度；主面板内 OCR 结果与原图坐标联动。
-- **🌐 AI 增强（BYOK）**：截图翻译（框选松手即译）、AI 问图（框选提问，Markdown 回答）；Key 加密存于系统凭据管理器，只有你主动触发才发送截图，调用入审计日志。
+- **🌐 AI 增强（BYOK）**：截图翻译（框选松手即译）、AI 问图（框选提问，Markdown 回答）、文字识别引擎三选（内置离线 / PaddleOCR 本地包按需下载 · 默认魔搭源 / 在线模型如 DeepSeek-OCR）；模型服务只管连接，各功能自选「服务+模型」互不绑定；Key 加密存于系统凭据管理器，只有你主动触发才发送截图，调用入审计日志。
 - **📜 长截图**：框选松手即采、滚轮穿透采集（帧稳定检测消除动画重影）、自动接缝拼接、到底提示、接缝质检页。
 - **📌 贴图**：截图原位贴回屏幕，支持拖动、滚轮缩放、透明度调节。
 - **🤖 Agent 能力**：CLI `once` 全命令 JSON 输出（含 `translate` / `ask`）+ stdio MCP Server（9 个工具）；标注属性全量继承客户端主题记忆，Agent 未显式传参即继承。
@@ -58,7 +58,7 @@ curl -fsSL --retry 3 https://github.com/wample0105/apo-once-glance/releases/late
 
 ### 3. MCP 接入（推荐在客户端内一键完成）
 
-打开客户端「AI 助手」页 → 对 Claude Desktop / Claude Code / Cursor / Codex / ZCode 等点击「一键接入」，自动写入 MCP 配置（写入前自动备份原配置）。也可以手动把 `once mcp` 加进你的 MCP 配置。
+打开客户端「接入 Agent」页 → 对 Claude Desktop / Claude Code / Cursor / Codex / ZCode 等点击「一键接入」，自动写入 MCP 配置（写入前自动备份原配置）。也可以手动把 `once mcp` 加进你的 MCP 配置。
 
 ## 📝 使用方法
 
@@ -81,7 +81,9 @@ curl -fsSL --retry 3 https://github.com/wample0105/apo-once-glance/releases/late
 once status                  # 实例/AI/落盘/OCR/热键状态
 once capture window --json   # 截前台窗口
 once ocr last --json         # 取字：文字块 + 坐标
-once translate last --json   # 截图翻译：本地 OCR → 云端译文
+once translate last --json   # 截图翻译：取字（跟随识别引擎）→ 云端译文
+once ocr-engine status --json     # 识别引擎：状态（builtin/paddle/online）
+once ocr-engine download --json   # 下载 PaddleOCR 本地包（魔搭默认源）
 once ask last --question "图中有什么" --json   # AI 问图
 once annotate last --script s.json --out r.png   # 指令驱动标注
 once history --query "kind:window after:昨天"     # 历史检索
@@ -107,7 +109,7 @@ MCP 工具：`capture_screen` / `scroll_capture` / `ocr_image` / `translate_imag
 
 1. 客户端：退出托盘程序，删除程序目录；落盘图片在 `图片\Onceglance`，按需保留。
 2. CLI：删除 `~/.onceglance` 目录。
-3. MCP 配置：在客户端「AI 助手」页对已接入的客户端点击「移除」。
+3. MCP 配置：在客户端「接入 Agent」页对已接入的客户端点击「移除」。
 
 ## ☕ 关注与交流
 
