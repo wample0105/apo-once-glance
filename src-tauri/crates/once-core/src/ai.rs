@@ -416,6 +416,8 @@ pub struct ChatReq<'a> {
     pub model: &'a str,
     pub messages: &'a [serde_json::Value],
     pub max_tokens: u32,
+    /// 0.0 = deterministic transcription; 0.3 default for generative tasks.
+    pub temperature: f32,
 }
 
 pub struct GenOutcome {
@@ -482,7 +484,7 @@ pub fn chat_completion(req: &ChatReq) -> Result<GenOutcome> {
             "model": req.model,
             "messages": req.messages,
             "max_tokens": req.max_tokens,
-            "temperature": 0.3,
+            "temperature": req.temperature,
         }))
         .send();
     let resp = match resp {
@@ -526,6 +528,7 @@ pub fn translate_text(cfg: &AiConfig, text: &str, target_lang: &str) -> Result<(
         model: &cfg.translate.model,
         messages: &msgs,
         max_tokens: 4096,
+        temperature: 0.3,
     })?;
     Ok((p, out))
 }
@@ -582,6 +585,7 @@ pub fn ask_image_rgba(cfg: &AiConfig, rgba: &[u8], w: u32, h: u32, question: &st
         model: &cfg.ask.model,
         messages: &msgs,
         max_tokens: 4096,
+        temperature: 0.3,
     })?;
     Ok((p, out))
 }
@@ -602,18 +606,83 @@ pub fn online_ocr_text(cfg: &AiConfig, png: &[u8]) -> Result<(AiProfile, GenOutc
             base64::engine::general_purpose::STANDARD.encode(png)
         }
     );
-    let msgs = vec![serde_json::json!({"role":"user","content":[
-        {"type":"text","text":"把图中的全部文字逐行转录出来，只输出识别文本本身，不要解释、不要加 Markdown 代码块；保留原有段落与换行。"},
-        {"type":"image_url","image_url":{"url": data_url}},
-    ]})];
-    let out = chat_completion(&ChatReq {
-        base_url: &p.base_url,
-        api_key: &key,
-        model: &fm.model,
-        messages: &msgs,
-        max_tokens: 8192,
-    })?;
-    Ok((p, out))
+    // OCR models answer their trained prompt template only, and which template
+    // works depends on the image: DeepSeek-OCR transcribes light documents with
+    // a free-form instruction but only answers its grounding/markdown template
+    // on dark UI shots. Try both; a response without real characters counts as
+    // degenerate and moves to the next prompt.
+    const PROMPTS: [&str; 2] = [
+        "Transcribe all text in the image line by line, keeping the original layout. Output only the transcribed text.",
+        "<|grounding|>Convert the document to markdown.",
+    ];
+    // Hosted endpoints cap the whole sequence (prompt incl. image tokens + completion).
+    // DeepSeek-OCR on SiliconFlow allows max_seq_len 8192 while a large screenshot
+    // already costs thousands of tokens, so a fixed max_tokens=8192 gets rejected with
+    // 400 (code 20015). Start from 4096 and halve on that specific limit error.
+    let mut max_tokens: u32 = 4096;
+    for prompt in PROMPTS {
+        let msgs = vec![serde_json::json!({"role":"user","content":[
+            {"type":"text","text":prompt},
+            {"type":"image_url","image_url":{"url": data_url}},
+        ]})];
+        loop {
+            let out = chat_completion(&ChatReq {
+                base_url: &p.base_url,
+                api_key: &key,
+                model: &fm.model,
+                messages: &msgs,
+                max_tokens,
+                temperature: 0.0,
+            });
+            match out {
+                Ok(out) => {
+                    let text = html_table_to_text(&out.text);
+                    if count_real_chars(&text) >= 2 {
+                        return Ok((p, GenOutcome { text, latency_ms: out.latency_ms }));
+                    }
+                    break; // degenerate output → try the next prompt template
+                }
+                Err(e) if max_tokens > 1024 && e.message.contains("max_seq_len") => max_tokens /= 2,
+                Err(e) => return Err(e),
+            }
+        }
+    }
+    Err(OnceError::ocr(
+        "在线模型无输出——该模型对此类截图可能不适用，建议切换内置引擎或 PaddleOCR 本地包",
+    ))
+}
+
+/// Letters/digits/CJK count — punctuation-only replies like "}" are degenerate.
+fn count_real_chars(s: &str) -> usize {
+    s.chars().filter(|c| c.is_alphanumeric()).count()
+}
+
+/// Markdown/HTML transcription cleanup: table cells become " | " separated text,
+/// row ends become line breaks, remaining tags are stripped, entities decoded.
+fn html_table_to_text(md: &str) -> String {
+    let mut out = String::with_capacity(md.len());
+    let mut tag = String::new();
+    let mut in_tag = false;
+    for c in md.chars() {
+        match c {
+            '<' => { in_tag = true; tag.clear(); }
+            '>' => {
+                in_tag = false;
+                match tag.to_lowercase().as_str() {
+                    "td" | "th" => out.push_str("  | "),
+                    "/tr" | "br" | "br/" => out.push('\n'),
+                    _ => {}
+                }
+            }
+            _ if in_tag => tag.push(c),
+            _ => out.push(c),
+        }
+    }
+    out.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
 }
 
 /// 在线读图端点的最小尺寸护栏：DeepSeek-OCR 等模型要求高/宽 > 28px，
@@ -899,6 +968,60 @@ mod tests {
         assert_eq!(cfg.ask.model, "glm-4.5v"); // 预设视觉模型首位
         // 引擎非 online 时不预填在线识别位
         assert!(cfg.ocr.online.is_empty());
+    }
+
+    #[test]
+    #[ignore = "prompt experiment, run manually"]
+    fn online_ocr_prompt_experiment() {
+        let cfg = crate::settings::load().ai;
+        let fm = cfg.ocr.online.clone();
+        let (p, key) = func_profile(&cfg, &fm).expect("profile");
+        let png = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../uitest_panel.png")).expect("image");
+        use base64::Engine as _;
+        let data_url = format!("data:image/png;base64,{}", base64::engine::general_purpose::STANDARD.encode(&png));
+        let prompts = [
+            "Transcribe all text in the image line by line, keeping the original layout. Output only the transcribed text.",
+            "Free OCR.",
+            "<|grounding|>Convert the document to markdown.",
+            "识别图中全部文字，逐行输出",
+        ];
+        for pr in prompts {
+            let msgs = vec![serde_json::json!({"role":"user","content":[
+                {"type":"text","text":pr},
+                {"type":"image_url","image_url":{"url": data_url}},
+            ]})];
+            let out = chat_completion(&ChatReq {
+                base_url: &p.base_url, api_key: &key, model: &fm.model,
+                messages: &msgs, max_tokens: 4096, temperature: 0.0,
+            });
+            match out {
+                Ok(o) => {
+                    let head: String = o.text.chars().take(150).collect();
+                    println!("[{:?}] chars={} :: {}", pr, o.text.chars().count(), head);
+                }
+                Err(e) => println!("[{:?}] ERR {}", pr, e.message),
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "live acceptance: requires the online OCR engine configured with a working key"]
+    fn online_ocr_real_request_respects_seq_len() {
+        let cfg = crate::settings::load().ai;
+        assert_eq!(cfg.ocr.engine(), OCR_ENGINE_ONLINE, "online engine not active");
+        assert!(!cfg.ocr.online.is_empty(), "online OCR slot not configured");
+        // Prefer the light-background text sample; fall back to the panel screenshot.
+        let candidates = [
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../../../tools/out/ai-ocr-sample.png"),
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../../../uitest_panel.png"),
+        ];
+        let png = candidates
+            .iter()
+            .find_map(|p| std::fs::read(p).ok())
+            .expect("no test image available");
+        let (_, out) = online_ocr_text(&cfg, &png).expect("online OCR failed");
+        eprintln!("transcript chars: {} latency: {}ms", out.text.chars().count(), out.latency_ms);
+        assert!(!out.text.trim().is_empty(), "expected non-empty transcript");
     }
 
     #[test]
