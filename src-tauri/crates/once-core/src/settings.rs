@@ -223,9 +223,25 @@ pub fn builtin_blacklist() -> Vec<BlacklistEntry> {
     .collect()
 }
 
-fn config_dir() -> PathBuf {
+pub fn config_dir() -> PathBuf {
     let base = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
     base.join("Onceglance")
+}
+
+/// 配置目录可写（settings.json 所在处；不可写=全部设置失效——诊断项用，与截图落盘目录分开）。
+pub fn config_writable() -> bool {
+    let dir = config_dir();
+    if std::fs::create_dir_all(&dir).is_err() {
+        return false;
+    }
+    let probe = dir.join(format!(".once-cfg-probe-{}", std::process::id()));
+    match std::fs::write(&probe, b"ok") {
+        Ok(_) => {
+            let _ = std::fs::remove_file(&probe);
+            true
+        }
+        Err(_) => false,
+    }
 }
 
 pub fn config_file() -> PathBuf {

@@ -765,25 +765,58 @@ fn doctor_run(app: AppHandle) -> serde_json::Value {
     let runtime_ok = webview2_present();
     let once_exe = resolve_once_exe(&app);
     let mcp_ok = once_exe.is_some() && s.agent_enabled;
+    // 热键注册（只读最近一次注册结果——doctor 重注册会闪断热键）
+    let hk_state = HOTKEY_REG_STATE.lock().unwrap().clone();
+    let hotkeys_ok = hk_state.as_ref().map_or(true, |(total, f)| f.is_empty());
+    let hotkeys_detail = match &hk_state {
+        None => "尚未注册（启动中）".to_string(),
+        Some((total, f)) if f.is_empty() => format!("全部注册成功（{total} 个）"),
+        Some((_, f)) => format!(
+            "{} 个未生效：{}（被其他程序占用，可在「通用」页改键）",
+            f.len(),
+            f.iter().map(|(n, k)| format!("{n}={k}")).collect::<Vec<_>>().join("、")
+        ),
+    };
+    // 配置目录（settings.json 所在 APPDATA）：不可写=全部设置失效，与截图落盘目录分开检查
+    let cfg_ok = once_core::settings::config_writable();
     items.push(serde_json::json!({ "check": "capture", "ok": capture_ok, "detail": "角落捕获自检" }));
+    items.push(serde_json::json!({ "check": "hotkeys", "ok": hotkeys_ok, "detail": hotkeys_detail }));
+    items.push(serde_json::json!({ "check": "config_dir", "ok": cfg_ok, "detail": once_core::settings::config_dir().display().to_string() }));
     items.push(serde_json::json!({ "check": "save_dir", "ok": dir_ok, "detail": s.save_root().display().to_string() }));
     items.push(serde_json::json!({ "check": "ocr_engine", "ok": ocr_ok, "detail": ocr::engine_language() }));
     items.push(serde_json::json!({ "check": "runtime", "ok": runtime_ok, "detail": "WebView2 运行时" }));
     items.push(serde_json::json!({
         "check": "mcp",
         "ok": mcp_ok,
-        "detail": once_exe.map(|p| p.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "once.exe 未找到（重新安装客户端或在「Agent 接入」页安装 CLI）".into())
+        "detail": format!(
+            "{} · 桥接{}",
+            once_exe.map(|p| p.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "once.exe 未找到（重新安装客户端或在「Agent 接入」页安装 CLI）".into()),
+            if std::path::Path::new(r"\\.\pipe\once-bridge").exists() { "已连接" } else { "离线（CLI/MCP 仍直接驱动内核，功能不受影响）" }
+        )
     }));
-    // AI 配置状态（v0.2）：只报配置事实，不联网验证（连接测试在「AI」页显式触发）；
+    // AI 配置状态（v0.2）：只报配置事实与 Key 存放状态，不联网验证（连接测试在「AI」页显式触发）；
     // 永不计入 ok_all——未配置是正常态，不是故障
     let ai_detail = if s.ai.profiles.is_empty() {
         "未配置（可选增强；本地功能不受影响）".to_string()
     } else {
-        format!("已配置 {} 套（连接测试见「AI」页）", s.ai.profiles.len())
+        let key_state = |role: &str, id: Option<&String>| match id
+            .and_then(|id| s.ai.profile(id))
+            .map(|p| (p.name.clone(), once_core::ai::key_exists(&p.id)))
+        {
+            Some((name, true)) => format!("{}={}·Key ✓", role, name),
+            Some((name, false)) => format!("{}={}·Key 缺失（到「AI」页补填）", role, name),
+            None => format!("{}=未指定", role),
+        };
+        format!(
+            "已配置 {} 套 · {} · {}（连接测试见「AI」页）",
+            s.ai.profiles.len(),
+            key_state("文字", s.ai.default_text.as_ref()),
+            key_state("视觉", s.ai.default_vision.as_ref()),
+        )
     };
     items.push(serde_json::json!({ "check": "ai_model", "ok": true, "detail": ai_detail }));
-    serde_json::json!({ "ok_all": capture_ok && dir_ok && ocr_ok && runtime_ok && mcp_ok, "items": items })
+    serde_json::json!({ "ok_all": capture_ok && dir_ok && ocr_ok && runtime_ok && mcp_ok && hotkeys_ok && cfg_ok, "items": items })
 }
 
 /// 审计日志读取（Agent 与隐私页）。
@@ -811,14 +844,16 @@ fn webview2_present() -> bool {
         })
 }
 
-fn register_hotkeys(app: &AppHandle) -> Vec<(String, String)> {
-    // 返回注册失败的 (功能, 键位)。可重入：先注销全部再按当前设置注册。
+/// 最近一次热键注册结果（总数, 失败清单）——doctor 只读报告，避免诊断时重注册闪断热键
+static HOTKEY_REG_STATE: std::sync::Mutex<Option<(usize, Vec<(String, String)>)>> =
+    std::sync::Mutex::new(None);
+
+fn register_hotkeys(app: &AppHandle) -> Vec<(String, String)> {    // 返回注册失败的 (功能, 键位)。可重入：先注销全部再按当前设置注册。
     let g = app.global_shortcut();
     let _ = g.unregister_all();
     let s = settings::load();
     let mut failures = Vec::new();
-    let bindings: Vec<(&str, &str, Box<dyn Fn(&AppHandle) + Send + Sync>)> = vec![
-        (
+    let bindings: Vec<(&str, &str, Box<dyn Fn(&AppHandle) + Send + Sync>)> = vec![        (
             "region",
             &s.hotkeys.region,
             Box::new(|app: &AppHandle| {
@@ -877,6 +912,7 @@ fn register_hotkeys(app: &AppHandle) -> Vec<(String, String)> {
             }),
         ),
     ];
+    let total = bindings.len();
     for (name, hk, handler) in bindings {
         let hk = hk.to_string();
         let res = g.on_shortcut(hk.as_str(), move |app, _sc, event| {
@@ -889,6 +925,8 @@ fn register_hotkeys(app: &AppHandle) -> Vec<(String, String)> {
             eprintln!("热键注册失败 {name} {hk}: {e}");
         }
     }
+    // 记录最近一次注册结果供诊断页只读报告（doctor 不重注册——重注册会闪断热键）
+    *HOTKEY_REG_STATE.lock().unwrap() = Some((total, failures.clone()));
     failures
 }
 
@@ -972,7 +1010,14 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             "fullscreen" => {
                 let _ = run_capture_blocking(app, "fullscreen", "copy");
             }
-            "panel" | "settings" => show_main(app),
+            "panel" => show_main(app),
+            // 设置…：去侧栏改版后首页≠设置页——show_main 后导航到设置视图（通用为落地页）
+            "settings" => {
+                show_main(app);
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.emit("nav-to", "general");
+                }
+            }
             "agent" => {
                 let next = !settings::load().agent_enabled;
                 let _ = settings::update(|s| s.agent_enabled = next);
