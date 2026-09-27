@@ -1286,6 +1286,31 @@ $("#ai-profiles").addEventListener("click", async (e) => {
 // 删除连接后全量重刷（renderAiProfiles 内部已连带刷新功能位）
 
 // ===== AI 页·截图翻译目标语言 + 指令模板 =====
+// Template row: built locally with a stable client id; persisted on change. Rows with an empty prompt stay local (kept for editing).
+function tplRowEl(t) {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.dataset.tplId = t.id || "local-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  row.innerHTML = `
+    <div class="label" style="display:flex;flex-direction:column;gap:6px">
+      <input type="text" class="formin" data-tpl-name value="${escapeHtml(t.name || "")}" placeholder="名称（问图指令上显示的文字）" style="width:100%">
+      <input type="text" class="formin" data-tpl-prompt value="${escapeHtml(t.prompt || "")}" placeholder="指令内容（如 把图中内容整理成周报格式）" style="width:100%">
+    </div>
+    <div class="ctl"><button class="btn ghost danger" data-tpl-del>删除</button></div>`;
+  row.querySelectorAll("input").forEach((inp) => inp.addEventListener("change", aiSaveTemplates));
+  const del = row.querySelector("[data-tpl-del]");
+  del.addEventListener("click", () => {
+    if (del.dataset.armed === "1") {
+      row.remove();
+      aiSaveTemplates().catch(reportErr);
+    } else {
+      del.dataset.armed = "1";
+      del.textContent = "确认删除？";
+      setTimeout(() => { del.dataset.armed = ""; del.textContent = "删除"; }, 3000);
+    }
+  });
+  return row;
+}
 async function renderAiTemplates() {
   const box = $("#ai-tpl-rows");
   let tpls = [];
@@ -1293,53 +1318,36 @@ async function renderAiTemplates() {
     const s = await invoke("get_settings");
     tpls = (s.ai && s.ai.templates) || [];
   } catch (e) { box.innerHTML = `<div class="row"><div class="label"><div class="d">加载失败</div></div></div>`; return; }
+  box.innerHTML = "";
   if (!tpls.length) {
-    box.innerHTML = `<div class="row"><div class="label"><div class="d">暂无模板</div></div></div>`;
+    const empty = document.createElement("div");
+    empty.className = "row";
+    empty.innerHTML = `<div class="label"><div class="d">暂无模板</div></div>`;
+    box.appendChild(empty);
     return;
   }
-  box.innerHTML = tpls.map((t, i) => `
-    <div class="row" data-tpl-id="${escapeHtml(t.id)}">
-      <div class="label" style="display:flex;flex-direction:column;gap:6px">
-        <input type="text" class="formin" data-tpl-name="${i}" value="${escapeHtml(t.name)}" placeholder="名称（问图指令上显示的文字）" style="width:100%">
-        <input type="text" class="formin" data-tpl-prompt="${i}" value="${escapeHtml(t.prompt)}" placeholder="指令内容（如 把图中内容整理成周报格式）" style="width:100%">
-      </div>
-      <div class="ctl"><button class="btn ghost danger" data-tpl-del="${escapeHtml(t.id)}">删除</button></div>
-    </div>`).join("");
-  box.querySelectorAll("input").forEach((inp) => inp.addEventListener("change", aiSaveTemplates));
-  box.querySelectorAll("[data-tpl-del]").forEach((b) => b.addEventListener("click", async () => {
-    if (b.dataset.armed === "1") {
-      const s = await invoke("get_settings");
-      const tpls = ((s.ai && s.ai.templates) || []).filter((t) => t.id !== b.dataset.tplDel);
-      await invoke("ai_templates_set", { templates: tpls });
-      renderAiTemplates().catch(reportErr);
-    } else {
-      b.dataset.armed = "1";
-      b.textContent = "确认删除？";
-      setTimeout(() => { b.dataset.armed = ""; b.textContent = "删除"; }, 3000);
-    }
-  }));
+  tpls.forEach((t) => box.appendChild(tplRowEl(t)));
 }
 async function aiSaveTemplates() {
   const tpls = [];
   document.querySelectorAll("#ai-tpl-rows .row[data-tpl-id]").forEach((row) => {
+    const prompt = (row.querySelector("[data-tpl-prompt]") || {}).value || "";
+    if (!prompt.trim()) return; // empty prompt is not persisted (row stays local until filled)
     tpls.push({
       id: row.dataset.tplId || "",
       name: (row.querySelector("[data-tpl-name]") || {}).value || "",
-      prompt: (row.querySelector("[data-tpl-prompt]") || {}).value || "",
+      prompt,
     });
   });
-  const cfg = await invoke("ai_templates_set", { templates: tpls });
-  // 回写后端分配的 id，避免继续编辑时重复建档
-  document.querySelectorAll("#ai-tpl-rows .row[data-tpl-id]").forEach((row, i) => {
-    const t = (cfg.templates || [])[i];
-    if (t) row.dataset.tplId = t.id;
-  });
+  await invoke("ai_templates_set", { templates: tpls }); // row ids are generated locally and stable; no write-back needed
 }
-$("#ai-tpl-add").onclick = async () => {
-  const s = await invoke("get_settings");
-  const tpls = ((s.ai && s.ai.templates) || []).concat([{ id: "", name: "", prompt: "" }]);
-  await invoke("ai_templates_set", { templates: tpls });
-  renderAiTemplates().catch(reportErr);
+$("#ai-tpl-add").onclick = () => {
+  const box = $("#ai-tpl-rows");
+  const emptyRow = box.querySelector(".row:not([data-tpl-id]) .d");
+  if (emptyRow && emptyRow.textContent === "暂无模板") emptyRow.closest(".row").remove();
+  // insert an editable row locally; sending a blank row to the backend gets it dropped (root cause of the dead button)
+  box.appendChild(tplRowEl({ name: "", prompt: "" }));
+  box.querySelector("[data-tpl-name]:last-of-type")?.focus();
 };
 $("#ai-trans-lang").onchange = async () => {
   try { await invoke("set_setting", { key: "translate_lang", value: $("#ai-trans-lang").value }); } catch (e) { reportErr(e); }
