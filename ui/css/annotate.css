@@ -168,3 +168,12 @@
   padding: 7px 14px; border-radius: 8px; border: 1px solid var(--ov-border);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4); z-index: 95;
 }
+
+/* ── AI chat bubbles (overlay multi-turn ask) ── */
+.ai-msg { max-width: 96%; font-size: 12.5px; line-height: 1.65; border-radius: 10px; padding: 8px 10px; word-break: break-word; box-sizing: border-box; background: var(--ov-surface-2); border: 1px solid var(--ov-border); color: var(--ov-fg); }
+.ai-msg.user { align-self: flex-end; max-width: 86%; }
+.ai-msg.ai { align-self: stretch; }
+.ai-msg.err { color: #FF9187; }
+.ai-msg-acts { margin-top: 4px; display: flex; justify-content: flex-end; gap: 6px; }
+.ai-msg .cp { background: transparent; border: none; color: var(--ov-fg-dim); font-size: 10.5px; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.ai-msg .cp:hover { color: var(--ov-fg); }

@@ -454,7 +454,12 @@
     </div>
     <!-- AI 问图输入浮层：挂在工具条内（随其定位并受点击保护），选区保留等待生成 -->
     <div id="ai-pop" style="display:none; position:absolute; z-index:40; width:340px; background:var(--ov-surface); border:1px solid var(--ov-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.45); padding:10px; box-sizing:border-box;">
-      <div id="ai-pop-handle" title="拖动面板 · 本次截图内有效"><svg width="22" height="10" viewBox="0 0 22 10"><circle cx="3" cy="2.2" r="1.6"/><circle cx="11" cy="2.2" r="1.6"/><circle cx="19" cy="2.2" r="1.6"/><circle cx="3" cy="7.8" r="1.6"/><circle cx="11" cy="7.8" r="1.6"/><circle cx="19" cy="7.8" r="1.6"/></svg></div>
+      <div id="ai-pop-handle" title="拖动面板 · 本次截图内有效">
+      <div id="ai-chat-head" style="display:none; align-items:center; gap:6px; margin:0 0 6px;">
+        <span style="flex:1; font-size:10.5px; color:var(--ov-fg-dim);">连续对话 · 模型记得图与上文</span>
+        <button id="ai-chat-clear" style="background:transparent; color:var(--ov-fg-dim); border:1px solid var(--ov-border); border-radius:6px; padding:2px 8px; font-size:10.5px; cursor:pointer;">清空对话</button>
+      </div>
+      <div id="ai-msgs" style="display:none; flex-direction:column; gap:8px; max-height:260px; overflow:auto; margin:0 0 8px;"></div><svg width="22" height="10" viewBox="0 0 22 10"><circle cx="3" cy="2.2" r="1.6"/><circle cx="11" cy="2.2" r="1.6"/><circle cx="19" cy="2.2" r="1.6"/><circle cx="3" cy="7.8" r="1.6"/><circle cx="11" cy="7.8" r="1.6"/><circle cx="19" cy="7.8" r="1.6"/></svg></div>
       <div id="ai-guide" style="display:none;">
         <div style="font-size:13px; color:var(--ov-fg); margin-bottom:6px;">还没有配置 AI 模型</div>
         <div style="font-size:11.5px; color:var(--ov-fg-dim); line-height:1.6; margin-bottom:10px;">配置一次，翻译与问图随处可用。Key 只存本机凭据管理器；只有你主动触发才会发送截图。</div>

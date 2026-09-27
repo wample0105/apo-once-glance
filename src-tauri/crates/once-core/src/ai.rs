@@ -342,6 +342,79 @@ pub fn ask_messages(question: &str, image_data_url: &str) -> Vec<serde_json::Val
     ]})]
 }
 
+/// 多轮问图的历史轮次（选区会话内追问；role: user|assistant）。
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct AskHistoryTurn {
+    pub role: String,
+    pub text: String,
+}
+
+impl Default for AskHistoryTurn {
+    fn default() -> Self {
+        Self { role: "user".into(), text: String::new() }
+    }
+}
+
+/// 多轮消息组：聊天 API 无状态，模型要看图就必须每请求带图——图挂在历史首条
+/// user 轮上，中间轮次以纯文本展开，新问题为末条纯文本（省 token 且模型仍见图）。
+pub fn ask_messages_history(question: &str, image_data_url: &str, history: &[AskHistoryTurn]) -> Vec<serde_json::Value> {
+    let mut msgs: Vec<serde_json::Value> = Vec::new();
+    let mut image_placed = false;
+    for turn in history {
+        let text = turn.text.trim();
+        if text.is_empty() {
+            continue;
+        }
+        if turn.role == "assistant" {
+            msgs.push(serde_json::json!({"role":"assistant","content": text}));
+        } else if !image_placed {
+            image_placed = true;
+            msgs.push(serde_json::json!({"role":"user","content":[
+                {"type":"text","text": text},
+                {"type":"image_url","image_url":{"url": image_data_url}},
+            ]}));
+        } else {
+            msgs.push(serde_json::json!({"role":"user","content": text}));
+        }
+    }
+    if image_placed {
+        msgs.push(serde_json::json!({"role":"user","content": question}));
+    } else {
+        msgs.push(serde_json::json!({"role":"user","content":[
+            {"type":"text","text": question},
+            {"type":"image_url","image_url":{"url": image_data_url}},
+        ]}));
+    }
+    msgs
+}
+
+/// 多轮问图：选区 RGBA 图 + 历史 → 问图功能位视觉模型。history 为空时等价单轮。
+pub fn ask_image_history(
+    cfg: &AiConfig,
+    rgba: &[u8],
+    w: u32,
+    h: u32,
+    question: &str,
+    history: &[AskHistoryTurn],
+) -> Result<(AiProfile, GenOutcome)> {
+    let (p, key) = func_profile(cfg, &cfg.ask)?;
+    if cfg.ask.model.trim().is_empty() {
+        return Err(OnceError::usage("AI 问图未填模型名——到「模型配置」页「AI 问图」补齐"));
+    }
+    let data_url = prepare_image_data_url(rgba, w, h, 2048)?;
+    let msgs = ask_messages_history(question, &data_url, history);
+    let out = chat_completion(&ChatReq {
+        base_url: &p.base_url,
+        api_key: &key,
+        model: &cfg.ask.model,
+        messages: &msgs,
+        max_tokens: 4096,
+        temperature: 0.3,
+    })?;
+    Ok((p, out))
+}
+
 /// 功能位补任/自愈（三端共用）：功能位缺失或悬空时改任第一套连接，
 /// 模型名留空时按该连接的服务商预设补建议值（与「首套连接自动担任」同策）。
 /// 返回本次补任的（功能名，连接名）——删除迁移时用于告知。
@@ -727,6 +800,33 @@ mod gen_tests {
         let content = m[0]["content"].as_array().unwrap();
         assert_eq!(content[0]["type"], "text");
         assert!(content[1]["image_url"]["url"].as_str().unwrap().starts_with("data:image/"));
+    }
+
+    #[test]
+    fn ask_history_shapes_and_image_placement() {
+        let turns = vec![
+            AskHistoryTurn { role: "user".into(), text: "图中说了什么".into() },
+            AskHistoryTurn { role: "assistant".into(), text: "介绍了 AI 社交媒体智能体".into() },
+        ];
+        let m = ask_messages_history("用英文再说一遍", "data:image/png;base64,AAA", &turns);
+        // 3 条：首条 user(带图)，assistant，新问题纯文本
+        assert_eq!(m.len(), 3);
+        assert_eq!(m[0]["role"], "user");
+        assert!(m[0]["content"].as_array().is_some()); // 首条带图
+        assert_eq!(m[1]["role"], "assistant");
+        assert_eq!(m[2]["role"], "user");
+        assert!(m[2]["content"].is_string()); // 新问题纯文本（图已在首条）
+        // 空历史 → 与单轮形态一致（图随问题）
+        let single = ask_messages_history("看看这张图", "data:image/png;base64,AAA", &[]);
+        assert!(single[0]["content"].as_array().is_some());
+        assert_eq!(single.len(), 1);
+        // 空文本轮被跳过
+        let with_blank = ask_messages_history("追问", "data:image/png;base64,AAA", &[
+            AskHistoryTurn { role: "user".into(), text: "  ".into() },
+            AskHistoryTurn { role: "assistant".into(), text: "答".into() },
+        ]);
+        assert_eq!(with_blank.len(), 2); // assistant + 新问题（图挂在 assistant 前的最近 user？无 user → 图随新问题）
+        assert!(with_blank[1]["content"].as_array().is_some()); // 图随新问题（历史里没有 user 轮可挂）
     }
 
     #[test]

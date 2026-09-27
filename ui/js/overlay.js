@@ -2715,6 +2715,71 @@ const aiBtnAsk = document.getElementById("tb-ai-ask");
 let aiBusyFlag = false;
 let aiTimer = null;
 let aiResult = null; // 后台完成后的未读结果 { kind, text, meta }——点对应 AI 按钮查看
+// In-session multi-turn ask history {role:"user"|"assistant", text}; cleared on overlay exit.
+let aiChat = [];
+function aiMsgsEl() { return document.getElementById("ai-msgs"); }
+function aiChatReset() {
+  aiChat = [];
+  const m = aiMsgsEl();
+  if (m) { m.innerHTML = ""; m.style.display = "none"; }
+  const h = document.getElementById("ai-chat-head");
+  if (h) h.style.display = "none";
+  const q = document.getElementById("ai-q");
+  if (q) q.placeholder = "问点什么…（Enter 发送 · Shift+Enter 换行 · Esc 取消）";
+}
+function aiScrollMsgs() { const m = aiMsgsEl(); if (m) m.scrollTop = m.scrollHeight; }
+function aiChatShow() {
+  const m = aiMsgsEl();
+  if (m && m.childElementCount) m.style.display = "flex";
+  const h = document.getElementById("ai-chat-head");
+  if (h && aiChat.length) h.style.display = "flex";
+}
+function aiBubbleUser(text) {
+  const m = aiMsgsEl(); if (!m) return;
+  const d = document.createElement("div");
+  d.className = "ai-msg user"; d.textContent = text;
+  m.appendChild(d); m.style.display = "flex"; aiScrollMsgs();
+}
+function aiBubbleBusy() {
+  const m = aiMsgsEl(); if (!m) return null;
+  const d = document.createElement("div");
+  d.className = "ai-msg ai"; d.textContent = "正在生成…";
+  m.appendChild(d); m.style.display = "flex"; aiScrollMsgs();
+  return d;
+}
+function aiBubbleError(text) {
+  const m = aiMsgsEl(); if (!m) return;
+  const d = document.createElement("div");
+  d.className = "ai-msg ai err"; d.textContent = "✕ " + text;
+  m.appendChild(d); m.style.display = "flex"; aiScrollMsgs();
+}
+function aiBubbleAi(mdText, meta) {
+  const m = aiMsgsEl(); if (!m) return;
+  const d = document.createElement("div");
+  d.className = "ai-msg ai";
+  d.innerHTML = aiRenderMd(mdText);
+  const acts = document.createElement("div");
+  acts.className = "ai-msg-acts";
+  const cp = document.createElement("button");
+  cp.className = "cp"; cp.textContent = "复制";
+  cp.addEventListener("click", async () => {
+    const ok = await copyText(mdText);
+    cp.textContent = ok ? "已复制" : "复制失败";
+    setTimeout(() => (cp.textContent = "复制"), 1500);
+  });
+  acts.appendChild(cp);
+  if (meta) {
+    const mt = document.createElement("span");
+    mt.className = "cp"; mt.style.cursor = "default"; mt.textContent = meta;
+    acts.appendChild(mt);
+  }
+  d.appendChild(acts);
+  m.appendChild(d); m.style.display = "flex"; aiScrollMsgs();
+}
+function aiChatAppendResult(text, meta) {
+  aiChatShow();
+  aiBubbleAi(text, meta || "");
+}
 let aiShownText = ""; // 结果面板当前展示的文本（复制按钮用）
 
 /* AI 浮层定位（2026-09-26）：默认背离选区弹出——工具条在选区下方→向下弹，在上方→向上弹，
@@ -2775,7 +2840,11 @@ aiBtnTranslate.addEventListener("click", () => {
 });
 aiBtnAsk.addEventListener("click", () => {
   if (aiBusyFlag) return;
-  if (aiResult && aiResult.kind === "ask") { const r = aiResult; aiResult = null; aiShowResult(r.kind, r.text, r.meta, {}); return; }
+  if (aiResult && aiResult.kind === "ask") {
+    const r = aiResult; aiResult = null;
+    aiOpenAsk().then(() => aiChatAppendResult(r.text, r.meta || ""));
+    return;
+  }
   aiOpenAsk();
 });
 
@@ -2797,6 +2866,7 @@ window.__TAURI__.event.listen("overlay-cleared", () => {
   aiExitBusy();
   aiBusyFlag = false;
   aiResult = null;
+  aiChatReset(); // 一次框选 = 一个会话：退场即清空多轮历史
 });
 
 // 预置问图指令（与 once-core BUILTIN_PROMPTS 保持一致）
@@ -2842,6 +2912,9 @@ async function aiOpenAsk() {
   document.getElementById("ai-send").disabled = false;
   const chips = document.getElementById("ai-chips");
   chips.innerHTML = "";
+  if (aiChat.length) { aiChatShow(); }
+  const hasChat = aiChat.length > 0;
+  if (!hasChat) chips.style.display = "flex";
   const addChip = (name, prompt) => {
     const b = document.createElement("button");
     b.textContent = name;
@@ -2849,13 +2922,17 @@ async function aiOpenAsk() {
     b.addEventListener("click", () => aiSend(prompt));
     chips.appendChild(b);
   };
-  for (const [n, p] of AI_BUILTIN_PROMPTS) addChip(n, p);
-  try {
-    const s = await invoke("get_settings");
-    ((s.ai && s.ai.templates) || []).forEach((t) => addChip(t.name, t.prompt));
-  } catch (e) {}
+  if (hasChat) chips.style.display = "none"; // 首问之后的追问不再需要模板 chips
+  else {
+    for (const [n, p] of AI_BUILTIN_PROMPTS) addChip(n, p);
+    try {
+      const s = await invoke("get_settings");
+      ((s.ai && s.ai.templates) || []).forEach((t) => addChip(t.name, t.prompt));
+    } catch (e) {}
+  }
   const q = document.getElementById("ai-q");
   q.value = "";
+  if (hasChat) q.placeholder = "继续追问…（Enter 发送）";
   setTimeout(() => q.focus(), 50);
 }
 
@@ -2924,7 +3001,7 @@ function aiExitBusy() {
   const spin = document.getElementById("ai-spin");
   if (spin) spin.style.display = "none";
   const chips = document.getElementById("ai-chips");
-  if (chips) chips.style.display = "flex";
+  if (chips && !aiChat.length) chips.style.display = "flex";
   const q = document.getElementById("ai-q");
   if (q) q.readOnly = false;
   const send = document.getElementById("ai-send");
@@ -2949,27 +3026,43 @@ function aiEnterBusyTr(label = "正在翻译选区文字") {
 async function aiRun(kind, question) {
   if (aiBusyFlag) return; // 生成中所有触发路径（chip/回车/按钮/翻译）在此短路，杜绝重复请求
   const rect = { screen: 1, x: toPhys(sel.x), y: toPhys(sel.y), w: toPhys(sel.w), h: toPhys(sel.h) };
-  if (kind === "ask") aiEnterBusy(question);
-  else {
+  let busyEl = null;
+  if (kind === "ask") {
+    aiEnterBusy(question);
+    aiBubbleUser(question);
+    busyEl = aiBubbleBusy();
+  } else {
     // 明示上传（v0.2）：识别引擎为在线模型时，取字会把截图发送给所选服务——进度期就讲清楚
     let online = false;
     try { online = ((await invoke("get_settings")).ai?.ocr?.engine) === "online"; } catch (e) {}
     aiEnterBusyTr(online ? "正在翻译选区文字（在线识别 · 截图将发送至所选服务）" : "正在翻译选区文字");
   }
   try {
+    const history = aiChat.slice(-12); // cap context: keep the latest 6 turns
     const r = kind === "translate"
       ? await invoke("ai_translate_region", rect)
-      : await invoke("ai_ask_region", { ...rect, question });
+      : await invoke("ai_ask_region", { ...rect, question, history });
     // 成功（C1/D1/A1）：结果就地留在浮层内——不再关取景层、不再贴出。
     // 翻译=自动复制+面板标注「已复制」（A1）；问图=面板展示+手动复制（要读的内容）
     aiBusyFlag = false;
     if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
+    if (kind === "ask") {
+      aiChat.push({ role: "user", text: question });
+      aiChat.push({ role: "assistant", text: r.text });
+      if (aiChat.length > 12) aiChat.splice(0, aiChat.length - 12);
+    }
     if (aiPop.style.display !== "none") {
       if (kind === "translate") {
         const ok = await copyText(r.text);
         aiShowResult(kind, r.text, r.meta, { copied: ok, error: ok ? "" : "复制失败，点「复制」重试", question: "" });
       } else {
-        aiShowResult(kind, r.text, r.meta, { question });
+        if (busyEl) busyEl.remove();
+        aiBubbleAi(r.text, r.meta);
+        aiExitBusy(); // 解锁输入/发送（对话流不再接管面板，必须显式恢复交互态）
+        const st = document.getElementById("ai-status");
+        st.textContent = ""; st.style.color = "";
+        const qi = document.getElementById("ai-q");
+        if (qi) { qi.value = ""; qi.placeholder = "继续追问…（Enter 发送）"; }
       }
     } else {
       // 后台完成（B1）：译文自动进剪贴板+toast；问图提示回浮层查看（点按钮显示未读结果）
@@ -2986,9 +3079,11 @@ async function aiRun(kind, question) {
     if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
     const msg = typeof e === "string" ? e : (e && e.message) || String(e);
     if (kind === "ask") {
+      if (busyEl) busyEl.remove();
       if (aiPop.style.display !== "none") {
-        // 浮层还在：就地显示失败原因并恢复交互态，可改问题重试
+        // 浮层还在：气泡流就地显示失败原因并恢复交互态，可改问题重试
         aiExitBusy();
+        aiBubbleError(msg);
         const status = document.getElementById("ai-status");
         status.style.color = "#FF9187";
         status.textContent = "失败：" + msg;
@@ -3091,6 +3186,11 @@ document.getElementById("ai-q").addEventListener("keydown", (e) => {
   else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); aiSend(); }
 });
 document.getElementById("ai-send").addEventListener("click", () => aiSend());
+document.getElementById("ai-chat-clear").addEventListener("click", () => {
+  aiChatReset();
+  document.getElementById("ai-chips").style.display = "flex";
+  aiExitBusy();
+});
 document.getElementById("ai-tr-retry").addEventListener("click", () => aiTranslateRun());
 document.getElementById("ai-guide-open").addEventListener("click", async () => {
   try { await invoke("ai_open_settings"); } catch (e) {}
