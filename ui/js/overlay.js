@@ -2721,7 +2721,7 @@ function aiMsgsEl() { return document.getElementById("ai-msgs"); }
 function aiChatReset() {
   aiChat = [];
   const m = aiMsgsEl();
-  if (m) { m.innerHTML = ""; m.style.display = "none"; }
+  if (m) m.innerHTML = "";
   const h = document.getElementById("ai-chat-head");
   if (h) h.style.display = "none";
   const q = document.getElementById("ai-q");
@@ -2753,7 +2753,7 @@ function aiBubbleError(text) {
   d.className = "ai-msg ai err"; d.textContent = "✕ " + text;
   m.appendChild(d); m.style.display = "flex"; aiScrollMsgs();
 }
-function aiBubbleAi(mdText, meta) {
+function aiBubbleAi(mdText) {
   const m = aiMsgsEl(); if (!m) return;
   const d = document.createElement("div");
   d.className = "ai-msg ai";
@@ -2768,17 +2768,12 @@ function aiBubbleAi(mdText, meta) {
     setTimeout(() => (cp.textContent = "复制"), 1500);
   });
   acts.appendChild(cp);
-  if (meta) {
-    const mt = document.createElement("span");
-    mt.className = "cp"; mt.style.cursor = "default"; mt.textContent = meta;
-    acts.appendChild(mt);
-  }
   d.appendChild(acts);
   m.appendChild(d); m.style.display = "flex"; aiScrollMsgs();
 }
-function aiChatAppendResult(text, meta) {
+function aiChatAppendResult(text) {
   aiChatShow();
-  aiBubbleAi(text, meta || "");
+  aiBubbleAi(text);
 }
 let aiShownText = ""; // 结果面板当前展示的文本（复制按钮用）
 
@@ -2812,6 +2807,7 @@ function clampAiPop() {
 }
 // 手柄拖动：同工具栏把手交互——自由摆放，本次截图会话内有效（退场复位）
 document.getElementById("ai-pop-handle").addEventListener("mousedown", (e) => {
+  if (e.target.closest("button")) return; // 标题栏按钮（清空/收起）不触发拖动
   e.preventDefault(); e.stopPropagation(); // 不触发画布/工具逻辑，不夺焦点
   aiPopFree = true;
   const handle = e.currentTarget;
@@ -2842,7 +2838,7 @@ aiBtnAsk.addEventListener("click", () => {
   if (aiBusyFlag) return;
   if (aiResult && aiResult.kind === "ask") {
     const r = aiResult; aiResult = null;
-    aiOpenAsk().then(() => aiChatAppendResult(r.text, r.meta || ""));
+    aiOpenAsk().then(() => aiChatAppendResult(r.text));
     return;
   }
   aiOpenAsk();
@@ -2933,6 +2929,14 @@ async function aiOpenAsk() {
   const q = document.getElementById("ai-q");
   q.value = "";
   if (hasChat) q.placeholder = "继续追问…（Enter 发送）";
+  try {
+    const s2 = await invoke("get_settings");
+    const ask = (s2.ai && s2.ai.ask) || {};
+    const conn = (s2.ai.profiles || []).find((x) => x.id === ask.profile_id);
+    // Model info lives in the title-bar tooltip, not inline (keeps the header to title + icons)
+    document.getElementById("ai-pop-handle").title =
+      conn ? "拖动窗口 · " + conn.name + " · " + (ask.model || "") : "拖动窗口";
+  } catch (e) {}
   setTimeout(() => q.focus(), 50);
 }
 
@@ -3057,7 +3061,7 @@ async function aiRun(kind, question) {
         aiShowResult(kind, r.text, r.meta, { copied: ok, error: ok ? "" : "复制失败，点「复制」重试", question: "" });
       } else {
         if (busyEl) busyEl.remove();
-        aiBubbleAi(r.text, r.meta);
+        aiBubbleAi(r.text);
         aiExitBusy(); // 解锁输入/发送（对话流不再接管面板，必须显式恢复交互态）
         const st = document.getElementById("ai-status");
         st.textContent = ""; st.style.color = "";
@@ -3186,6 +3190,10 @@ document.getElementById("ai-q").addEventListener("keydown", (e) => {
   else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); aiSend(); }
 });
 document.getElementById("ai-send").addEventListener("click", () => aiSend());
+document.getElementById("ai-pop-min").addEventListener("click", () => {
+  aiPop.style.display = "none";
+  if (aiBusyFlag) showToast("✦ 已转入后台，完成后自动处理");
+});
 document.getElementById("ai-chat-clear").addEventListener("click", () => {
   aiChatReset();
   document.getElementById("ai-chips").style.display = "flex";

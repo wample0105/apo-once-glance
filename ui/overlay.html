@@ -147,16 +147,6 @@
   #tb-handle.dragging { cursor: grabbing; background-color: rgba(255,255,255,0.16); }
   /* AI 浮层默认定位：贴工具条上方（向上弹）。显示方向由 JS 按选区位置翻转，复位时回落本规则 */
   #ai-pop { bottom: calc(100% + 10px); left: 8px; }
-  /* AI 浮层顶部拖动手柄（同工具栏把手视觉 ⋮⋮）：四态共用；拖动后自由定位，本次截图会话内有效 */
-  #ai-pop-handle {
-    display: flex; align-items: center; justify-content: center;
-    height: 14px; margin: -4px -4px 4px; border-radius: 5px; cursor: grab;
-    -webkit-user-select: none; user-select: none;
-  }
-  #ai-pop-handle svg { fill: rgba(255,255,255,0.4); }
-  #ai-pop-handle:hover { background-color: rgba(255,255,255,0.10); }
-  #ai-pop-handle:hover svg { fill: rgba(255,255,255,0.9); }
-  #ai-pop-handle.dragging { cursor: grabbing; background-color: rgba(255,255,255,0.16); }
   #toolbar { padding-left: 16px; }
   #toolbar .tb {
     border: none; background: transparent; color: var(--ov-fg);
@@ -453,13 +443,14 @@
       <button class="tb" id="tb-exit" title="取消（Esc）"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
     </div>
     <!-- AI 问图输入浮层：挂在工具条内（随其定位并受点击保护），选区保留等待生成 -->
-    <div id="ai-pop" style="display:none; position:absolute; z-index:40; width:340px; background:var(--ov-surface); border:1px solid var(--ov-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.45); padding:10px; box-sizing:border-box;">
-      <div id="ai-pop-handle" title="拖动面板 · 本次截图内有效">
-      <div id="ai-chat-head" style="display:none; align-items:center; gap:6px; margin:0 0 6px;">
-        <span style="flex:1; font-size:10.5px; color:var(--ov-fg-dim);">连续对话 · 模型记得图与上文</span>
-        <button id="ai-chat-clear" style="background:transparent; color:var(--ov-fg-dim); border:1px solid var(--ov-border); border-radius:6px; padding:2px 8px; font-size:10.5px; cursor:pointer;">清空对话</button>
+    <div id="ai-pop" style="display:none; position:absolute; z-index:40; width:460px; background:var(--ov-surface); border:1px solid rgba(255,255,255,0.16); border-radius:12px; box-shadow:0 18px 48px rgba(0,0,0,0.6); padding:10px 12px; box-sizing:border-box;">
+      <div id="ai-pop-handle">
+        <span class="ai-pop-title">AI 问图</span>
+        <span style="flex:1"></span>
+        <button id="ai-chat-clear" title="清空对话（重新开始）"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
+        <button id="ai-pop-min" title="收起（Esc）——会话保留，可再打开"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
       </div>
-      <div id="ai-msgs" style="display:none; flex-direction:column; gap:8px; max-height:260px; overflow:auto; margin:0 0 8px;"></div><svg width="22" height="10" viewBox="0 0 22 10"><circle cx="3" cy="2.2" r="1.6"/><circle cx="11" cy="2.2" r="1.6"/><circle cx="19" cy="2.2" r="1.6"/><circle cx="3" cy="7.8" r="1.6"/><circle cx="11" cy="7.8" r="1.6"/><circle cx="19" cy="7.8" r="1.6"/></svg></div>
+      <div id="ai-msgs" style="display:flex; flex-direction:column; gap:10px; height:300px; overflow:auto; margin:0 0 8px; padding-right:4px;"></div>
       <div id="ai-guide" style="display:none;">
         <div style="font-size:13px; color:var(--ov-fg); margin-bottom:6px;">还没有配置 AI 模型</div>
         <div style="font-size:11.5px; color:var(--ov-fg-dim); line-height:1.6; margin-bottom:10px;">配置一次，翻译与问图随处可用。Key 只存本机凭据管理器；只有你主动触发才会发送截图。</div>
