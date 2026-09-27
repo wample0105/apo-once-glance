@@ -258,6 +258,36 @@
     border: 1px solid var(--border); border-radius: var(--r-btn);
     background: #fff; color: var(--text-primary);
   }
+  /* 模态弹窗（添加/编辑模型配置）：遮罩点击不关闭（防误触丢输入），Esc/✕/取消关闭 */  #ai-modal {
+    position: fixed; inset: 0; z-index: 120;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.42);
+  }
+  #ai-modal .modal-card {
+    width: 500px; max-height: 88vh; overflow: auto;
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+  }
+  #ai-modal .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    font-size: 14px; font-weight: 600;
+  }
+  #ai-modal .modal-head button {
+    border: none; background: transparent; cursor: pointer;
+    color: var(--text-tertiary); font-size: 15px;
+    width: 28px; height: 28px; border-radius: 6px;
+  }
+  #ai-modal .modal-head button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+  #ai-modal .modal-body { padding: 4px 20px 14px; }
+  /* 预设模型快捷填充 chips：点一下即填入输入框（datalist 原生弹层在 WebView2 不可靠的确定性替代） */
+  .mchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 4px; }
+  .mchip {
+    font-family: var(--mono); font-size: 11px;
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: 6px; padding: 2px 9px; cursor: pointer; color: var(--text-secondary);
+  }
+  .mchip:hover { border-color: var(--accent); color: var(--text-primary); }
   /* UI 评审 P3-10/11：键盘焦点可见 + 危险操作语义色 */
   label.t { display: block; cursor: default; }
   button:focus-visible, .nav-item:focus-visible, .switch:focus-visible {
@@ -295,6 +325,8 @@
   table.ref th { color: var(--text-tertiary); font-weight: 500; font-size: 11px; }
   table.ref code { font-family: var(--mono); font-size: 11px; background: var(--bg-tertiary); padding: 1px 5px; border-radius: 4px; }
   .installcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px; }
+  /* AI 助手页客户端列表轻量压缩（8 行客户端是页面主体，行距收紧一档） */
+  #agent-reg .row { padding: 8px 0; }
   .installcard { border: 1px solid var(--border); border-radius: var(--r-card); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
   .installcard h4 { font-size: 12px; font-weight: 500; }
   .installcard .sub { font-size: 11px; color: var(--text-tertiary); line-height: 1.5; }
@@ -512,42 +544,9 @@
         <div style="display:flex;gap:8px;margin-bottom:14px">
           <button class="btn" id="ai-add">添加模型配置</button>
         </div>
-        <div class="group" id="ai-form" style="display:none">
-          <div class="row">
-            <div class="label"><label class="t" for="ai-f-name">名称</label></div>
-            <div class="ctl"><input type="text" class="formin" id="ai-f-name" style="width:200px" placeholder="如 智谱主力"></div>
-          </div>
-          <div class="row">
-            <div class="label"><label class="t" for="ai-f-provider">服务商</label><div class="d" id="ai-f-hint"></div></div>
-            <div class="ctl"><select id="ai-f-provider"></select></div>
-          </div>
-          <div class="row">
-            <div class="label"><label class="t" for="ai-f-url">接口地址</label><div class="d">OpenAI 兼容 base_url，预设一般无需修改</div></div>
-            <div class="ctl"><input type="text" class="formin" id="ai-f-url" style="width:280px"></div>
-          </div>
-          <div class="row">
-            <div class="label"><label class="t" for="ai-f-key">API Key</label><div class="d" id="ai-f-keyhint">仅存本机系统凭据管理器，不出现在设置文件，也不回显</div></div>
-            <div class="ctl"><input type="password" class="formin" id="ai-f-key" style="width:280px" autocomplete="off"> <a id="ai-f-keyurl" href="#" target="_blank" style="font-size:12px; margin-left:8px; display:none;">获取 Key →</a></div>
-          </div>
-          <div class="row">
-            <div class="label"><label class="t" for="ai-f-text">文字模型</label><div class="d">截图翻译等文本任务，可留空。保存后可一键拉取可用模型</div></div>
-            <div class="ctl"><input type="text" class="formin" id="ai-f-text" list="ai-dl-text" style="width:240px"> <button class="btn ghost" id="ai-f-fetch" style="display:none; font-size:11.5px;">拉取模型列表</button></div>
-          </div>
-          <div class="row">
-            <div class="label"><label class="t" for="ai-f-vision">视觉模型</label><div class="d">AI 问图、云端识别等读图任务，可留空</div></div>
-            <div class="ctl"><input type="text" class="formin" id="ai-f-vision" list="ai-dl-vision" style="width:240px"></div>
-          </div>
-          <datalist id="ai-dl-text"></datalist><datalist id="ai-dl-vision"></datalist>
-          <div class="row">
-            <div class="label"><div class="d" id="ai-f-stat"></div></div>
-            <div class="ctl">
-              <button class="btn primary" id="ai-f-save">保存</button>
-              <button class="btn ghost" id="ai-f-cancel">取消</button>
-            </div>
-          </div>
-        </div>
 
         <div class="ptitle" style="font-size:13px">默认模型</div>
+        <div class="psub">文字与视觉可指向不同配置（如 DeepSeek 做翻译、智谱做问图）——先在上方分别添加配置，再在两侧下拉各指定默认值。</div>
         <div class="group">
           <div class="row">
             <div class="label"><div class="t">默认文字模型</div><div class="d">截图翻译等文本任务使用</div></div>
@@ -571,27 +570,77 @@
           </div>
         </div>
 
-        <div class="ptitle" style="font-size:13px">指令模板（问图快捷指令）</div>
-        <div class="psub">问图时作为快捷指令出现；一句话说清要 AI 做什么、输出什么格式。</div>
-        <div class="group" id="ai-tpl-rows"></div>
-        <div style="display:flex;gap:8px;margin-bottom:14px">
-          <button class="btn" id="ai-tpl-add">添加模板</button>
-        </div>
+        <details class="refbox">
+          <summary>指令模板（问图快捷指令）</summary>
+          <div class="psub" style="margin:10px 14px 0">问图时作为快捷指令出现；一句话说清要 AI 做什么、输出什么格式。</div>
+          <div class="group" id="ai-tpl-rows" style="margin:10px 14px"></div>
+          <div style="display:flex;gap:8px;margin:0 14px 12px">
+            <button class="btn" id="ai-tpl-add">添加模板</button>
+          </div>
+        </details>
 
-        <div class="ptitle" style="font-size:13px">识别</div>
-        <div class="psub">普通识别始终在本机完成；只有你主动增强时，才会发送截图。</div>
-        <div class="group">
-          <div class="row">
-            <div class="label"><div class="t">本地引擎（内置）</div><div class="d">系统自带 OCR，离线可用；普通取字永远不联网</div></div>
-            <div class="ctl ro-value">默认</div>
+        <details class="refbox">
+          <summary>识别</summary>
+          <div class="psub" style="margin:10px 14px 0">普通识别始终在本机完成；只有你主动增强时，才会发送截图。</div>
+          <div class="group" style="margin:10px 14px 12px">
+            <div class="row">
+              <div class="label"><div class="t">本地引擎（内置）</div><div class="d">系统自带 OCR，离线可用；普通取字永远不联网</div></div>
+              <div class="ctl ro-value">默认</div>
+            </div>
+            <div class="row disabled">
+              <div class="label"><div class="t">RapidOCR 增强包</div><div class="d">本地高质量识别（按需下载，约 16MB）——同样不联网，后续版本提供</div></div>
+              <div class="ctl ro-value">未提供</div>
+            </div>
+            <div class="row">
+              <div class="label"><div class="t">云端增强</div><div class="d">配置视觉模型后可用；本地识别效果不佳时提示，绝不静默上传</div></div>
+              <div class="ctl ro-value" id="ai-cloud-state">未配置</div>
+            </div>
           </div>
-          <div class="row disabled">
-            <div class="label"><div class="t">RapidOCR 增强包</div><div class="d">本地高质量识别（按需下载，约 16MB）——同样不联网，后续版本提供</div></div>
-            <div class="ctl ro-value">未提供</div>
-          </div>
-          <div class="row">
-            <div class="label"><div class="t">云端增强</div><div class="d">配置视觉模型后可用；本地识别效果不佳时提示，绝不静默上传</div></div>
-            <div class="ctl ro-value" id="ai-cloud-state">未配置</div>
+        </details>
+
+        <!-- 添加/编辑模型配置：模态弹窗（业界通行；点遮罩不关闭防误触丢输入，Esc/✕/取消关闭） -->
+        <div id="ai-modal" style="display:none">
+          <div class="modal-card">
+            <div class="modal-head">
+              <span id="ai-modal-title">添加模型配置</span>
+              <button id="ai-modal-close" title="关闭（Esc）">✕</button>
+            </div>
+            <div class="modal-body">
+              <div class="row">
+                <div class="label"><label class="t" for="ai-f-name">名称</label></div>
+                <div class="ctl"><input type="text" class="formin" id="ai-f-name" style="width:200px" placeholder="如 智谱主力"></div>
+              </div>
+              <div class="row">
+                <div class="label"><label class="t" for="ai-f-provider">服务商</label><div class="d" id="ai-f-hint"></div></div>
+                <div class="ctl"><select id="ai-f-provider"></select></div>
+              </div>
+              <div class="row">
+                <div class="label"><label class="t" for="ai-f-url">接口地址</label><div class="d">OpenAI 兼容 base_url，预设一般无需修改</div></div>
+                <div class="ctl"><input type="text" class="formin" id="ai-f-url" style="width:250px"></div>
+              </div>
+              <div class="row">
+                <div class="label"><label class="t" for="ai-f-key">API Key</label><div class="d" id="ai-f-keyhint">仅存本机系统凭据管理器，不出现在设置文件，也不回显</div></div>
+                <div class="ctl"><input type="password" class="formin" id="ai-f-key" style="width:250px" autocomplete="off"> <a id="ai-f-keyurl" href="#" target="_blank" style="font-size:12px; margin-left:8px; display:none;">获取 Key →</a></div>
+              </div>
+              <div class="row">
+                <div class="label"><label class="t" for="ai-f-text">文字模型</label><div class="d">截图翻译等文本任务，填该服务商下的模型名，可留空</div></div>
+                <div class="ctl"><input type="text" class="formin" id="ai-f-text" list="ai-dl-text" style="width:210px"> <button class="btn ghost" id="ai-f-fetch" style="display:none; font-size:11.5px;">拉取模型列表</button></div>
+              </div>
+              <div class="mchips" id="ai-chips-text"></div>
+              <div class="row">
+                <div class="label"><label class="t" for="ai-f-vision">视觉模型</label><div class="d">AI 问图、云端识别等读图任务，可留空</div></div>
+                <div class="ctl"><input type="text" class="formin" id="ai-f-vision" list="ai-dl-vision" style="width:210px"></div>
+              </div>
+              <div class="mchips" id="ai-chips-vision"></div>
+              <datalist id="ai-dl-text"></datalist><datalist id="ai-dl-vision"></datalist>
+              <div class="row" style="border-bottom:none">
+                <div class="label"><div class="d" id="ai-f-stat"></div></div>
+                <div class="ctl">
+                  <button class="btn ghost" id="ai-f-cancel">取消</button>
+                  <button class="btn primary" id="ai-f-save">保存</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -617,43 +666,58 @@
         <div class="psub">把截图、取字、标注能力挂给你的 AI 助手；写入前自动备份原配置。</div>
         <div class="syntaxhint">同一家族的桌面端与 CLI 端配置互不相通，需分别接入。</div>
         <div class="group" id="agent-reg"><div class="row"><div class="label"><div class="d">检测中…</div></div></div></div>
-        <div class="ptitle" style="font-size:13px">第 1 步 · 安装 CLI 与 Skill（一次装齐）</div>
-        <div class="psub">一条命令同时安装或更新 CLI 与 Agent Skill。</div>
-        <div class="installcards">
-          <div class="installcard">
-            <h4>方式一 · 终端</h4>
-            <div class="codebox" style="height:84px;display:flex;align-items:center"><span class="copy" data-copy="curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wample0105/apo-once-glance/releases/latest/download/install.sh | bash">复制</span>curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wample0105/apo-once-glance/releases/latest/download/install.sh | bash</div>
-          </div>
-          <div class="installcard">
-            <h4>方式二 · 交给 Agent</h4>
-            <div class="codebox" style="height:84px"><span class="copy" id="copy-prompt">复制</span><span id="install-prompt">请帮我在这台电脑安装 OnceGlance 的 CLI 和 Agent Skill。请执行下面这条命令：
+        <!-- 安装与手动配置：一次性设置内容，默认折叠（渐进披露——核心是上方客户端列表） -->
+        <details class="refbox">
+          <summary>安装 CLI 与手动配置 MCP（一次性设置，已接入可跳过）</summary>
+          <div style="padding:10px 14px 12px">
+            <div class="ptitle" style="font-size:13px">第 1 步 · 安装 CLI 与 Skill（一次装齐）</div>
+            <div class="psub">一条命令同时安装或更新 CLI 与 Agent Skill。</div>
+            <div class="installcards">
+              <div class="installcard">
+                <h4>方式一 · 终端</h4>
+                <div class="codebox" style="height:84px;display:flex;align-items:center"><span class="copy" data-copy="curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wample0105/apo-once-glance/releases/latest/download/install.sh | bash">复制</span>curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wample0105/apo-once-glance/releases/latest/download/install.sh | bash</div>
+              </div>
+              <div class="installcard">
+                <h4>方式二 · 交给 Agent</h4>
+                <div class="codebox" style="height:84px"><span class="copy" id="copy-prompt">复制</span><span id="install-prompt">请帮我在这台电脑安装 OnceGlance 的 CLI 和 Agent Skill。请执行下面这条命令：
 curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wample0105/apo-once-glance/releases/latest/download/install.sh | bash
 安装完成后，运行 once status --json 验证是否安装成功。</span></div>
+              </div>
+            </div>
+            <div class="psub" style="margin-top:8px">安装后重启 Agent，再运行 <code>once status --json</code> 验证连接；Windows 在 Git Bash / WSL 中执行。</div>
+            <div class="ptitle" style="font-size:13px;margin-top:14px">第 2 步 · 配置 MCP</div>
+            <div class="psub">把下面的 JSON 加入你的 Agent 的 MCP 配置（命令为 once.exe 的绝对路径）。</div>
+            <div class="codebox" id="mcp-config"><span class="copy">复制</span></div>
           </div>
-        </div>
-        <div class="psub" style="margin-top:8px">安装后重启 Agent，再运行 <code>once status --json</code> 验证连接；Windows 在 Git Bash / WSL 中执行。</div>
-        <div class="ptitle" style="font-size:13px;margin-top:14px">第 2 步 · 配置 MCP</div>
-        <div class="psub">把下面的 JSON 加入你的 Agent 的 MCP 配置（命令为 once.exe 的绝对路径）。</div>
-        <div class="codebox" id="mcp-config"><span class="copy">复制</span></div>
+        </details>
+
         <div class="ptitle" style="font-size:13px;margin-top:14px">隐私与安全</div>
         <div class="psub">黑名单拦得住，审计看得见——每次调用都留一条不含内容的记录。</div>
-        <div class="ptitle" style="font-size:13px">App 黑名单</div>
-        <div class="psub">命中即拒绝截图，不留成图，AI 助手收到退出码 6 的明确错误。不提供"本次放行"。</div>
-        <div class="group">
-          <div id="blacklist-rows"></div>
-          <div class="row">
-            <input type="text" class="formin" id="bl-input" placeholder="进程名（1password.exe）或关键字（*银行*），回车添加" style="flex:1">
-            <button class="btn" id="bl-add">添加</button>
+        <details class="refbox">
+          <summary>App 黑名单（命中即拒绝截图 · 退出码 6）</summary>
+          <div style="padding:4px 14px 12px">
+            <div class="psub" style="margin-top:8px">命中即拒绝截图，不留成图，AI 助手收到退出码 6 的明确错误。不提供"本次放行"。</div>
+            <div class="group">
+              <div id="blacklist-rows"></div>
+              <div class="row">
+                <input type="text" class="formin" id="bl-input" placeholder="进程名（1password.exe）或关键字（*银行*），回车添加" style="flex:1">
+                <button class="btn" id="bl-add">添加</button>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="ptitle" style="font-size:13px">审计日志</div>
-        <div class="psub">仅记录命令元数据与 AI 调用去向（服务商/模型），永不记录图片内容与 OCR 正文；30 天自动清理。</div>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <select id="audit-filter"><option value="all">全部</option><option value="fail">仅失败</option></select>
-          <span style="flex:1"></span>
-          <button class="btn ghost" id="audit-clear">清空</button>
-        </div>
-        <div class="auditlist" id="audit-list"></div>
+        </details>
+        <details class="refbox">
+          <summary>审计日志（仅记录元数据 · 30 天自动清理）</summary>
+          <div style="padding:4px 14px 12px">
+            <div class="psub" style="margin-top:8px">仅记录命令元数据与 AI 调用去向（服务商/模型），永不记录图片内容与 OCR 正文；30 天自动清理。</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <select id="audit-filter"><option value="all">全部</option><option value="fail">仅失败</option></select>
+              <span style="flex:1"></span>
+              <button class="btn ghost" id="audit-clear">清空</button>
+            </div>
+            <div class="auditlist" id="audit-list"></div>
+          </div>
+        </details>
         <details class="refbox">
           <summary>接口速查</summary>
           <div class="group" style="padding:0 14px">
@@ -791,9 +855,9 @@ curl -fsSL --retry 3 --retry-all-errors --retry-delay 1 https://github.com/wampl
       <!-- ===== 诊断（§4.12）===== -->
       <section class="page" id="page-doctor">
         <div class="ptitle">诊断</div>
-        <div class="psub">一键自检：捕获、落盘目录、OCR 引擎、桥接。诊断报告不含任何截图内容与 OCR 文字。</div>
+        <div class="psub">一键自检：捕获、热键注册、配置与落盘目录、OCR 引擎、运行时、MCP 连接、AI 模型。诊断报告不含任何截图内容与 OCR 文字。</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-          <button class="btn solid" id="btn-doctor">重新自检</button>
+          <button class="btn primary" id="btn-doctor">重新自检</button>
           <span class="metaline" id="doctor-ran-at"></span>
         </div>
         <div class="group" id="doctor-list" style="margin-top:12px"></div>

@@ -54,6 +54,7 @@ let lastSettingPage = "general"; // 记住上次访问的设置分组，齿轮�
 function gotoPage(page) {
   $$(".page").forEach((p) => p.classList.remove("on"));
   $("#page-" + page).classList.add("on");
+  if (page !== "ai") closeAiForm(); // 离开 AI 页收起模型弹窗（弹窗随页隐藏会残留旧编辑态）
   const isSetting = page !== "history";
   $("#settings-tabs").style.display = isSetting ? "flex" : "none";
   $("#btn-settings-open").style.display = isSetting ? "none" : "inline-flex";
@@ -726,6 +727,7 @@ $("#bl-add").onclick = async () => {
 // ===== AI 配置中心（v0.2 M1：BYOK 模型配置，Key 只进系统凭据管理器）=====
 let aiPresets = [];
 let aiEditingId = null; // null=新建，否则为编辑中的 profile id
+let aiEditingHasKey = false; // 编辑态且已存 Key：换服务商时提醒 Key 归属
 
 async function loadAiPage() {
   if (!aiPresets.length) {
@@ -789,7 +791,12 @@ async function renderAiProfiles() {
 
 function openAiForm(profile = null) {
   aiEditingId = profile ? profile.id : null;
-  $("#ai-form").style.display = "";
+  aiEditingHasKey = !!(profile && profile.has_key);
+  $("#ai-modal-title").textContent = profile ? "编辑模型配置" : "添加模型配置";
+  $("#ai-modal").style.display = "flex";
+  const keyhint = $("#ai-f-keyhint");
+  keyhint.textContent = "仅存本机系统凭据管理器，不出现在设置文件，也不回显";
+  keyhint.style.color = "";
   $("#ai-f-name").value = profile ? profile.name : "";
   const sel = $("#ai-f-provider");
   sel.innerHTML = aiPresets.map((p) => `<option value="${p.id}">${p.name}</option>`).join("");
@@ -850,20 +857,38 @@ function aiFillDatalist(providerId) {
   $("#ai-f-hint").textContent = p ? p.hint : "";
   $("#ai-dl-text").innerHTML = ((p && p.text_models) || []).map((m) => `<option value="${m}">`).join("");
   $("#ai-dl-vision").innerHTML = ((p && p.vision_models) || []).map((m) => `<option value="${m}">`).join("");
+  // 预设模型快捷填充 chips：点一下即填入（datalist 原生弹层在 WebView2 不可靠）
+  const chips = (boxId, models, inputSel) => {
+    const box = $(boxId);
+    if (!box) return;
+    box.innerHTML = (models || []).map((m) => `<button type="button" class="mchip" data-m="${m}">${m}</button>`).join("");
+    box.querySelectorAll(".mchip").forEach((b) => {
+      b.addEventListener("click", () => { $(inputSel).value = b.dataset.m; $(inputSel).focus(); });
+    });
+  };
+  chips("#ai-chips-text", p && p.text_models, "#ai-f-text");
+  chips("#ai-chips-vision", p && p.vision_models, "#ai-f-vision");
 }
 
 function closeAiForm() {
-  $("#ai-form").style.display = "none";
+  $("#ai-modal").style.display = "none";
   aiEditingId = null;
 }
 
 $("#ai-add").onclick = () => { if (aiPresets.length) openAiForm(); else loadAiPage().catch(reportErr); };
 $("#ai-f-cancel").onclick = closeAiForm;
+$("#ai-modal-close").onclick = closeAiForm;
 $("#ai-f-provider").onchange = () => {
   const p = aiPreset($("#ai-f-provider").value);
   if (p && p.base_url) $("#ai-f-url").value = p.base_url;
   aiFillDatalist($("#ai-f-provider").value);
   aiSyncKeyLink($("#ai-f-provider").value);
+  // 编辑态换服务商：已保存的 Key 属于原服务商，不换 Key 连接必失败——明确提醒
+  if (aiEditingHasKey) {
+    const keyhint = $("#ai-f-keyhint");
+    keyhint.textContent = "已保存的 Key 属于原服务商——切换服务商后请粘贴新服务商的 Key，否则连接会失败";
+    keyhint.style.color = "var(--error)";
+  }
 };
 $("#ai-f-fetch").onclick = () => aiFetchModels();
 $("#ai-f-save").onclick = async () => {
@@ -1051,22 +1076,28 @@ $("#audit-clear").onclick = async () => {
 // 检查项中文化（P1-3）：Rust 侧 check 键是冻结的机器标识，仅 GUI 层做标签映射
 const DOCTOR_LABEL = {
   capture: "捕获",
+  hotkeys: "热键",
+  config_dir: "配置目录",
   save_dir: "保存目录",
   ocr_engine: "OCR 引擎",
   runtime: "运行时",
   mcp: "MCP 连接",
   ai_model: "AI 模型",
 };
+let doctorRunSeq = 0; // 自检代次：进页自动跑与手动点击并发时，旧恢复定时器不得覆盖新轮文案
 async function runDoctor() {
   const btn = $("#btn-doctor");
+  const myRun = ++doctorRunSeq;
   if (btn) { btn.disabled = true; btn.textContent = "自检中…"; }
+  const t0 = performance.now();
   try {
     const r = await invoke("doctor_run");
-    // 总结态置顶（补-6）：一眼见全局，下方列表降为明细
+    const ms = Math.round(performance.now() - t0);
+    // 总结态置顶（补-6）：一眼见全局，下方列表降为明细；附项数与用时（新鲜度可视化）
     const bad = r.items.filter((it) => !it.ok).length;
     const sum = bad
-      ? `<div class="doctor-sum bad"><span class="d-bad">✕</span><span>${bad} 项异常</span></div>`
-      : `<div class="doctor-sum ok"><span class="d-ok">✓</span><span>一切正常</span></div>`;
+      ? `<div class="doctor-sum bad"><span class="d-bad">✕</span><span>${bad} 项异常</span><span style="font-weight:400;font-size:11.5px;color:var(--text-tertiary)">${r.items.length} 项检查 · ${ms}ms</span></div>`
+      : `<div class="doctor-sum ok"><span class="d-ok">✓</span><span>一切正常</span><span style="font-weight:400;font-size:11.5px;color:var(--text-tertiary)">${r.items.length} 项检查 · ${ms}ms</span></div>`;
     $("#doctor-list").innerHTML = sum + r.items.map((it) => `
     <div class="doctor-item">
       <span class="${it.ok ? "d-ok" : "d-bad"}">${it.ok ? "✓" : "✕"}</span>
@@ -1077,10 +1108,15 @@ async function runDoctor() {
     dot.className = "statusdot " + (r.ok_all ? "" : "warn");
     // tooltip 带当前状态文字（补-7）：「绿=正常」对色弱/新用户不自明
     dot.title = r.ok_all ? "诊断状态：一切正常，点击查看" : "诊断状态：有可修复项，点击直达诊断";
+    // 完成信号（业界：重跑必须有可见反馈——检查快时"自检中"一闪而过像没反应）
+    if (btn) {
+      btn.textContent = bad ? `✕ ${bad} 项异常` : `✓ 已复核 ${r.items.length} 项`;
+      setTimeout(() => { if (btn.disabled || doctorRunSeq !== myRun) return; btn.textContent = "重新自检"; }, 1500);
+    }
   } catch (e) {
     reportErr(e);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "重新自检"; }
+    if (btn) { btn.disabled = false; }
     const at = $("#doctor-ran-at");
     if (at) at.textContent = "上次自检 " + new Date().toLocaleTimeString("zh-CN", { hour12: false });
   }
@@ -1322,7 +1358,10 @@ function setDetailZoom(scale, fit) {
   applyDetailZoom();
 }
 window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && $("#page-detail").classList.contains("on")) closeDetail();
+  if (e.key === "Escape") {
+    if ($("#ai-modal").style.display === "flex") { closeAiForm(); return; } // 弹窗最上层：先关弹窗
+    if ($("#page-detail").classList.contains("on")) closeDetail();
+  }
 });
 
 
