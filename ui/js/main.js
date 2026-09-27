@@ -49,8 +49,8 @@ $("#btn-close").onclick = async () => {
 })();
 
 // ===== 导航（设置收敛版）：首页=常驻工作台；设置视图=返回+分组 tab =====
-// 低频设置（AI/通用/AI 助手/诊断）收敛进齿轮入口，首页只留核心高频功能
-let lastSettingPage = "general"; // 记住上次访问的设置分组，齿轮直达
+// 低频设置（模型配置/接入 Agent/通用/诊断）收敛进齿轮入口，首页只留核心高频功能
+let lastSettingPage = "ai"; // 记住上次访问的设置分组，齿轮直达；默认 AI（AI 配置置首的新序）
 function gotoPage(page) {
   $$(".page").forEach((p) => p.classList.remove("on"));
   $("#page-" + page).classList.add("on");
@@ -116,13 +116,13 @@ function syncHomeMode(hasShots) {
   if (e) e.style.display = hasShots ? "" : "none";
 }
 
-// 状态行·AI 助手 chip（权限态轻提示；详情在 AI 助手页管理）
+// 状态行·Agent chip（权限态轻提示；详情在接入 Agent 页管理）
 async function refreshAgentChip() {
   const chip = $("#strip-agent");
   if (!chip) return;
   try {
     const s = await invoke("get_settings");
-    $("#strip-agent-text").textContent = s.agent_enabled ? "AI 助手 · 允许调用" : "AI 助手 · 已切断";
+    $("#strip-agent-text").textContent = s.agent_enabled ? "Agent · 允许调用" : "Agent · 已切断";
     chip.className = "statchip " + (s.agent_enabled ? "ok" : "warn");
   } catch (e) { /* 不阻塞首页 */ }
 }
@@ -211,19 +211,24 @@ function refreshCurrentView() {
 }
 
 // 首页 AI 卡状态自适应（引导态「3 步开启」/ 部分就绪 / 绿色就绪态）。
-// 就绪判定必须「文字+视觉双角色都有可用默认」：只查「有 Key」会误报——
-// 默认视觉缺失时问图调用必报「未设置默认模型」，与徽章宣称矛盾（P0）
+// 就绪判定走功能位（两层制）：翻译/问图各自的「连接有 Key + 模型名非空」——
+// 只查「有 Key」会误报，功能位缺模型名时调用必报错，与徽章宣称矛盾。
 async function refreshAiCard() {
   try {
     const list = (await invoke("ai_list")) || [];
-    const defT = list.find((p) => p.is_default_text);
-    const defV = list.find((p) => p.is_default_vision);
-    const textOk = !!(defT && defT.has_key && defT.text_model);
-    const visionOk = !!(defV && defV.has_key && defV.vision_model);
+    let s = null;
+    try { s = (await invoke("get_settings")).ai; } catch (e) {}
+    const fmReady = (fm) => {
+      if (!fm || !fm.model) return false;
+      const c = list.find((p) => p.id === fm.profile_id);
+      return !!(c && c.has_key);
+    };
+    const textOk = fmReady(s && s.translate), visionOk = fmReady(s && s.ask);
+    const defT = s && s.translate && list.find((p) => p.id === s.translate.profile_id);
     const name = $("#ai-card-name"), desc = $("#ai-card-desc"), chip = $("#ai-card-chip");
     if (textOk && visionOk) {
       name.textContent = "AI 能力已就绪";
-      desc.textContent = `${defT.name} · 翻译、问图可用`;
+      desc.textContent = `${defT ? defT.name : ""} · 翻译、问图可用`;
       chip.textContent = "已就绪";
       chip.classList.add("ready");
     } else if (!list.some((p) => p.has_key)) {
@@ -232,9 +237,9 @@ async function refreshAiCard() {
       chip.textContent = "未配置";
       chip.classList.remove("ready");
     } else {
-      // 有 Key 但角色不全：缺哪个如实说（缺省角色 / 缺 Key / 缺模型名都算未就绪）
+      // 有 Key 但功能位不全：缺哪个如实说（缺省连接 / 缺 Key / 缺模型名都算未就绪）
       name.textContent = "AI 能力部分就绪";
-      desc.textContent = `翻译${textOk ? "可用" : "未就绪"} · 问图${visionOk ? "可用" : "未就绪"}，点击到 AI 页补全`;
+      desc.textContent = `翻译${textOk ? "可用" : "未就绪"} · 问图${visionOk ? "可用" : "未就绪"}，点击到模型配置页补全`;
       chip.textContent = "部分就绪";
       chip.classList.remove("ready");
     }
@@ -411,7 +416,7 @@ async function loadSettingsUI() {
   dot.classList.toggle("off", !s.agent_enabled);
   const stat = $("#agent-stat");
   if (s.agent_enabled) {
-    stat.textContent = "当前状态：允许（AI 助手可调用截图、OCR、标注）";
+    stat.textContent = "当前状态：允许（Agent 可调用截图、OCR、标注）";
     stat.className = "statline ok";
   } else {
     stat.textContent = "当前状态：已切断（截图类调用返回退出码 5，历史与状态查询不受影响）";
@@ -724,75 +729,83 @@ $("#bl-add").onclick = async () => {
   renderBlacklist(s.blacklist);
 };
 
-// ===== AI 配置中心（v0.2 M1：BYOK 模型配置，Key 只进系统凭据管理器）=====
+// ===== AI 设置（v0.2 两层制：模型服务=纯连接；截图翻译/文字识别/AI 问图各选「服务+模型」互不绑定）=====
 let aiPresets = [];
 let aiEditingId = null; // null=新建，否则为编辑中的 profile id
 let aiEditingHasKey = false; // 编辑态且已存 Key：换服务商时提醒 Key 归属
+let aiSettings = null; // settings.ai 缓存（translate/ask 功能位 + ocr 引擎）
+let aiConnList = [];   // 连接列表缓存（ai_list）
+let aiFetchedModels = {}; // profile id → 已拉取的模型列表（datalist 增强）
+let aiSub = "profiles"; // 当前子页（模型服务置首）
+
+function aiPreset(id) { return aiPresets.find((p) => p.id === id); }
+function aiConn(id) { return aiConnList.find((p) => p.id === id); }
 
 async function loadAiPage() {
   if (!aiPresets.length) {
     try { aiPresets = await invoke("ai_presets"); } catch (e) { reportErr(e); }
   }
+  try { const s = await invoke("get_settings"); aiSettings = s.ai || {}; } catch (e) { aiSettings = {}; }
+  try { aiConnList = await invoke("ai_list"); } catch (e) { aiConnList = []; }
+  renderAiFunc("translate");
+  renderAiFunc("ask");
+  renderAiOcr();
   await renderAiProfiles();
   await renderAiTemplates();
-  try {
-    const s = await invoke("get_settings");
-    const lang = $("#ai-trans-lang");
-    if (lang) lang.value = (s.ai && s.ai.translate_lang) || "简体中文";
-  } catch (e) {}
+  const lang = $("#ai-trans-lang");
+  if (lang) lang.value = (aiSettings && aiSettings.translate_lang) || "简体中文";
 }
 
-function aiPreset(id) { return aiPresets.find((p) => p.id === id); }
+// 子导航切换（分段控件：截图翻译/文字识别/AI 问图/模型服务）
+function aiShowSub(sub) {
+  aiSub = sub;
+  document.querySelectorAll("#ai-subnav [data-aisub]").forEach((b) => b.classList.toggle("on", b.dataset.aisub === sub));
+  document.querySelectorAll("#page-ai .aisub").forEach((el) => el.classList.remove("on"));
+  const target = document.getElementById(`ai-sub-${sub}`);
+  if (target) target.classList.add("on");
+}
+$("#ai-subnav").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-aisub]");
+  if (b) aiShowSub(b.dataset.aisub);
+});
 
+// ===== 模型服务（纯连接）列表 =====
 async function renderAiProfiles() {
   const box = $("#ai-profiles");
-  let list = [];
   try {
-    list = await invoke("ai_list");
+    aiConnList = await invoke("ai_list");
   } catch (e) {
     box.innerHTML = `<div class="row"><div class="label"><div class="d">加载失败：${e && e.message ? e.message : e}</div></div></div>`;
     return;
   }
-  if (!list.length) {
-    box.innerHTML = `<div class="row"><div class="label"><div class="d">还没有模型配置——添加一套即可开启 AI 增强（截图翻译、问图等）</div></div></div>`;
+  if (!aiConnList.length) {
+    box.innerHTML = `<div class="row"><div class="label"><div class="d">暂无服务——添加后各功能即可引用</div></div></div>`;
   } else {
-    box.innerHTML = list.map((p) => {
-      const badges = [
-        p.is_default_text ? '<span class="tagok">默认文字</span>' : "",
-        p.is_default_vision ? '<span class="tagok">默认视觉</span>' : "",
-      ].filter(Boolean).join(" ");
-      const models = [p.text_model ? `文字 ${escapeHtml(p.text_model)}` : "", p.vision_model ? `视觉 ${escapeHtml(p.vision_model)}` : ""]
-        .filter(Boolean).join(" · ") || "未配置模型";
-      return `
+    box.innerHTML = aiConnList.map((p) => `
       <div class="row">
-        <div class="label"><div class="t">${escapeHtml(p.name)} <span style="color:var(--text-tertiary)">· ${p.provider_name}</span> ${badges}</div>
-          <div class="d">${models} · <span style="color:${p.has_key ? "var(--success)" : "var(--error)"}">${p.has_key ? "Key 已保存" : "未配 Key"}</span></div>
+        <div class="label"><div class="t">${escapeHtml(p.name)} <span style="color:var(--text-tertiary)">· ${escapeHtml(p.provider_name)}</span></div>
+          <div class="d">${escapeHtml(p.base_url)} · <span style="color:${p.has_key ? "var(--success)" : "var(--error)"}">${p.has_key ? "Key 已保存" : "未配 Key"}</span></div>
           <div class="d" data-ai-test="${p.id}" style="min-height:14px"></div>
         </div>
         <div class="ctl">
-          <button class="btn" data-ai-test-btn="${p.id}">测试连接</button>
+          <button class="btn" data-ai-test-btn="${p.id}">测试 Key</button>
           <button class="btn ghost" data-ai-edit="${p.id}">编辑</button>
           <button class="btn ghost danger" data-ai-del="${p.id}">删除</button>
         </div>
-      </div>`;
-    }).join("");
+      </div>`).join("");
   }
-  const mkDefaults = (sel, role) => {
-    const el = $(sel);
-    el.innerHTML = `<option value="">未指定</option>` + list.map((p) =>
-      `<option value="${p.id}" ${(role === "text" ? p.is_default_text : p.is_default_vision) ? "selected" : ""}>${escapeHtml(p.name)}（${p.provider_name}）</option>`).join("");
-  };
-  mkDefaults("#ai-default-text", "text");
-  mkDefaults("#ai-default-vision", "vision");
-  const cloud = $("#ai-cloud-state");
-  if (cloud) cloud.textContent = list.some((p) => p.vision_model && p.has_key) ? "可用（主动触发时才发送截图）" : "未配置";
+  // 连接列表变化会影响功能位下拉与状态行，全部重刷
+  renderAiFunc("translate");
+  renderAiFunc("ask");
+  renderAiOcr();
   refreshAiCard(); // 配置变化后同步首页 AI 卡状态
 }
 
+// ===== 弹窗：只管连接（名称/服务商/接口地址/Key），模型名在各功能页选择 =====
 function openAiForm(profile = null) {
   aiEditingId = profile ? profile.id : null;
   aiEditingHasKey = !!(profile && profile.has_key);
-  $("#ai-modal-title").textContent = profile ? "编辑模型配置" : "添加模型配置";
+  $("#ai-modal-title").textContent = profile ? "编辑模型服务" : "添加模型服务";
   $("#ai-modal").style.display = "flex";
   const keyhint = $("#ai-f-keyhint");
   keyhint.textContent = "仅存本机系统凭据管理器，不出现在设置文件，也不回显";
@@ -804,18 +817,10 @@ function openAiForm(profile = null) {
   $("#ai-f-url").value = profile ? profile.base_url : (aiPreset(sel.value) || {}).base_url || "";
   $("#ai-f-key").value = "";
   $("#ai-f-key").placeholder = profile && profile.has_key ? "已保存——留空表示不修改" : "";
-  $("#ai-f-text").value = profile ? profile.text_model : "";
-  $("#ai-f-vision").value = profile ? profile.vision_model : "";
   aiSyncKeyLink(sel.value);
-  // 拉取模型按钮：仅已保存且 Key 就绪的配置可用（凭据库才有 Key 可调 /models）
-  const fetchBtn = $("#ai-f-fetch");
-  fetchBtn.style.display = profile && profile.has_key ? "" : "none";
-  fetchBtn.disabled = false;
-  fetchBtn.textContent = "拉取模型列表";
   const stat = $("#ai-f-stat");
   stat.textContent = "";
   stat.style.color = "";
-  aiFillDatalist(sel.value);
   $("#ai-f-name").focus();
 }
 
@@ -831,44 +836,302 @@ function aiSyncKeyLink(providerId) {
   }
 }
 
-// 一键拉取该配置的可用模型（OpenAI 兼容 /models），填充文字/视觉两个 datalist
-async function aiFetchModels() {
-  const id = aiEditingId;
+// ===== 功能位（截图翻译 / AI 问图）：各选「服务+模型」，即时生效 =====
+const AI_FUNCS = {
+  translate: { profile: "#ai-tr-profile", model: "#ai-tr-model", drop: "#ai-tr-drop", list: "#ai-tr-list", fetch: "#ai-tr-fetch", test: "#ai-tr-test", stat: "#ai-tr-stat", kind: "text", modelsKey: "text_models", label: "截图翻译" },
+  ask: { profile: "#ai-ask-profile", model: "#ai-ask-model", drop: "#ai-ask-drop", list: "#ai-ask-list", fetch: "#ai-ask-fetch", test: "#ai-ask-test", stat: "#ai-ask-stat", kind: "vision", modelsKey: "vision_models", label: "AI 问图" },
+};
+
+function aiFuncFm(key) {
+  return (aiSettings && aiSettings[key]) || { profile_id: "", model: "" };
+}
+
+function renderAiFunc(key) {
+  const def = AI_FUNCS[key];
+  const fm = aiFuncFm(key);
+  const sel = $(def.profile);
+  sel.innerHTML = `<option value="">未设置</option>` + aiConnList.map((p) =>
+    `<option value="${p.id}">${escapeHtml(p.name)}（${escapeHtml(p.provider_name)}）</option>`).join("");
+  sel.value = fm.profile_id || "";
+  $(def.model).value = fm.model || "";
+  aiSyncFuncModels(key);
+  aiRenderFuncStat(key);
+}
+
+// 服务选定后：收起下拉与拉取按钮状态（模型列表统一走 ▼ 下拉，预设建议+已拉取合并）
+function aiSyncFuncModels(key) {
+  const def = AI_FUNCS[key];
+  const conn = aiConn($(def.profile).value);
+  aiCloseLists();
+  const fetchBtn = $(def.fetch);
+  if (conn && conn.has_key) {
+    fetchBtn.style.display = "";
+    fetchBtn.disabled = false;
+    fetchBtn.textContent = "拉取模型列表";
+  } else {
+    fetchBtn.style.display = "none";
+  }
+}
+
+function aiRenderFuncStat(key) {
+  const def = AI_FUNCS[key];
+  const stat = $(def.stat);
+  if (!stat) return;
+  const fm = aiFuncFm(key);
+  const conn = fm.profile_id ? aiConn(fm.profile_id) : null;
+  if (!conn) {
+    stat.textContent = aiConnList.length ? "未设置" : "未设置——先到「模型服务」添加一套连接";
+    stat.style.color = "var(--text-tertiary)";
+    return;
+  }
+  const ready = conn.has_key && !!fm.model;
+  stat.textContent = `${conn.name} · ${fm.model || "（未填模型名）"} · ${conn.has_key ? "Key ✓" : "未配 Key"}`;
+  stat.style.color = ready ? "var(--success)" : "var(--warn)";
+}
+
+// 即时生效（业界设置页惯例：改即存，无需保存按钮）
+async function aiSaveFunc(key) {
+  const def = AI_FUNCS[key];
+  try {
+    aiSettings = await invoke("ai_set_func", { func: key, profileId: $(def.profile).value, model: $(def.model).value.trim() });
+    aiRenderFuncStat(key);
+    refreshAiCard();
+  } catch (e) { reportErr(e); }
+}
+
+async function aiTestFunc(key) {
+  const def = AI_FUNCS[key];
+  const stat = $(def.stat);
+  const id = $(def.profile).value;
+  const model = $(def.model).value.trim();
+  if (!id || !model) {
+    stat.textContent = "先选服务并填写模型名";
+    stat.style.color = "var(--error)";
+    return;
+  }
+  const conn = aiConn(id);
+  if (conn && !conn.has_key) {
+    stat.textContent = "未配 Key——到「模型服务」编辑并填入 API Key";
+    stat.style.color = "var(--error)";
+    return;
+  }
+  const btn = $(def.test);
+  btn.disabled = true;
+  stat.style.color = "";
+  stat.textContent = "测试中…";
+  try {
+    const r = await invoke("ai_test", { id, model, kind: def.kind });
+    stat.textContent = r.ok ? `✓ 连接成功 ${r.latency_ms}ms · ${model}` : `✕ ${r.message}`;
+    stat.style.color = r.ok ? "var(--success)" : "var(--error)";
+  } catch (e) {
+    stat.textContent = "✕ " + (e && e.message ? e.message : e);
+    stat.style.color = "var(--error)";
+  }
+  btn.disabled = false;
+}
+
+async function aiFetchFuncModels(key) {
+  const def = AI_FUNCS[key];
+  const id = $(def.profile).value;
   if (!id) return;
-  const btn = $("#ai-f-fetch");
+  const btn = $(def.fetch);
   btn.disabled = true;
   btn.textContent = "拉取中…";
   try {
-    const models = await invoke("ai_fetch_models", { profileId: id });
-    const opts = (models || []).map((m) => `<option value="${m}">`).join("");
-    $("#ai-dl-text").innerHTML = opts;
-    $("#ai-dl-vision").innerHTML = opts;
-    btn.textContent = `已拉取 ${(models || []).length} 个模型`;
+    const r = await invoke("ai_fetch_models", { profileId: id });
+    const models = (r && r.models) || [];
+    aiFetchedModels[id] = models;
+    btn.textContent = `已拉取 ${models.length} 个`;
   } catch (e) {
     btn.textContent = "拉取失败，点重试";
     reportErr(e);
     return;
   }
   btn.disabled = false;
+  // 拉取完成自动弹列表（列表 = 已拉取 ∪ 预设建议）
+  aiOpenList(def.list, aiModelsFor(key), new Set(aiFetchedModels[id] || []), $(def.model).value.trim(),
+    (m) => { $(def.model).value = m; aiSaveFunc(key); });
 }
 
-function aiFillDatalist(providerId) {
-  const p = aiPreset(providerId);
-  $("#ai-f-hint").textContent = p ? p.hint : "";
-  $("#ai-dl-text").innerHTML = ((p && p.text_models) || []).map((m) => `<option value="${m}">`).join("");
-  $("#ai-dl-vision").innerHTML = ((p && p.vision_models) || []).map((m) => `<option value="${m}">`).join("");
-  // 预设模型快捷填充 chips：点一下即填入（datalist 原生弹层在 WebView2 不可靠）
-  const chips = (boxId, models, inputSel) => {
-    const box = $(boxId);
-    if (!box) return;
-    box.innerHTML = (models || []).map((m) => `<button type="button" class="mchip" data-m="${m}">${m}</button>`).join("");
-    box.querySelectorAll(".mchip").forEach((b) => {
-      b.addEventListener("click", () => { $(inputSel).value = b.dataset.m; $(inputSel).focus(); });
-    });
-  };
-  chips("#ai-chips-text", p && p.text_models, "#ai-f-text");
-  chips("#ai-chips-vision", p && p.vision_models, "#ai-f-vision");
+// ===== 模型下拉列表（可编辑组合框：输入自由填写 + ▼ 出列表选择）=====
+function aiCloseLists() {
+  document.querySelectorAll("#page-ai .mlist").forEach((el) => (el.style.display = "none"));
 }
+function aiModelsFor(key) {
+  const def = AI_FUNCS[key];
+  const conn = aiConn($(def.profile).value);
+  const preset = aiPreset(conn ? conn.provider : "");
+  const suggestions = (preset && preset[def.modelsKey]) || [];
+  const fetched = aiFetchedModels[$(def.profile).value] || [];
+  return Array.from(new Set(fetched.concat(suggestions)));
+}
+function aiOpenList(listSel, models, fetchedSet, current, onPick) {
+  aiCloseLists();
+  const listEl = $(listSel);
+  listEl.innerHTML = "";
+  if (!models.length) {
+    const empty = document.createElement("div");
+    empty.className = "mi";
+    empty.style.cssText = "cursor:default;color:var(--text-tertiary)";
+    empty.textContent = "暂无模型，先拉取列表";
+    listEl.appendChild(empty);
+  } else {
+    models.forEach((m) => {
+      const div = document.createElement("div");
+      div.className = "mi" + (m === current ? " cur" : "");
+      const name = document.createElement("span");
+      name.textContent = m;
+      const tag = document.createElement("span");
+      tag.className = "mtag";
+      tag.textContent = fetchedSet && fetchedSet.has(m) ? "接口" : "预设";
+      div.append(name, tag);
+      div.addEventListener("click", () => { aiCloseLists(); onPick(m); });
+      listEl.appendChild(div);
+    });
+  }
+  listEl.style.display = "block";
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".combo")) aiCloseLists();
+});
+
+// ===== 文字识别子页：引擎三选（builtin / paddle / online） =====
+function renderAiOcr() {
+  const ocr = (aiSettings && aiSettings.ocr) || {};
+  const engine = ocr.engine || "builtin";
+  document.querySelectorAll("#ai-ocr-cards .engcard").forEach((c) => {
+    c.classList.toggle("on", c.dataset.engine === engine);
+  });
+  const fm = ocr.online || { profile_id: "", model: "" };
+  const sel = $("#ai-ocr-profile");
+  sel.innerHTML = `<option value="">未设置</option>` + aiConnList.map((p) =>
+    `<option value="${p.id}">${escapeHtml(p.name)}（${escapeHtml(p.provider_name)}）</option>`).join("");
+  sel.value = fm.profile_id || "";
+  $("#ai-ocr-model").value = fm.model || "";
+  aiSyncOcrModels();
+  refreshPaddleUI();
+}
+
+function aiSyncOcrModels() {
+  const conn = aiConn($("#ai-ocr-profile").value);
+  aiCloseLists();
+  // 获取 Key 链接跟随所选连接的服务商
+  const a = $("#ai-ocr-keyurl");
+  const p = aiPreset(conn ? conn.provider : "");
+  if (p && p.key_url) {
+    a.href = p.key_url;
+    a.style.display = "";
+  } else {
+    a.style.display = "none";
+  }
+}
+
+function aiOcrModels() {
+  const conn = aiConn($("#ai-ocr-profile").value);
+  const preset = aiPreset(conn ? conn.provider : "");
+  const suggestions = (preset && preset.vision_models) || [];
+  // 识别建议：服务商视觉模型 + 常见在线 OCR 名（DeepSeek-OCR 等）
+  const extras = ["deepseek-ai/DeepSeek-OCR"];
+  const fetched = aiFetchedModels[$("#ai-ocr-profile").value] || [];
+  return Array.from(new Set(fetched.concat(suggestions, extras)));
+}
+
+async function aiSaveOcrOnline() {
+  try {
+    aiSettings = await invoke("ai_set_func", { func: "ocr_online", profileId: $("#ai-ocr-profile").value, model: $("#ai-ocr-model").value.trim() });
+    refreshAiCard();
+  } catch (e) { reportErr(e); }
+}
+
+async function setOcrEngine(engine) {
+  try {
+    aiSettings = await invoke("ai_set_ocr_engine", { engine });
+    renderAiOcr();
+    refreshAiCard();
+  } catch (e) { reportErr(e); }
+}
+
+// 引擎卡片单选：点卡片即选中；卡内控件操作不触发重选
+document.querySelector("#ai-ocr-cards").addEventListener("click", (e) => {
+  if (e.target.closest(".ecbody")) return;
+  const card = e.target.closest(".engcard");
+  if (card && !card.classList.contains("on")) setOcrEngine(card.dataset.engine);
+});
+
+// 本地增强包状态（后端 ocr_pack_*；未就绪时保底显示未安装）
+let paddleDownloading = false;
+async function refreshPaddleUI() {
+  const badge = $("#ai-paddle-badge");
+  const stat = $("#ai-paddle-stat");
+  const dlBtn = $("#ai-paddle-dl");
+  const delBtn = $("#ai-paddle-del");
+  let st = null;
+  try { st = await invoke("ocr_pack_status"); } catch (e) { st = null; }
+  if (!st) {
+    badge.textContent = "未安装";
+    badge.className = "engbadge dim";
+    dlBtn.style.display = "";
+    delBtn.style.display = "none";
+    if (!paddleDownloading) stat.textContent = "";
+    return;
+  }
+  if (st.installed) {
+    badge.textContent = "已安装";
+    badge.className = "engbadge";
+    dlBtn.style.display = "none";
+    delBtn.style.display = "";
+    if (!paddleDownloading) stat.textContent = "";
+  } else {
+    badge.textContent = "未安装";
+    badge.className = "engbadge dim";
+    dlBtn.style.display = "";
+    delBtn.style.display = "none";
+  }
+}
+
+// 本地增强包：下载 / 删除 / 进度（后端经事件推送进度，魔搭默认源）
+async function ocrPackDownload() {
+  if (paddleDownloading) return;
+  paddleDownloading = true;
+  const stat = $("#ai-paddle-stat");
+  const dlBtn = $("#ai-paddle-dl");
+  dlBtn.disabled = true;
+  stat.style.color = "";
+  stat.textContent = "准备下载…";
+  try {
+    await invoke("ocr_pack_download", { source: $("#ai-paddle-src").value });
+    stat.textContent = "已下载——点本卡片启用为识别引擎";
+    stat.style.color = "var(--success)";
+  } catch (e) {
+    stat.textContent = "下载失败：" + (e && e.message ? e.message : e);
+    stat.style.color = "var(--error)";
+  }
+  paddleDownloading = false;
+  dlBtn.disabled = false;
+  refreshPaddleUI();
+}
+async function ocrPackDelete() {
+  const btn = $("#ai-paddle-del");
+  if (btn.dataset.armed !== "1") {
+    btn.dataset.armed = "1";
+    btn.textContent = "确认删除？";
+    setTimeout(() => { if (!document.body.contains(btn)) return; btn.dataset.armed = ""; btn.textContent = "删除"; }, 3000);
+    return;
+  }
+  btn.dataset.armed = "";
+  btn.textContent = "删除";
+  try { await invoke("ocr_pack_delete"); } catch (e) { reportErr(e); }
+  refreshPaddleUI();
+}
+event.listen("ocr-pack-progress", (e) => {
+  const { received, total } = e.payload || {};
+  const stat = $("#ai-paddle-stat");
+  if (!stat) return;
+  const mb = (n) => (n / 1048576).toFixed(1);
+  const pct = total ? Math.round((received / total) * 100) : 0;
+  stat.style.color = "";
+  stat.textContent = `下载中 ${pct}%（${mb(received)} / ${mb(total)} MB）`;
+});
 
 function closeAiForm() {
   $("#ai-modal").style.display = "none";
@@ -881,16 +1144,15 @@ $("#ai-modal-close").onclick = closeAiForm;
 $("#ai-f-provider").onchange = () => {
   const p = aiPreset($("#ai-f-provider").value);
   if (p && p.base_url) $("#ai-f-url").value = p.base_url;
-  aiFillDatalist($("#ai-f-provider").value);
+  $("#ai-f-hint").textContent = p ? p.hint : "";
   aiSyncKeyLink($("#ai-f-provider").value);
-  // 编辑态换服务商：已保存的 Key 属于原服务商，不换 Key 连接必失败——明确提醒
+  // 编辑态换服务商：已保存的 Key 属于原服务商——不换 Key 连接必失败，明确提醒
   if (aiEditingHasKey) {
     const keyhint = $("#ai-f-keyhint");
     keyhint.textContent = "已保存的 Key 属于原服务商——切换服务商后请粘贴新服务商的 Key，否则连接会失败";
     keyhint.style.color = "var(--error)";
   }
 };
-$("#ai-f-fetch").onclick = () => aiFetchModels();
 $("#ai-f-save").onclick = async () => {
   const keyVal = $("#ai-f-key").value.trim();
   const payload = {
@@ -898,8 +1160,6 @@ $("#ai-f-save").onclick = async () => {
     name: $("#ai-f-name").value,
     provider: $("#ai-f-provider").value,
     base_url: $("#ai-f-url").value,
-    text_model: $("#ai-f-text").value,
-    vision_model: $("#ai-f-vision").value,
   };
   try {
     await invoke("ai_save_profile", { profile: payload, apiKey: keyVal || null });
@@ -912,25 +1172,75 @@ $("#ai-f-save").onclick = async () => {
   }
 };
 
+// 功能位事件（即时生效）：服务切换 / 模型名改定 / 拉取 / 测试 / ▼ 下拉列表
+for (const key of Object.keys(AI_FUNCS)) {
+  const def = AI_FUNCS[key];
+  $(def.profile).addEventListener("change", () => { aiSyncFuncModels(key); aiSaveFunc(key); });
+  $(def.model).addEventListener("change", () => aiSaveFunc(key));
+  $(def.fetch).addEventListener("click", () => aiFetchFuncModels(key));
+  $(def.test).addEventListener("click", () => aiTestFunc(key));
+  $(def.drop).addEventListener("click", () => {
+    const listEl = $(def.list);
+    const wasOpen = listEl.style.display !== "none";
+    aiCloseLists();
+    if (wasOpen) return;
+    aiOpenList(def.list, aiModelsFor(key), new Set(aiFetchedModels[$(def.profile).value] || []),
+      $(def.model).value.trim(), (m) => { $(def.model).value = m; aiSaveFunc(key); });
+  });
+}
+$("#ai-ocr-profile").addEventListener("change", () => { aiSyncOcrModels(); aiSaveOcrOnline(); });
+$("#ai-ocr-model").addEventListener("change", () => aiSaveOcrOnline());
+$("#ai-ocr-drop").addEventListener("click", () => {
+  const listEl = $("#ai-ocr-list");
+  const wasOpen = listEl.style.display !== "none";
+  aiCloseLists();
+  if (wasOpen) return;
+  aiOpenList("#ai-ocr-list", aiOcrModels(), new Set(aiFetchedModels[$("#ai-ocr-profile").value] || []),
+    $("#ai-ocr-model").value.trim(), (m) => { $("#ai-ocr-model").value = m; aiSaveOcrOnline(); });
+});
+$("#ai-ocr-test").addEventListener("click", async () => {
+  const stat = $("#ai-ocr-stat");
+  const id = $("#ai-ocr-profile").value;
+  const model = $("#ai-ocr-model").value.trim();
+  if (!id || !model) {
+    stat.textContent = "先选服务并填写识别模型名";
+    stat.style.color = "var(--error)";
+    return;
+  }
+  const conn = aiConn(id);
+  if (conn && !conn.has_key) {
+    stat.textContent = "未配 Key——到「模型服务」编辑并填入 API Key";
+    stat.style.color = "var(--error)";
+    return;
+  }
+  const btn = $("#ai-ocr-test");
+  btn.disabled = true;
+  stat.style.color = "";
+  stat.textContent = "测试中…";
+  try {
+    const r = await invoke("ai_test", { id, model, kind: "vision" });
+    stat.textContent = r.ok ? `✓ 可用 ${r.latency_ms}ms · ${model}` : `✕ ${r.message}`;
+    stat.style.color = r.ok ? "var(--success)" : "var(--error)";
+  } catch (e) {
+    stat.textContent = "✕ " + (e && e.message ? e.message : e);
+    stat.style.color = "var(--error)";
+  }
+  btn.disabled = false;
+});
+$("#ai-paddle-dl").addEventListener("click", () => ocrPackDownload());
+$("#ai-paddle-del").addEventListener("click", () => ocrPackDelete());
+
 // 配置行操作（事件委托：行内容会整体重绘）
 $("#ai-profiles").addEventListener("click", async (e) => {
   const testBtn = e.target.closest("[data-ai-test-btn]");
   const editBtn = e.target.closest("[data-ai-edit]");
   const delBtn = e.target.closest("[data-ai-del]");
   if (testBtn) {
+    // 连接级测试：OpenAI 兼容 /models 验证接口地址 + Key（不带模型名）
     const id = testBtn.dataset.aiTestBtn;
     const out = document.querySelector(`[data-ai-test="${id}"]`);
     if (!out) return;
-    const list = await invoke("ai_list").catch(() => []);
-    const v = list.find((x) => x.id === id);
-    const kinds = [];
-    if (v && v.text_model) kinds.push("text");
-    if (v && v.vision_model) kinds.push("vision");
-    if (!kinds.length) {
-      out.textContent = "未配置模型——先「编辑」填写文字或视觉模型";
-      out.style.color = "var(--error)";
-      return;
-    }
+    const v = aiConn(id);
     if (!v.has_key) {
       out.textContent = "未配 Key——点「编辑」填写 API Key";
       out.style.color = "var(--error)";
@@ -939,19 +1249,15 @@ $("#ai-profiles").addEventListener("click", async (e) => {
     testBtn.disabled = true;
     out.style.color = "";
     out.textContent = "测试中…";
-    const lines = [];
-    const label = (k) => (k === "text" ? "文字" : "视觉");
-    for (const k of kinds) {
-      try {
-        const r = await invoke("ai_test", { id, kind: k });
-        lines.push(`${label(k)} ${r.ok ? "✓ " + r.latency_ms + "ms" : "✕ " + r.message}`);
-      } catch (err) {
-        lines.push(`${label(k)} ✕ ${err && err.message ? err.message : err}`);
-      }
+    try {
+      const r = await invoke("ai_fetch_models", { profileId: id });
+      out.textContent = `✓ Key 有效 · ${r.latency_ms}ms · 可用 ${r.models.length} 个模型`;
+      out.style.color = "var(--success)";
+    } catch (err) {
+      out.textContent = "✕ " + (err && err.message ? err.message : err);
+      out.style.color = "var(--error)";
     }
     testBtn.disabled = false;
-    out.textContent = lines.join("  ");
-    out.style.color = lines.every((l) => l.includes("✓")) ? "var(--success)" : "var(--error)";
   } else if (editBtn) {
     const list = await invoke("ai_list").catch(() => []);
     const v = list.find((x) => x.id === editBtn.dataset.aiEdit);
@@ -977,14 +1283,7 @@ $("#ai-profiles").addEventListener("click", async (e) => {
   }
 });
 
-$("#ai-default-text").onchange = async () => {
-  try { await invoke("ai_set_default", { role: "text", id: $("#ai-default-text").value || null }); } catch (e) { reportErr(e); }
-  renderAiProfiles().catch(() => {});
-};
-$("#ai-default-vision").onchange = async () => {
-  try { await invoke("ai_set_default", { role: "vision", id: $("#ai-default-vision").value || null }); } catch (e) { reportErr(e); }
-  renderAiProfiles().catch(() => {});
-};
+// 删除连接后全量重刷（renderAiProfiles 内部已连带刷新功能位）
 
 // ===== AI 页·截图翻译目标语言 + 指令模板 =====
 async function renderAiTemplates() {
@@ -995,7 +1294,7 @@ async function renderAiTemplates() {
     tpls = (s.ai && s.ai.templates) || [];
   } catch (e) { box.innerHTML = `<div class="row"><div class="label"><div class="d">加载失败</div></div></div>`; return; }
   if (!tpls.length) {
-    box.innerHTML = `<div class="row"><div class="label"><div class="d">还没有自定义模板——添加后会出现在问图快捷指令里</div></div></div>`;
+    box.innerHTML = `<div class="row"><div class="label"><div class="d">暂无模板</div></div></div>`;
     return;
   }
   box.innerHTML = tpls.map((t, i) => `
@@ -1125,11 +1424,15 @@ $("#btn-doctor").onclick = runDoctor;
 
 // ===== 事件 =====
 event.listen("nav-to", (e) => {
-  const page = e.payload;
+  let page = e.payload;
+  let sub = null;
+  // 支持 "ai-translate"/"ai-ocr"/"ai-ask"/"ai-profiles"：直达 AI 页对应功能区
+  if (page && page.startsWith("ai-")) { sub = page.slice(3); page = "ai"; }
   const btn = document.querySelector(`.nav-item[data-page="${page}"]`);
   if (btn) btn.click();
+  if (sub) aiShowSub(sub);
 });
-// 托盘「AI 助手调用」勾选变化：设置页开关/状态行与首页状态 chip 即时回填
+// 托盘「Agent 调用」勾选变化：设置页开关/状态行与首页状态 chip 即时回填
 // （此前只在落盘、页面不刷新，显示旧态误导用户）
 event.listen("agent-permission-changed", () => {
   loadSettingsUI().catch(() => {});

@@ -2257,6 +2257,9 @@ async function output(action) {
     }
   } else if (action === "ocr") {
     // R1：识别期进度卡 + 结果就地面板（与翻译/问图同一语言），不再关取景层、不再角落 toast
+    // 引擎感知（v0.2）：在线引擎时进度与结果都明示「截图已发送给该服务」
+    let ocrEngineTag = "";
+    try { ocrEngineTag = (await invoke("get_settings")).ai?.ocr?.engine || "builtin"; } catch (e) {}
     aiShowPop();
     aiHideResult();
     document.getElementById("ai-guide").style.display = "none";
@@ -2265,16 +2268,17 @@ async function output(action) {
     document.getElementById("ai-tr-err").style.display = "none";
     document.getElementById("ai-tr-actions").style.display = "none";
     document.getElementById("ai-tr-lang").textContent = "";
-    aiEnterBusyTr("正在识别选区文字");
+    aiEnterBusyTr(ocrEngineTag === "online" ? "正在识别选区文字（在线引擎 · 截图将发送至所选服务）" : "正在识别选区文字");
     try {
       const oc = await invoke("freeze_deliver", { ...rect, action: "ocr" });
       aiBusyFlag = false;
       if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
+      const engineNote = oc.ocr_engine ? ` · ${oc.ocr_engine}` : "";
       if (oc.ocr_status === "copied") {
         if (aiPop.style.display !== "none") {
-          aiShowResult("ocr", oc.ocr_text, "", { statusText: `已复制 ${oc.ocr_chars} 字 · 本地完成` });
+          aiShowResult("ocr", oc.ocr_text, "", { statusText: `已复制 ${oc.ocr_chars} 字${engineNote}` });
         } else {
-          showToast(`✦ 识别完成 · 已复制 ${oc.ocr_chars} 字`); // B1：面板被收起=后台完成
+          showToast(`✦ 识别完成 · 已复制 ${oc.ocr_chars} 字${engineNote}`); // B1：面板被收起=后台完成
         }
       } else if (oc.ocr_status === "clipboard_busy") {
         aiShowResult("ocr", oc.ocr_text, "", { error: "剪贴板写入未确认——点「复制」重试" });
@@ -2946,7 +2950,12 @@ async function aiRun(kind, question) {
   if (aiBusyFlag) return; // 生成中所有触发路径（chip/回车/按钮/翻译）在此短路，杜绝重复请求
   const rect = { screen: 1, x: toPhys(sel.x), y: toPhys(sel.y), w: toPhys(sel.w), h: toPhys(sel.h) };
   if (kind === "ask") aiEnterBusy(question);
-  else aiEnterBusyTr();
+  else {
+    // 明示上传（v0.2）：识别引擎为在线模型时，取字会把截图发送给所选服务——进度期就讲清楚
+    let online = false;
+    try { online = ((await invoke("get_settings")).ai?.ocr?.engine) === "online"; } catch (e) {}
+    aiEnterBusyTr(online ? "正在翻译选区文字（在线识别 · 截图将发送至所选服务）" : "正在翻译选区文字");
+  }
   try {
     const r = kind === "translate"
       ? await invoke("ai_translate_region", rect)
