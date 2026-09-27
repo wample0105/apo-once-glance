@@ -2257,7 +2257,7 @@ async function output(action) {
     }
   } else if (action === "ocr") {
     // R1：识别期进度卡 + 结果就地面板（与翻译/问图同一语言），不再关取景层、不再角落 toast
-    aiPop.style.display = "block";
+    aiShowPop();
     aiHideResult();
     document.getElementById("ai-guide").style.display = "none";
     document.getElementById("ai-ask-body").style.display = "none";
@@ -2713,6 +2713,57 @@ let aiTimer = null;
 let aiResult = null; // 后台完成后的未读结果 { kind, text, meta }——点对应 AI 按钮查看
 let aiShownText = ""; // 结果面板当前展示的文本（复制按钮用）
 
+/* AI 浮层定位（2026-09-26）：默认背离选区弹出——工具条在选区下方→向下弹，在上方→向上弹，
+   出屏钳制；拖动手柄后本次会话内自由定位不再重排（镜像 toolbarFree 模式） */
+let aiPopFree = false;
+function aiShowPop() {
+  if (!aiPopFree) {
+    // 翻转判定与 positionToolbar 同源：工具条 top 在选区底之下 = 工具条在选区下方
+    const below = (parseFloat(toolbar.style.top) || 0) >= sel.y + sel.h - 4;
+    if (below) { aiPop.style.top = "calc(100% + 10px)"; aiPop.style.bottom = "auto"; }
+    else { aiPop.style.top = "auto"; aiPop.style.bottom = ""; } // 回落 CSS 默认＝向上弹
+    aiPop.style.left = "";
+  }
+  aiPop.style.display = "block";
+  requestAnimationFrame(clampAiPop); // 内容切换后一帧再测（高度随态变化）
+}
+// 屏幕钳制：出屏则转为相对工具条的自由定位拉回（bottom 锚定态先落成 top/left）
+function clampAiPop() {
+  const r = aiPop.getBoundingClientRect();
+  let dx = 0, dy = 0;
+  if (r.left < 8) dx = 8 - r.left;
+  if (r.right > innerWidth - 8) dx = (innerWidth - 8) - r.right;
+  if (r.top < 8) dy = 8 - r.top;
+  if (r.bottom > innerHeight - 8) dy = (innerHeight - 8) - r.bottom;
+  if (!dx && !dy) return;
+  const tb = toolbar.getBoundingClientRect();
+  aiPop.style.left = (r.left + dx - tb.left) + "px";
+  aiPop.style.top = (r.top + dy - tb.top) + "px";
+  aiPop.style.bottom = "auto";
+}
+// 手柄拖动：同工具栏把手交互——自由摆放，本次截图会话内有效（退场复位）
+document.getElementById("ai-pop-handle").addEventListener("mousedown", (e) => {
+  e.preventDefault(); e.stopPropagation(); // 不触发画布/工具逻辑，不夺焦点
+  aiPopFree = true;
+  const handle = e.currentTarget;
+  handle.classList.add("dragging");
+  const r = aiPop.getBoundingClientRect(), tb = toolbar.getBoundingClientRect();
+  const grabDx = e.clientX - r.left, grabDy = e.clientY - r.top;
+  const onMove = (ev) => {
+    aiPop.style.left = (ev.clientX - grabDx - tb.left) + "px";
+    aiPop.style.top = (ev.clientY - grabDy - tb.top) + "px";
+    aiPop.style.bottom = "auto";
+    clampAiPop();
+  };
+  const onUp = () => {
+    handle.classList.remove("dragging");
+    document.removeEventListener("mousemove", onMove);
+    document.removeEventListener("mouseup", onUp);
+  };
+  document.addEventListener("mousemove", onMove);
+  document.addEventListener("mouseup", onUp);
+});
+
 aiBtnTranslate.addEventListener("click", () => {
   if (aiBusyFlag) return;
   if (aiResult && aiResult.kind === "translate") { const r = aiResult; aiResult = null; aiShowResult(r.kind, r.text, r.meta, {}); return; }
@@ -2737,6 +2788,8 @@ document.getElementById("toolbar").addEventListener("mousedown", (e) => {
 // 覆盖层每次退场（park）后复位 AI 界面状态
 window.__TAURI__.event.listen("overlay-cleared", () => {
   if (aiPop) aiPop.style.display = "none";
+  aiPopFree = false; // 退场复位：下次拉起恢复自动避让定位（同工具栏把手语义）
+  aiPop.style.top = ""; aiPop.style.left = ""; aiPop.style.bottom = "";
   aiExitBusy();
   aiBusyFlag = false;
   aiResult = null;
@@ -2765,7 +2818,7 @@ function aiHideResult() {
 }
 
 function aiShowGuide() {
-  aiPop.style.display = "block";
+  aiShowPop();
   aiHideResult();
   document.getElementById("ai-guide").style.display = "block";
   document.getElementById("ai-ask-body").style.display = "none";
@@ -2774,7 +2827,7 @@ function aiShowGuide() {
 
 async function aiOpenAsk() {
   if (!(await aiConfigured())) { aiShowGuide(); return; }
-  aiPop.style.display = "block";
+  aiShowPop();
   aiHideResult();
   document.getElementById("ai-guide").style.display = "none";
   document.getElementById("ai-tr-body").style.display = "none";
@@ -2816,7 +2869,7 @@ function runPendingAction(a) {
 async function aiTranslateRun() {
   if (aiBusyFlag) return;
   if (!(await aiConfigured())) { aiShowGuide(); return; }
-  aiPop.style.display = "block";
+  aiShowPop();
   aiHideResult();
   document.getElementById("ai-guide").style.display = "none";
   document.getElementById("ai-ask-body").style.display = "none";
@@ -2986,7 +3039,7 @@ async function copyText(t) {
 
 function aiShowResult(kind, text, meta, opts = {}) {
   aiShownText = text;
-  aiPop.style.display = "block";
+  aiShowPop();
   aiHideResult();
   document.getElementById("ai-guide").style.display = "none";
   document.getElementById("ai-ask-body").style.display = "none";
