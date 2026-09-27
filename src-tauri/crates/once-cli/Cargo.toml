@@ -9,7 +9,7 @@ name = "once"
 path = "src/main.rs"
 
 [dependencies]
-once-core = { path = "../once-core" }
+once-core = { path = "../once-core", features = ["paddle"] }
 clap = { version = "4", features = ["derive", "string"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

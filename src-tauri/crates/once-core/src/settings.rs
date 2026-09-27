@@ -263,6 +263,8 @@ pub fn load() -> Settings {
     if !matches!(s.default_action.as_str(), "copy_image" | "ocr_copy" | "save_only") {
         s.default_action = "copy_image".into();
     }
+    // AI 配置 v1 → v2 迁移（幂等）：默认角色拆到功能位，模型名出栈到功能位
+    s.ai.migrate();
     *SETTINGS.write().unwrap() = Some(s.clone());
     s
 }

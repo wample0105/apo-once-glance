@@ -17,6 +17,16 @@ pub struct OcrLineOut {
     pub text: String,
     /// 物理像素 [x, y, w, h]。
     pub bbox: [i32; 4],
+    /// 行级置信度（Windows.Media.Ocr 不输出：None → 块置信度恒 1.0；
+    /// PaddleOCR 本地包输出 CTC 均分真实值）。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confidence: Option<f64>,
+}
+
+impl OcrLineOut {
+    pub fn new(text: String, bbox: [i32; 4]) -> Self {
+        Self { text, bbox, confidence: None }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -55,6 +65,28 @@ struct WindowsMediaOcr;
 
 pub fn provider() -> &'static dyn OcrProvider {
     &WindowsMediaOcr
+}
+
+/// 本地增强包引擎（`paddle` feature 编译且包已安装时可用；CLI 不带该 feature，返回 None）。
+pub fn paddle_provider() -> Option<&'static dyn OcrProvider> {
+    #[cfg(feature = "paddle")]
+    {
+        if crate::ocr_pack::installed() {
+            return Some(&crate::ocr_paddle::PaddleProvider);
+        }
+    }
+    None
+}
+
+/// 按设置引擎名解析本地引擎（builtin=内置；paddle=增强包，不可用时如实报错，
+/// 绝不静默回退内置——用户选了增强包却被悄悄换引擎，识别质量变化无从归因）。
+pub fn local_provider(engine: &str) -> Result<&'static dyn OcrProvider> {
+    match engine {
+        OCR_ENGINE_PADDLE => paddle_provider().ok_or_else(|| {
+            OnceError::ocr("PaddleOCR 本地包不可用——到「模型配置 → 文字识别」下载安装")
+        }),
+        _ => Ok(provider()),
+    }
 }
 
 /// 引擎可用性（doctor 用）。
@@ -202,10 +234,7 @@ impl OcrProvider for WindowsMediaOcr {
                 }
                 if !line_text.is_empty() {
                     if let Some((x, y, w, h)) = line_bbox {
-                        lines.push(OcrLineOut {
-                            text: line_text,
-                            bbox: [x as i32, y as i32, w as i32, h as i32],
-                        });
+                        lines.push(OcrLineOut::new(line_text, [x as i32, y as i32, w as i32, h as i32]));
                     }
                 }
             }
@@ -233,7 +262,7 @@ fn is_cjk(c: char) -> bool {
 
 /// 行 → 块聚合：垂直间距 < 0.6×行高的相邻行合并为一段；
 /// 含代码符号密集的段标记 code；很短且像控件的标记 ui。
-fn assemble(lines: Vec<OcrLineOut>, w: u32, h: u32) -> OcrResult {
+pub(crate) fn assemble(lines: Vec<OcrLineOut>, w: u32, h: u32) -> OcrResult {
     let mut sorted = lines;
     sorted.sort_by_key(|l| (l.bbox[1], l.bbox[0]));
     let mut blocks: Vec<OcrBlock> = Vec::new();
@@ -294,12 +323,19 @@ fn finish_block(lines: Vec<OcrLineOut>) -> OcrBlock {
     let y1 = lines.iter().map(|l| l.bbox[1] + l.bbox[3]).max().unwrap_or(0);
     let text = lines.iter().map(|l| l.text.clone()).collect::<Vec<_>>().join("\n");
     let r#type = classify(&text);
+    // 块置信度 = 行级置信度均值（无行级值时恒 1.0，如 Windows.Media.Ocr）
+    let confs: Vec<f64> = lines.iter().filter_map(|l| l.confidence).collect();
+    let confidence = if confs.is_empty() {
+        1.0
+    } else {
+        confs.iter().sum::<f64>() / confs.len() as f64
+    };
     OcrBlock {
         r#type: r#type.into(),
         text,
         bbox: [x0, y0, x1 - x0, y1 - y0],
-        confidence: 1.0,
-        low_confidence: false,
+        confidence,
+        low_confidence: confidence < 0.5,
         lines,
     }
 }

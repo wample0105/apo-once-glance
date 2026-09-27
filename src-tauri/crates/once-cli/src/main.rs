@@ -78,6 +78,11 @@ enum Commands {
         #[arg(long)]
         question: String,
     },
+    /// 识别引擎（与 GUI「模型配置 → 文字识别」同一设置）：status 查看 / set 切换 / download 下载本地包
+    OcrEngine {
+        #[command(subcommand)]
+        action: OcrEngineAction,
+    },
     /// 在资源管理器中定位文件
     Open { target: String },
     /// 读取 / 写入设置
@@ -140,6 +145,27 @@ enum ConfigAction {
     Set { key: String, value: String },
 }
 
+#[derive(Subcommand)]
+enum OcrEngineAction {
+    /// 查看当前引擎、本地包与在线识别位状态
+    Status,
+    /// 切换引擎：builtin | paddle | online
+    Set {
+        #[arg(long)]
+        engine: String,
+        /// online 引擎的服务 id + 模型名（与 GUI 同一配置；缺省沿用已存值）
+        #[arg(long)]
+        profile_id: Option<String>,
+        #[arg(long)]
+        model: Option<String>,
+    },
+    /// 下载 PaddleOCR 本地包（约 21MB；默认魔搭 ModelScope 源，--source huggingface 可选）
+    Download {
+        #[arg(long, default_value = "modelscope")]
+        source: String,
+    },
+}
+
 fn main() {
     once_core::dpi::ensure_per_monitor_dpi_aware();
     let cli = Cli::parse();
@@ -184,6 +210,7 @@ fn dispatch(cli: &Cli) -> (String, Result<Value>) {
         Commands::Ask { target, question } => {
             ("ask".into(), cmd_ask(target, &question))
         }
+        Commands::OcrEngine { action } => ("ocr-engine".into(), cmd_ocr_engine(action)),
         Commands::Open { target } => ("open".into(), cmd_open(target)),
         Commands::Config { action } => cmd_config(action),
         Commands::Doctor => ("doctor".into(), cmd_doctor()),
@@ -408,12 +435,14 @@ fn resolve_lang(explicit: &str) -> String {
     }
 }
 
-/// once translate：--text 纯文本直译；否则图片（路径|last）→ 本地 OCR → 云端翻译。
+/// once translate：--text 纯文本直译；否则图片（路径|last）→ 取字（跟随识别引擎）→ 云端翻译。
 /// 与 GUI 翻译同一内核链路（once_core::ai::translate_text）；调用入审计（不记录正文）。
+/// 识别引擎为 online 时取字上传截图（与 GUI 同一隐私边界：用户配置即知悉，审计留痕）。
 fn cmd_translate(target: Option<&str>, text: Option<&str>, lang: &str) -> Result<Value> {
     ai_heal();
     let cfg = once_core::settings::load().ai;
     let lang = resolve_lang(lang);
+    let t_model = cfg.translate.model.clone();
     if let Some(t) = text.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()) {
         let (profile, out) = ai::translate_text(&cfg, &t, &lang)?;
         audit::record_ai(
@@ -421,12 +450,12 @@ fn cmd_translate(target: Option<&str>, text: Option<&str>, lang: &str) -> Result
             out.latency_ms as u64,
             0,
             Some(&profile.provider),
-            Some(&profile.text_model),
+            Some(&t_model),
             Some(false),
         );
         return Ok(json!({
             "mode": "text", "lang": lang, "text": out.text,
-            "provider": profile.provider, "model": profile.text_model,
+            "provider": profile.provider, "model": t_model,
             "latency_ms": out.latency_ms as u64,
         }));
     }
@@ -438,14 +467,32 @@ fn cmd_translate(target: Option<&str>, text: Option<&str>, lang: &str) -> Result
     let png = capture::encode_png(&capture::CapturedBitmap {
         pixels: rgba, width: w, height: h, origin: (0, 0),
     })?;
-    // §9：引擎异常重试 1 次（与 once ocr 同策）
-    let ocr_r = match ocr::provider().recognize_png(&png) {
-        Ok(r) => r,
-        Err(_) => ocr::provider()
-            .recognize_png(&png)
-            .map_err(|e| OnceError::ocr(format!("本地识别失败（已重试 1 次）：{}", e.message)))?,
+    // 取字跟随识别引擎：online=在线读图端点（上传截图）；否则本地引擎（§9 重试 1 次同策）
+    let (source_text, ocr_info) = if cfg.ocr.engine() == ai::OCR_ENGINE_ONLINE {
+        let (oprofile, out) = ai::online_ocr_text(&cfg, &png)?;
+        audit::record_ai(
+            "ai.ocr_online",
+            out.latency_ms as u64,
+            0,
+            Some(&oprofile.provider),
+            Some(&cfg.ocr.online.model),
+            Some(true),
+        );
+        (
+            out.text.trim().to_string(),
+            json!({"engine": "online", "provider": oprofile.provider, "model": cfg.ocr.online.model}),
+        )
+    } else {
+        let engine_name = if cfg.ocr.engine() == ai::OCR_ENGINE_PADDLE { "paddle" } else { "builtin" };
+        let local = ocr::local_provider(cfg.ocr.engine())?;
+        let ocr_r = match local.recognize_png(&png) {
+            Ok(r) => r,
+            Err(_) => local
+                .recognize_png(&png)
+                .map_err(|e| OnceError::ocr(format!("本地识别失败（已重试 1 次）：{}", e.message)))?,
+        };
+        (ocr_r.full_text.trim().to_string(), json!({"engine": engine_name}))
     };
-    let source_text = ocr_r.full_text.trim().to_string();
     if source_text.is_empty() {
         return Err(OnceError::ocr("图片中未发现文字——纯图内容请改用 once ask <path> --question"));
     }
@@ -456,13 +503,13 @@ fn cmd_translate(target: Option<&str>, text: Option<&str>, lang: &str) -> Result
         out.latency_ms as u64,
         0,
         Some(&profile.provider),
-        Some(&profile.text_model),
+        Some(&t_model),
         Some(false),
     );
     Ok(json!({
         "mode": "image", "lang": lang, "source": path.to_string_lossy(),
-        "ocr_chars": chars, "text": out.text,
-        "provider": profile.provider, "model": profile.text_model,
+        "ocr": ocr_info, "ocr_chars": chars, "text": out.text,
+        "provider": profile.provider, "model": t_model,
         "latency_ms": out.latency_ms as u64,
     }))
 }
@@ -475,6 +522,7 @@ fn cmd_ask(target: &str, question: &str) -> Result<Value> {
         return Err(OnceError::usage("问题不能为空").with_hint("示例：once ask last --question \"把图中的表格提取成 Markdown\""));
     }
     let cfg = once_core::settings::load().ai;
+    let a_model = cfg.ask.model.clone();
     let path = resolve_target(target)?;
     let (rgba, w, h) = ai::load_image_rgba(&path)?;
     let (profile, out) = ai::ask_image_rgba(&cfg, &rgba, w, h, q)?;
@@ -483,30 +531,95 @@ fn cmd_ask(target: &str, question: &str) -> Result<Value> {
         out.latency_ms as u64,
         0,
         Some(&profile.provider),
-        Some(&profile.vision_model),
+        Some(&a_model),
         Some(true),
     );
     Ok(json!({
         "question": q, "source": path.to_string_lossy(), "text": out.text,
-        "provider": profile.provider, "model": profile.vision_model,
+        "provider": profile.provider, "model": a_model,
         "latency_ms": out.latency_ms as u64,
     }))
+}
+
+/// once ocr-engine：识别引擎管理（与 GUI「模型配置 → 文字识别」同一 settings.ai.ocr）。
+/// CLI 不编译 paddle 推理 feature：set paddle 会写入设置，但 CLI 端取字时会报
+/// 「本地包不可用」（GUI 端正常可用）；下载/状态三端一致。
+fn cmd_ocr_engine(action: &OcrEngineAction) -> Result<Value> {
+    match action {
+        OcrEngineAction::Status => {
+            let s = once_core::settings::load();
+            let ai = &s.ai;
+            let pack_installed = once_core::ocr_pack::installed();
+            let online_label = if ai.ocr.online.is_empty() {
+                Value::Null
+            } else {
+                json!(format!(
+                    "{}·{}",
+                    ai.profile(&ai.ocr.online.profile_id).map(|p| p.name.as_str()).unwrap_or("(连接已删除)"),
+                    ai.ocr.online.model
+                ))
+            };
+            Ok(json!({
+                "engine": ai.ocr.engine(),
+                "cli_paddle_compiled": cfg!(feature = "paddle"),
+                "pack_installed": pack_installed,
+                "pack_dir": once_core::ocr_pack::pack_dir().to_string_lossy(),
+                "online": online_label,
+                "note": if ai.ocr.engine() == ai::OCR_ENGINE_PADDLE && !cfg!(feature = "paddle") {
+                    "CLI 未编译 paddle 推理——取字将报错，GUI 端可用"
+                } else { "" },
+            }))
+        }
+        OcrEngineAction::Set { engine, profile_id, model } => {
+            if !matches!(engine.as_str(), "builtin" | "paddle" | "online") {
+                return Err(OnceError::usage(format!("未知引擎：{engine}（builtin|paddle|online）")));
+            }
+            let engine = engine.clone();
+            let profile_id = profile_id.clone().unwrap_or_default();
+            let model = model.clone().unwrap_or_default();
+            once_core::settings::update(|s| {
+                s.ai.ocr.engine = engine.clone();
+                if engine == "online" && !profile_id.is_empty() {
+                    s.ai.ocr.online = ai::FuncModel { profile_id, model };
+                }
+                ai::autofill_defaults(&mut s.ai);
+            })?;
+            let s = once_core::settings::load();
+            Ok(json!({ "ok": true, "engine": s.ai.ocr.engine() }))
+        }
+        OcrEngineAction::Download { source } => {
+            if !matches!(source.as_str(), "modelscope" | "huggingface") {
+                return Err(OnceError::usage(format!("未知下载源：{source}（modelscope|huggingface）")));
+            }
+            let t0 = std::time::Instant::now();
+            // CLI 无 UI：仅在终局打印；进度经 last 字节量粗报（JSON 模式不刷屏）
+            once_core::ocr_pack::download(source, &mut |_received, _total| {})?;
+            Ok(json!({
+                "ok": true,
+                "source": source,
+                "pack_dir": once_core::ocr_pack::pack_dir().to_string_lossy(),
+                "elapsed_ms": t0.elapsed().as_millis() as u64,
+            }))
+        }
+    }
 }
 
 fn cmd_status() -> Result<Value> {
     let s = once_core::settings::load();
     let count = history::count().unwrap_or(0);
     let ai = &s.ai;
-    let def_text = ai
-        .default_text
-        .as_ref()
-        .and_then(|id| ai.profile(id))
-        .map(|p| p.name.clone());
-    let def_vision = ai
-        .default_vision
-        .as_ref()
-        .and_then(|id| ai.profile(id))
-        .map(|p| p.name.clone());
+    // 功能位展示：连接名·模型名（两层制；模型名随功能位，互不绑定）
+    let fm_label = |fm: &ai::FuncModel| -> Option<String> {
+        fm.resolve(ai)
+            .map(|p| format!("{}·{}", p.name, fm.model))
+    };
+    let ocr_engine = match ai.ocr.engine() {
+        ai::OCR_ENGINE_ONLINE => fm_label(&ai.ocr.online).map(|x| format!("online ({x})")).unwrap_or_else(|| "online (未配置)".into()),
+        ai::OCR_ENGINE_PADDLE => {
+            if ai.ocr.paddle_pack.is_empty() { "paddle (增强包未安装)".into() } else { format!("paddle ({})", ai.ocr.paddle_pack) }
+        }
+        _ => "builtin (Windows.Media.Ocr)".into(),
+    };
     Ok(json!({
         "app": "onceglance",
         "version": once_core::VERSION,
@@ -520,8 +633,9 @@ fn cmd_status() -> Result<Value> {
         "history_count": count,
         "ai": {
             "profiles": ai.profiles.len(),
-            "default_text": def_text,
-            "default_vision": def_vision,
+            "translate": fm_label(&ai.translate),
+            "ask": fm_label(&ai.ask),
+            "ocr_engine": ocr_engine,
             "translate_lang": ai.translate_lang,
         },
     }))
@@ -672,22 +786,56 @@ fn resolve_target(target: &str) -> Result<PathBuf> {
 }
 
 fn cmd_ocr(target: &str, lang: &str) -> Result<Value> {
+    ai_heal();
+    let cfg_ai = once_core::settings::load().ai;
     let path = resolve_target(target)?;
     let png = std::fs::read(&path)
         .map_err(|e| OnceError::io(format!("读取失败：{}", path.display())).with_source(e.to_string()))?;
-    let _ = lang; // v1 引擎按系统语言；auto 保留参数位
+    let _ = lang; // auto 保留参数位；本地引擎按系统语言，在线引擎由模型自判
 
-    // §9：引擎异常重试 1 次
-    let result = match ocr::provider().recognize_png(&png) {
-        Ok(r) => r,
-        Err(e) => match ocr::provider().recognize_png(&png) {
+    // 取字跟随识别引擎（三端同源）：online=上传截图给所选读图端点（审计留痕）；
+    // builtin/paddle=本地推理。§9：本地引擎异常重试 1 次。
+    let (result, engine_name) = if cfg_ai.ocr.engine() == ai::OCR_ENGINE_ONLINE {
+        let (oprofile, out) = ai::online_ocr_text(&cfg_ai, &png)?;
+        audit::record_ai(
+            "ai.ocr_online",
+            out.latency_ms as u64,
+            0,
+            Some(&oprofile.provider),
+            Some(&cfg_ai.ocr.online.model),
+            Some(true),
+        );
+        let text = out.text.trim().to_string();
+        let empty = text.is_empty();
+        (
+            ocr::OcrResult {
+                blocks: vec![],
+                full_text: text,
+                language: String::new(),
+                empty_reason: if empty { Some("在线识别未返回文字".into()) } else { None },
+                width: 0,
+                height: 0,
+            },
+            format!("online_{}", oprofile.provider),
+        )
+    } else {
+        let local = ocr::local_provider(cfg_ai.ocr.engine())?;
+        let result = match local.recognize_png(&png) {
             Ok(r) => r,
-            Err(e2) => {
-                return Err(OnceError::ocr(format!("OCR 失败（已重试 1 次）：{}", e2.message))
-                    .with_hint("图片需为 PNG；系统需安装中文/英文 OCR 语言包")
-                    .with_source(e.source.clone().unwrap_or_default()))
-            }
-        },
+            Err(e) => match local.recognize_png(&png) {
+                Ok(r) => r,
+                Err(e2) => {
+                    return Err(OnceError::ocr(format!("OCR 失败（已重试 1 次）：{}", e2.message))
+                        .with_hint(if cfg_ai.ocr.engine() == ai::OCR_ENGINE_PADDLE {
+                            "本地增强包损坏？到「模型配置 → 文字识别」重新下载"
+                        } else {
+                            "图片需为 PNG；系统需安装中文/英文 OCR 语言包"
+                        })
+                        .with_source(e.source.clone().unwrap_or_default()))
+                }
+            },
+        };
+        (result, local.name().to_string())
     };
 
     // 结果缓存：<stem>.ocr.json（OCR-5 内容寻址由 manifest 关联）
@@ -698,7 +846,7 @@ fn cmd_ocr(target: &str, lang: &str) -> Result<Value> {
     ));
     let doc = json!({
         "source": path.to_string_lossy(),
-        "engine": ocr::provider().name(),
+        "engine": engine_name,
         "language": result.language,
         "blocks": result.blocks,
         "full_text": result.full_text,
@@ -948,7 +1096,7 @@ fn config_set(key: &str, value: &str) -> Result<Value> {
                 None => {
                     let names: Vec<String> = s.ai.profiles.iter().map(|p| p.name.clone()).collect();
                     let hint = if names.is_empty() {
-                        "尚未配置模型——请先在 GUI「AI」页添加".to_string()
+                        "尚未配置模型——请先在 GUI「模型配置」页添加".to_string()
                     } else {
                         format!("可用配置：{}", names.join("、"))
                     };
@@ -1077,7 +1225,7 @@ fn cmd_doctor() -> Result<Value> {
     );
     let ai_ok = !ai_cfg.profiles.is_empty();
     let ai_detail = if ai_cfg.profiles.is_empty() {
-        "未配置——GUI「AI」页添加模型后 translate/ask 可用".to_string()
+        "未配置——GUI「模型配置」页添加模型后 translate/ask 可用".to_string()
     } else {
         format!(
             "已配置 {} 套 · 默认文字 {} · 默认视觉 {}（translate/ask 即刻可用）",

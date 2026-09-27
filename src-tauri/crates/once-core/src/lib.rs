@@ -13,6 +13,9 @@ pub mod error;
 pub mod history;
 pub mod longshot;
 pub mod ocr;
+pub mod ocr_pack;
+#[cfg(feature = "paddle")]
+pub mod ocr_paddle;
 pub mod settings;
 pub mod storage;
 

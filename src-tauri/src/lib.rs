@@ -783,7 +783,31 @@ fn doctor_run(app: AppHandle) -> serde_json::Value {
     items.push(serde_json::json!({ "check": "hotkeys", "ok": hotkeys_ok, "detail": hotkeys_detail }));
     items.push(serde_json::json!({ "check": "config_dir", "ok": cfg_ok, "detail": once_core::settings::config_dir().display().to_string() }));
     items.push(serde_json::json!({ "check": "save_dir", "ok": dir_ok, "detail": s.save_root().display().to_string() }));
-    items.push(serde_json::json!({ "check": "ocr_engine", "ok": ocr_ok, "detail": ocr::engine_language() }));
+    // 识别引擎项（v0.2）：按所选引擎如实报告——builtin 查系统引擎；paddle 查本地包；
+    // online 查功能位配置（不联网验证，连接测试在识别页显式触发）
+    let ocr_detail = match s.ai.ocr.engine() {
+        once_core::ai::OCR_ENGINE_PADDLE => {
+            let ver = std::fs::read_to_string(once_core::ocr_pack::pack_dir().join("pack.json"))
+                .ok()
+                .and_then(|b| serde_json::from_str::<serde_json::Value>(&b).ok())
+                .and_then(|v| v["version"].as_str().map(String::from))
+                .unwrap_or_default();
+            let loaded = once_core::ocr::paddle_provider().is_some();
+            if ver.is_empty() {
+                "PaddleOCR 本地包未安装（引擎已指向它——到「模型配置 → 文字识别」下载）".to_string()
+            } else if loaded {
+                format!("PaddleOCR 本地包 · {ver} · 可用")
+            } else {
+                format!("PaddleOCR 本地包 · {ver} · 引擎加载失败")
+            }
+        }
+        once_core::ai::OCR_ENGINE_ONLINE => match s.ai.ocr.online.resolve(&s.ai) {
+            Some(p) => format!("在线模型 · {}·{}（取字将上传截图）", p.name, s.ai.ocr.online.model),
+            None => "在线模型未配置——取字会回退失败（到「模型配置 → 文字识别」选择服务与模型）".to_string(),
+        },
+        _ => format!("内置 Windows.Media.Ocr · {}", ocr::engine_language()),
+    };
+    items.push(serde_json::json!({ "check": "ocr_engine", "ok": ocr_ok || s.ai.ocr.engine() != once_core::ai::OCR_ENGINE_BUILTIN, "detail": ocr_detail }));
     items.push(serde_json::json!({ "check": "runtime", "ok": runtime_ok, "detail": "WebView2 运行时" }));
     items.push(serde_json::json!({
         "check": "mcp",
@@ -795,24 +819,30 @@ fn doctor_run(app: AppHandle) -> serde_json::Value {
             if std::path::Path::new(r"\\.\pipe\once-bridge").exists() { "已连接" } else { "离线（CLI/MCP 仍直接驱动内核，功能不受影响）" }
         )
     }));
-    // AI 配置状态（v0.2）：只报配置事实与 Key 存放状态，不联网验证（连接测试在「AI」页显式触发）；
+    // AI 配置状态（v0.2）：只报配置事实与 Key 存放状态，不联网验证（连接测试在「模型配置」页显式触发）；
     // 永不计入 ok_all——未配置是正常态，不是故障
     let ai_detail = if s.ai.profiles.is_empty() {
         "未配置（可选增强；本地功能不受影响）".to_string()
     } else {
-        let key_state = |role: &str, id: Option<&String>| match id
-            .and_then(|id| s.ai.profile(id))
+        let key_state = |role: &str, fm: &once_core::ai::FuncModel| match fm
+            .resolve(&s.ai)
             .map(|p| (p.name.clone(), once_core::ai::key_exists(&p.id)))
         {
-            Some((name, true)) => format!("{}={}·Key ✓", role, name),
-            Some((name, false)) => format!("{}={}·Key 缺失（到「AI」页补填）", role, name),
+            Some((name, true)) if !fm.model.is_empty() => format!("{}={}·{}·Key ✓", role, name, fm.model),
+            Some((name, true)) => format!("{}={}", role, name),
+            Some((name, false)) => format!("{}={}·Key 缺失（到「模型配置」页补填）", role, name),
             None => format!("{}=未指定", role),
         };
+        let engine = match s.ai.ocr.engine() {
+            once_core::ai::OCR_ENGINE_ONLINE => key_state("识别(在线)", &s.ai.ocr.online),
+            e => format!("识别={}", if e == "paddle" { "本地增强包" } else { "内置" }),
+        };
         format!(
-            "已配置 {} 套 · {} · {}（连接测试见「AI」页）",
+            "已配置 {} 套 · {} · {} · {}（连接测试见「模型配置」页）",
             s.ai.profiles.len(),
-            key_state("文字", s.ai.default_text.as_ref()),
-            key_state("视觉", s.ai.default_vision.as_ref()),
+            key_state("翻译", &s.ai.translate),
+            key_state("问图", &s.ai.ask),
+            engine,
         )
     };
     items.push(serde_json::json!({ "check": "ai_model", "ok": true, "detail": ai_detail }));
@@ -956,7 +986,7 @@ fn tray_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     let agent_enabled = settings::load().agent_enabled;
     let agent = CheckMenuItem::with_id(
         app, "agent",
-        if agent_enabled { "AI 助手调用：允许" } else { "AI 助手调用：已切断" },
+        if agent_enabled { "Agent 调用：允许" } else { "Agent 调用：已切断" },
         true, agent_enabled, None::<&str>,
     )?;
     let sep2 = PredefinedMenuItem::separator(app)?;
@@ -970,7 +1000,7 @@ fn tray_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     )
 }
 
-/// 托盘「AI 助手调用」项与权限状态双向同步：菜单由当前设置整体重建（文案+勾选态一并刷新）。
+/// 托盘「Agent 调用」项与权限状态双向同步：菜单由当前设置整体重建（文案+勾选态一并刷新）。
 /// （此前文案写死「允许」，取消勾选后仍显示允许，误导用户——见 2026-09-26 反馈）
 fn sync_tray_agent(app: &AppHandle) {
     if let Some(tray) = app.tray_by_id("main-tray") {
@@ -1157,12 +1187,16 @@ pub fn run() {
             ai::ai_list,
             ai::ai_save_profile,
             ai::ai_delete_profile,
-            ai::ai_set_default,
+            ai::ai_set_func,
+            ai::ai_set_ocr_engine,
             ai::ai_test,
             ai::ai_translate_region,
             ai::ai_ask_region,
             ai::ai_open_settings,
             ai::ai_templates_set,
+            ai::ocr_pack_status,
+            ai::ocr_pack_download,
+            ai::ocr_pack_delete,
             pin::pin_create_ai,
             pin::pin_resize_ai
         ])

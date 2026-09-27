@@ -44,3 +44,9 @@ dirs = "6"
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "charset", "http2", "system-proxy", "native-tls"] }
 keyring = { version = "3", features = ["windows-native", "apple-native"] }
 base64 = "0.22"
+ort = { version = "2.0.0-rc.13", optional = true }
+
+[features]
+# PaddleOCR 本地增强包（ONNX 推理）：仅 GUI 默认启用；CLI 不带此 feature 控制体积，
+# engine=paddle 时回退内置并在输出中如实标注。
+paddle = ["dep:ort"]

@@ -23,6 +23,9 @@ pub struct DeliverOutcome {
     /// 取字状态：copied（已复制）| clipboard_busy（写入失败，面板给复制按钮兜底）| empty（未发现文字）。
     #[serde(skip_serializing_if = "String::is_empty")]
     pub ocr_status: String,
+    /// 取字引擎标注（本地 builtin/paddle 或在线「连接名·模型」）——面板据实展示去向。
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub ocr_engine: String,
 }
 
 pub fn deliver_capture(
@@ -96,12 +99,49 @@ pub fn deliver_capture(
         ocr_chars: None,
         ocr_text: String::new(),
         ocr_status: String::new(),
+        ocr_engine: String::new(),
     };
 
     match action {
         "ocr" => {
-            // §9：引擎异常重试 1 次 → 仍失败则返回 Err（取景层面板显示错误，不再走角落 toast）
-            let ocr_result = ocr::provider().recognize_png(&png).or_else(|_| ocr::provider().recognize_png(&png));
+            // 取字跟随识别引擎（v0.2）：builtin/paddle 本地不出网；online 发送截图给所选
+            // 读图端点（用户在识别页明示选择，审计留痕）。§9：本地引擎异常重试 1 次。
+            let engine = s.ai.ocr.engine().to_string();
+            let ocr_result: once_core::Result<once_core::ocr::OcrResult> = if engine == once_core::ai::OCR_ENGINE_ONLINE {
+                match once_core::ai::online_ocr_text(&s.ai, &png) {
+                    Ok((p, out)) => {
+                        outcome.ocr_engine = format!("在线 {}·{}", p.name, s.ai.ocr.online.model);
+                        once_core::audit::record_ai(
+                            "ai.ocr_online",
+                            out.latency_ms as u64,
+                            0,
+                            Some(&p.provider),
+                            Some(&s.ai.ocr.online.model),
+                            Some(true),
+                        );
+                        Ok(once_core::ocr::OcrResult {
+                            blocks: vec![],
+                            full_text: out.text,
+                            language: String::new(),
+                            empty_reason: None,
+                            width: bmp.width,
+                            height: bmp.height,
+                        })
+                    }
+                    Err(e) => {
+                        once_core::audit::record_ai("ai.ocr_online", 0, 1, None, None, Some(true));
+                        Err(e)
+                    }
+                }
+            } else {
+                let local = once_core::ocr::local_provider(&engine)?;
+                outcome.ocr_engine = if engine == once_core::ai::OCR_ENGINE_PADDLE {
+                    "PaddleOCR 本地包".into()
+                } else {
+                    "内置引擎".into()
+                };
+                local.recognize_png(&png).or_else(|_| local.recognize_png(&png))
+            };
             match ocr_result {
                 Ok(r) => {
                     let chars = r.full_text.chars().count();
@@ -114,7 +154,7 @@ pub fn deliver_capture(
                     ));
                     let doc = serde_json::json!({
                         "source": paths.png.to_string_lossy(),
-                        "engine": ocr::provider().name(),
+                        "engine": outcome.ocr_engine,
                         "language": r.language,
                         "blocks": r.blocks,
                         "full_text": r.full_text,

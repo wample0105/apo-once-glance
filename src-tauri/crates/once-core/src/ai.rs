@@ -104,8 +104,11 @@ pub fn preset(id: &str) -> Option<&'static ProviderPreset> {
 }
 
 // ===== 配置结构（settings.ai；全部非敏感字段）=====
+// v2 两层制：profile=纯连接（名称/服务商/接口地址；Key 只在凭据库），
+// 功能位（截图翻译/AI 问图/在线识别）各自持「profile id + 模型名」。
+// 文档里的「不绑定」落在数据层：三个功能位可自由混搭不同 profile。
 
-/// 单套模型配置。API Key 不在本结构——只存系统凭据管理器。
+/// 单套模型连接。API Key 不在本结构——只存系统凭据管理器。
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct AiProfile {
@@ -114,9 +117,10 @@ pub struct AiProfile {
     /// ProviderPreset.id（custom = 自定义端点）。
     pub provider: String,
     pub base_url: String,
-    /// 文字模型（翻译等文本任务；可空）。
+    /// v1 遗留：旧版把模型名内嵌在 profile 里。仅作迁移源，读入转正后清空、不再序列化。
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub text_model: String,
-    /// 视觉模型（问图、云端识别等读图任务；可空）。
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub vision_model: String,
 }
 
@@ -133,14 +137,71 @@ impl Default for AiProfile {
     }
 }
 
-/// settings.ai：配置列表 + 默认角色（角色存 profile id）。
+/// 功能位：哪个服务（profile id）+ 哪个模型。三个功能位同构、互不绑定。
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct FuncModel {
+    pub profile_id: String,
+    pub model: String,
+}
+
+impl FuncModel {
+    pub fn is_empty(&self) -> bool {
+        self.profile_id.is_empty() || self.model.is_empty()
+    }
+
+    /// 解析到有效连接（模型名非空且 profile 存在）。
+    pub fn resolve<'a>(&self, cfg: &'a AiConfig) -> Option<&'a AiProfile> {
+        if self.model.trim().is_empty() {
+            return None;
+        }
+        cfg.profiles.iter().find(|p| p.id == self.profile_id)
+    }
+}
+
+/// 文字识别引擎（settings.ai.ocr.engine 的冻结取值）。
+pub const OCR_ENGINE_BUILTIN: &str = "builtin";
+pub const OCR_ENGINE_PADDLE: &str = "paddle";
+pub const OCR_ENGINE_ONLINE: &str = "online";
+
+/// 文字识别引擎配置：内置（零配置默认）/ 本地 PaddleOCR 增强包 / 在线模型。
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct OcrConfig {
+    /// builtin | paddle | online（未知值一律回退 builtin）。
+    pub engine: String,
+    /// 在线引擎的「服务+模型」（engine=online 时生效）。
+    pub online: FuncModel,
+    /// 本地增强包版本标记（下载校验通过后写入；空 = 未安装）。
+    pub paddle_pack: String,
+}
+
+impl OcrConfig {
+    /// 规范化引擎名（脏数据回退 builtin）。
+    pub fn engine(&self) -> &str {
+        match self.engine.as_str() {
+            OCR_ENGINE_PADDLE => OCR_ENGINE_PADDLE,
+            OCR_ENGINE_ONLINE => OCR_ENGINE_ONLINE,
+            _ => OCR_ENGINE_BUILTIN,
+        }
+    }
+}
+
+/// settings.ai：连接列表 + 三个功能位 + 引擎选择。
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(default)]
 pub struct AiConfig {
     pub profiles: Vec<AiProfile>,
-    /// 默认文字模型 → profile id（截图翻译用）。
+    /// 截图翻译的文本模型（本地取字 → 文本模型翻译）。
+    pub translate: FuncModel,
+    /// AI 问图的视觉模型（整图发送，读图理解）。
+    pub ask: FuncModel,
+    /// 文字识别引擎。
+    pub ocr: OcrConfig,
+    /// v1 遗留默认角色（profile id）：仅迁移源，转正后清空、不再序列化。
+    #[serde(skip_serializing)]
     pub default_text: Option<String>,
-    /// 默认视觉模型 → profile id（问图 / 云端识别用）。
+    #[serde(skip_serializing)]
     pub default_vision: Option<String>,
     /// 问图自定义指令模板（chips 中与预置指令并列）。
     pub templates: Vec<PromptTemplate>,
@@ -153,17 +214,50 @@ impl AiConfig {
         self.profiles.iter().find(|p| p.id == id)
     }
 
-    /// 删除 profile 后修剪悬空的默认角色引用。
-    pub fn prune_defaults(&mut self) {
-        if let Some(id) = &self.default_text {
-            if self.profile(id).is_none() {
-                self.default_text = None;
+    /// v1 → v2 迁移（幂等）：旧默认角色（profile id）拆到功能位，模型名取自旧 profile
+    /// 内嵌字段；旧「云端识别」（default_vision）同时预填在线识别位（引擎保持 builtin，
+    /// 是否切到在线由用户决定）。迁移后清空遗留字段。
+    pub fn migrate(&mut self) {
+        if let Some(id) = self.default_text.clone() {
+            if self.translate.is_empty() {
+                if let Some(p) = self.profile(&id) {
+                    if !p.text_model.trim().is_empty() {
+                        self.translate = FuncModel { profile_id: id, model: p.text_model.trim().to_string() };
+                    }
+                }
             }
         }
-        if let Some(id) = &self.default_vision {
-            if self.profile(id).is_none() {
-                self.default_vision = None;
+        if let Some(id) = self.default_vision.clone() {
+            if self.ask.is_empty() {
+                if let Some(p) = self.profile(&id) {
+                    if !p.vision_model.trim().is_empty() {
+                        let fm = FuncModel { profile_id: id, model: p.vision_model.trim().to_string() };
+                        if self.ocr.online.is_empty() {
+                            self.ocr.online = fm.clone();
+                        }
+                        self.ask = fm;
+                    }
+                }
             }
+        }
+        self.default_text = None;
+        self.default_vision = None;
+        for p in &mut self.profiles {
+            p.text_model = String::new();
+            p.vision_model = String::new();
+        }
+    }
+
+    /// 删除 profile 后修剪悬空的功能位引用（清空后由 autofill 补任）。
+    pub fn prune_defaults(&mut self) {
+        if !self.translate.is_empty() && self.profile(&self.translate.profile_id).is_none() {
+            self.translate = FuncModel::default();
+        }
+        if !self.ask.is_empty() && self.profile(&self.ask.profile_id).is_none() {
+            self.ask = FuncModel::default();
+        }
+        if !self.ocr.online.is_empty() && self.profile(&self.ocr.online.profile_id).is_none() {
+            self.ocr.online = FuncModel::default();
         }
     }
 }
@@ -195,7 +289,7 @@ pub fn set_key(profile_id: &str, key: &str) -> Result<()> {
 pub fn get_key(profile_id: &str) -> Result<String> {
     key_entry(profile_id)?
         .get_password()
-        .map_err(|_| OnceError::denied("未保存该配置的 API Key，请到「AI」页填写"))
+        .map_err(|_| OnceError::denied("未保存该配置的 API Key，请到「模型配置」页填写"))
 }
 
 /// 删除 Key（尽力而为：profile 删除时顺带清理，凭据本就不存在不算错）。
@@ -248,40 +342,43 @@ pub fn ask_messages(question: &str, image_data_url: &str) -> Vec<serde_json::Val
     ]})]
 }
 
-/// 默认角色补任（三端共用）：缺失或悬空时改任第一套有对应模型的配置
-/// （与「首套配置自动担任默认」同策）。返回本次补任的（角色，配置名）——删除迁移时用于告知。
-/// 只看模型名非空，不查 Key：Key 缺失在调用时报人话错误，不在补任路径做凭据查询。
+/// 功能位补任/自愈（三端共用）：功能位缺失或悬空时改任第一套连接，
+/// 模型名留空时按该连接的服务商预设补建议值（与「首套连接自动担任」同策）。
+/// 返回本次补任的（功能名，连接名）——删除迁移时用于告知。
+/// 只看配置层，不查 Key：Key 缺失在调用时报人话错误，不在补任路径做凭据查询。
 pub fn autofill_defaults(cfg: &mut AiConfig) -> Vec<(&'static str, String)> {
     let mut roles = Vec::new();
-    let need_text = cfg
-        .default_text
-        .as_ref()
-        .map_or(true, |id| cfg.profile(id).is_none());
-    if need_text {
-        let cand = cfg
-            .profiles
-            .iter()
-            .find(|p| !p.text_model.is_empty())
-            .map(|c| (c.id.clone(), c.name.clone()));
-        if let Some((id, name)) = cand {
-            cfg.default_text = Some(id);
-            roles.push(("默认文字模型", name));
+    let need_translate = cfg.translate.resolve(cfg).is_none();
+    if need_translate {
+        if let Some(p) = cfg.profiles.first() {
+            let model = cfg.translate.model.trim().to_string();
+            let model = if model.is_empty() {
+                preset(&p.provider).and_then(|x| x.text_models.first().map(|m| m.to_string()))
+            } else {
+                Some(model)
+            };
+            let name = p.name.clone();
+            cfg.translate = FuncModel { profile_id: p.id.clone(), model: model.unwrap_or_default() };
+            roles.push(("截图翻译", name));
         }
     }
-    let need_vision = cfg
-        .default_vision
-        .as_ref()
-        .map_or(true, |id| cfg.profile(id).is_none());
-    if need_vision {
-        let cand = cfg
-            .profiles
-            .iter()
-            .find(|p| !p.vision_model.is_empty())
-            .map(|c| (c.id.clone(), c.name.clone()));
-        if let Some((id, name)) = cand {
-            cfg.default_vision = Some(id);
-            roles.push(("默认视觉模型", name));
+    let need_ask = cfg.ask.resolve(cfg).is_none();
+    if need_ask {
+        if let Some(p) = cfg.profiles.first() {
+            let model = cfg.ask.model.trim().to_string();
+            let model = if model.is_empty() {
+                preset(&p.provider).and_then(|x| x.vision_models.first().map(|m| m.to_string()))
+            } else {
+                Some(model)
+            };
+            let name = p.name.clone();
+            cfg.ask = FuncModel { profile_id: p.id.clone(), model: model.unwrap_or_default() };
+            roles.push(("AI 问图", name));
         }
+    }
+    // 在线识别位预填：切到 online 但没配时，从问图位带一份（同一读图链路，用户可改）。
+    if cfg.ocr.engine() == OCR_ENGINE_ONLINE && cfg.ocr.online.is_empty() && !cfg.ask.is_empty() {
+        cfg.ocr.online = cfg.ask.clone();
     }
     roles
 }
@@ -294,19 +391,23 @@ pub fn load_image_rgba(path: &std::path::Path) -> Result<(Vec<u8>, u32, u32)> {
     Ok((img.to_rgba8().into_raw(), w, h))
 }
 
-/// 按角色取默认模型 + Key（未配置/配置缺失时报面向用户的人话错误）。
-pub fn default_profile(cfg: &AiConfig, kind: TestKind) -> Result<(AiProfile, String)> {
-    let id = match kind {
-        TestKind::Text => cfg.default_text.as_ref(),
-        TestKind::Vision => cfg.default_vision.as_ref(),
-    }
-    .ok_or_else(|| OnceError::denied("未设置默认模型——请到「AI」页选择"))?;
-    let p = cfg
-        .profile(id)
-        .ok_or_else(|| OnceError::denied("默认模型配置已不存在——请到「AI」页重新选择"))?
+/// 按功能位取连接 + Key（未配置/配置缺失时报面向用户的人话错误）。
+pub fn func_profile(cfg: &AiConfig, fm: &FuncModel) -> Result<(AiProfile, String)> {
+    let p = fm
+        .resolve(cfg)
+        .ok_or_else(|| OnceError::denied("未设置模型——请到「模型配置」页对应功能区选择"))?
         .clone();
     let key = get_key(&p.id)?;
     Ok((p, key))
+}
+
+/// 兼容包装：按角色枚举取功能位（text=截图翻译，vision=AI 问图）。
+pub fn default_profile(cfg: &AiConfig, kind: TestKind) -> Result<(AiProfile, String)> {
+    let fm = match kind {
+        TestKind::Text => &cfg.translate,
+        TestKind::Vision => &cfg.ask,
+    };
+    func_profile(cfg, fm)
 }
 
 pub struct ChatReq<'a> {
@@ -412,21 +513,21 @@ pub fn chat_completion(req: &ChatReq) -> Result<GenOutcome> {
     Ok(GenOutcome { text, latency_ms: t0.elapsed().as_millis() })
 }
 
-/// 截图翻译：本地提取的文本 → 默认文字模型。
+/// 截图翻译：本地提取的文本 → 截图翻译功能位的文本模型。
 pub fn translate_text(cfg: &AiConfig, text: &str, target_lang: &str) -> Result<(AiProfile, GenOutcome)> {
-    let (p, key) = default_profile(cfg, TestKind::Text)?;
-    if p.text_model.is_empty() {
-        return Err(OnceError::usage("默认文字模型未填模型名——到「AI」页补齐"));
+    let (p, key) = func_profile(cfg, &cfg.translate)?;
+    if cfg.translate.model.trim().is_empty() {
+        return Err(OnceError::usage("截图翻译未填模型名——到「模型配置」页「截图翻译」补齐"));
     }
     let msgs = translate_messages(text, target_lang);
     let out = chat_completion(&ChatReq {
         base_url: &p.base_url,
         api_key: &key,
-        model: &p.text_model,
+        model: &cfg.translate.model,
         messages: &msgs,
         max_tokens: 4096,
     })?;
-    Ok((p.clone(), out))
+    Ok((p, out))
 }
 
 /// 选区图预处理：RGBA → data URL；长边超 max_side 等比缩小；PNG 超 2MB 转 JPEG q85 控体积。
@@ -467,22 +568,77 @@ pub fn rgba_to_png(rgba: &[u8], w: u32, h: u32) -> Result<Vec<u8>> {
     Ok(png)
 }
 
-/// AI 问图：选区 RGBA 图 → 默认视觉模型。
+/// AI 问图：选区 RGBA 图 → AI 问图功能位的视觉模型。
 pub fn ask_image_rgba(cfg: &AiConfig, rgba: &[u8], w: u32, h: u32, question: &str) -> Result<(AiProfile, GenOutcome)> {
-    let (p, key) = default_profile(cfg, TestKind::Vision)?;
-    if p.vision_model.is_empty() {
-        return Err(OnceError::usage("默认视觉模型未填模型名——到「AI」页补齐"));
+    let (p, key) = func_profile(cfg, &cfg.ask)?;
+    if cfg.ask.model.trim().is_empty() {
+        return Err(OnceError::usage("AI 问图未填模型名——到「模型配置」页「AI 问图」补齐"));
     }
     let data_url = prepare_image_data_url(rgba, w, h, 2048)?;
     let msgs = ask_messages(question, &data_url);
     let out = chat_completion(&ChatReq {
         base_url: &p.base_url,
         api_key: &key,
-        model: &p.vision_model,
+        model: &cfg.ask.model,
         messages: &msgs,
         max_tokens: 4096,
     })?;
-    Ok((p.clone(), out))
+    Ok((p, out))
+}
+
+/// 在线文字识别：选区图 → 在线识别功能位的读图端点，只求转录全文（翻译取字等）。
+/// 隐私边界：调用即上传截图；只发生在用户主动触发的功能里，由界面明示去向。
+pub fn online_ocr_text(cfg: &AiConfig, png: &[u8]) -> Result<(AiProfile, GenOutcome)> {
+    let fm = &cfg.ocr.online;
+    let (p, key) = func_profile(cfg, fm)?;
+    if fm.model.trim().is_empty() {
+        return Err(OnceError::usage("在线识别未填模型名——到「模型配置」页「文字识别」补齐"));
+    }
+    let png = ensure_min_png_size(png, 32)?;
+    let data_url = format!(
+        "data:image/png;base64,{}",
+        {
+            use base64::Engine as _;
+            base64::engine::general_purpose::STANDARD.encode(png)
+        }
+    );
+    let msgs = vec![serde_json::json!({"role":"user","content":[
+        {"type":"text","text":"把图中的全部文字逐行转录出来，只输出识别文本本身，不要解释、不要加 Markdown 代码块；保留原有段落与换行。"},
+        {"type":"image_url","image_url":{"url": data_url}},
+    ]})];
+    let out = chat_completion(&ChatReq {
+        base_url: &p.base_url,
+        api_key: &key,
+        model: &fm.model,
+        messages: &msgs,
+        max_tokens: 8192,
+    })?;
+    Ok((p, out))
+}
+
+/// 在线读图端点的最小尺寸护栏：DeepSeek-OCR 等模型要求高/宽 > 28px，
+/// 过小选区（极端细窄框选）先等比放大到 min_side 再上传，避免 400。
+fn ensure_min_png_size(png: &[u8], min_side: u32) -> Result<Vec<u8>> {
+    let reader = image::ImageReader::new(std::io::Cursor::new(png))
+        .with_guessed_format()
+        .map_err(|e| OnceError::io(format!("读取图像失败：{e}")))?;
+    let (w, h) = reader
+        .into_dimensions()
+        .map_err(|e| OnceError::ocr("图像解码失败").with_source(e.to_string()))?;
+    if w >= min_side && h >= min_side {
+        return Ok(png.to_vec());
+    }
+    let img = image::load_from_memory(png)
+        .map_err(|e| OnceError::ocr("图像解码失败").with_source(e.to_string()))?;
+    let k = min_side as f64 / w.min(h) as f64;
+    let nw = ((w as f64) * k).round().max(1.0) as u32;
+    let nh = ((h as f64) * k).round().max(1.0) as u32;
+    let resized = img.resize_exact(nw, nh, image::imageops::FilterType::Triangle);
+    let mut out = Vec::new();
+    resized
+        .write_to(&mut std::io::Cursor::new(&mut out), image::ImageFormat::Png)
+        .map_err(|e| OnceError::io("图像编码失败").with_source(e.to_string()))?;
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -524,7 +680,7 @@ mod gen_tests {
     }
 }
 
-/// 测试目标：文字模型发最小对话；视觉模型发 1×1 图（读图链路双向验证）。
+/// 测试目标：文字模型发最小对话；视觉模型发 64×64 图（读图链路双向验证；下限>28px 兼容 OCR 类模型）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TestKind {
@@ -551,8 +707,9 @@ pub struct TestOutcome {
     pub message: String,
 }
 
-/// 1×1 PNG（透明像素）的 base64——视觉链路验证用最小图。
-const PING_PNG_1X1: &str = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+/// 64×64 纯色 PNG（淡蓝）的 base64——视觉链路验证用最小图。
+/// 曾用 1×1：硅基流动的 DeepSeek-OCR 等模型要求高/宽 > 28px，1×1 会被 400 拒绝（code 20015）。
+const TEST_PNG_64: &str = "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAeElEQVR4nO3PUQkAIBTAwBfNdNbWEH4cwmABbrP2+brhgga0oAEtaEALGtCCBrSgAS1oQAsa0IIGtKABLWhACxrQgga0oAEtaEALGtCCBrSgAS1oQAsa0IIGtKABLWhACxrQgga0oAEtaEALGtCCBrSgAS1oQAseu0d6UaXQOKYMAAAAAElFTkSuQmCC";
 
 /// base_url 拼接 /chat/completions（容忍尾部斜杠与 /v1 后缀写法差异）。
 pub fn chat_url(base_url: &str) -> String {
@@ -567,7 +724,7 @@ fn chat_body(model: &str, kind: TestKind) -> serde_json::Value {
             "role": "user",
             "content": [
                 { "type": "text", "text": "这张图里有什么？回复 ok 两个字母即可" },
-                { "type": "image_url", "image_url": { "url": format!("data:image/png;base64,{PING_PNG_1X1}") } },
+                { "type": "image_url", "image_url": { "url": format!("data:image/png;base64,{TEST_PNG_64}") } },
             ],
         }),
     };
@@ -659,29 +816,133 @@ mod tests {
             name: "智谱主力".into(),
             provider: "zhipu".into(),
             base_url: "https://open.bigmodel.cn/api/paas/v4".into(),
-            text_model: "glm-4.6".into(),
-            vision_model: "glm-4.5v".into(),
+            ..Default::default()
         };
-        let cfg = AiConfig { profiles: vec![p.clone()], default_text: Some("p1".into()), default_vision: None, ..Default::default() };
+        let cfg = AiConfig {
+            profiles: vec![p],
+            translate: FuncModel { profile_id: "p1".into(), model: "glm-4-flash".into() },
+            ..Default::default()
+        };
         let v = serde_json::to_value(&cfg).unwrap();
         let s = serde_json::to_string(&v).unwrap();
         // 铁律：配置序列化结果里不允许出现 key 字样字段（Key 只在凭据库）
         assert!(!s.contains("api_key"));
+        // v1 遗留字段迁移后不再出现在序列化结果里
+        assert!(!s.contains("default_text"));
+        assert!(!s.contains("default_vision"));
         let back: AiConfig = serde_json::from_value(v).unwrap();
         assert_eq!(back, cfg);
     }
 
     #[test]
-    fn prune_defaults_removes_dangling() {
+    fn migrate_v1_to_v2() {
+        // v1 真实形态：模型名内嵌 profile，默认角色存 profile id
+        let v1: AiConfig = serde_json::from_str(
+            r#"{
+                "profiles": [{
+                    "id": "p1", "name": "智谱官方", "provider": "zhipu",
+                    "base_url": "https://open.bigmodel.cn/api/paas/v4",
+                    "text_model": "glm-4-flash", "vision_model": "glm-4.5v"
+                }],
+                "default_text": "p1",
+                "default_vision": "p1"
+            }"#,
+        )
+        .unwrap();
+        let mut cfg = v1;
+        cfg.migrate();
+        assert_eq!(cfg.translate, FuncModel { profile_id: "p1".into(), model: "glm-4-flash".into() });
+        assert_eq!(cfg.ask, FuncModel { profile_id: "p1".into(), model: "glm-4.5v".into() });
+        // 旧「云端识别」预填在线识别位；引擎保持 builtin（切换由用户决定）
+        assert_eq!(cfg.ocr.online, cfg.ask);
+        assert_eq!(cfg.ocr.engine(), OCR_ENGINE_BUILTIN);
+        assert!(cfg.default_text.is_none() && cfg.default_vision.is_none());
+        assert!(cfg.profiles[0].text_model.is_empty() && cfg.profiles[0].vision_model.is_empty());
+        // 序列化后重新读入不再变化（幂等）
+        let s = serde_json::to_string(&cfg).unwrap();
+        let back: AiConfig = serde_json::from_str(&s).unwrap();
+        let mut back2 = back.clone();
+        back2.migrate();
+        assert_eq!(back, back2);
+    }
+
+    #[test]
+    fn migrate_tolerates_dangling_role() {
         let mut cfg = AiConfig {
             profiles: vec![],
             default_text: Some("gone".into()),
             default_vision: Some("gone2".into()),
             ..Default::default()
         };
+        cfg.migrate();
+        assert!(cfg.translate.is_empty() && cfg.ask.is_empty());
         cfg.prune_defaults();
-        assert!(cfg.default_text.is_none());
-        assert!(cfg.default_vision.is_none());
+        assert!(cfg.translate.is_empty() && cfg.ask.is_empty());
+    }
+
+    #[test]
+    fn autofill_picks_first_profile_with_preset_model() {
+        let mut cfg = AiConfig {
+            profiles: vec![AiProfile {
+                id: "p1".into(),
+                name: "智谱官方".into(),
+                provider: "zhipu".into(),
+                base_url: "https://open.bigmodel.cn/api/paas/v4".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let roles = autofill_defaults(&mut cfg);
+        assert_eq!(roles.len(), 2);
+        assert_eq!(cfg.translate.profile_id, "p1");
+        assert_eq!(cfg.translate.model, "glm-4.6"); // 预设文字模型首位
+        assert_eq!(cfg.ask.model, "glm-4.5v"); // 预设视觉模型首位
+        // 引擎非 online 时不预填在线识别位
+        assert!(cfg.ocr.online.is_empty());
+    }
+
+    #[test]
+    fn ensure_min_size_upscales_tiny_and_passes_through() {
+        use base64::Engine as _;
+        // 1×1 PNG → 等比放大到 32×32
+        let tiny = base64::engine::general_purpose::STANDARD
+            .decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")
+            .unwrap();
+        let out = ensure_min_png_size(&tiny, 32).unwrap();
+        let (w, h) = image::ImageReader::new(std::io::Cursor::new(&out[..]))
+            .with_guessed_format()
+            .unwrap()
+            .into_dimensions()
+            .unwrap();
+        assert_eq!((w, h), (32, 32));
+        // 已达标图片原样透传（字节一致）
+        let big = base64::engine::general_purpose::STANDARD.decode(TEST_PNG_64).unwrap();
+        let same = ensure_min_png_size(&big, 32).unwrap();
+        assert_eq!(same, big);
+    }
+
+    #[test]
+    fn ocr_engine_unknown_falls_back_builtin() {
+        let mut cfg = AiConfig::default();
+        cfg.ocr.engine = "whatever".into();
+        assert_eq!(cfg.ocr.engine(), OCR_ENGINE_BUILTIN);
+        cfg.ocr.engine = OCR_ENGINE_ONLINE.into();
+        assert_eq!(cfg.ocr.engine(), OCR_ENGINE_ONLINE);
+    }
+
+    #[test]
+    fn prune_defaults_removes_dangling() {
+        let mut cfg = AiConfig {
+            profiles: vec![],
+            translate: FuncModel { profile_id: "gone".into(), model: "m".into() },
+            ask: FuncModel { profile_id: "gone2".into(), model: "m".into() },
+            ocr: OcrConfig { engine: String::new(), online: FuncModel { profile_id: "gone3".into(), model: "m".into() }, paddle_pack: String::new() },
+            ..Default::default()
+        };
+        cfg.prune_defaults();
+        assert!(cfg.translate.is_empty());
+        assert!(cfg.ask.is_empty());
+        assert!(cfg.ocr.online.is_empty());
     }
 
     #[test]
