@@ -2,7 +2,7 @@
 // 冻结画布 → 窗口/控件自动识别（单击选中，Tab 切换）→ 拖拽框选 → 8 手柄调整/整框移动
 // → 尺寸牌常显 + 放大镜(8× 十字线+像素坐标+HEX 取色) → 两行工具栏即画 → 一键输出。
 // 冻结、取色、识别、交付均由 Rust 命令支撑（freeze_*/detect_candidates/scroll_*）。
-const { invoke, convertFileSrc } = window.__TAURI__.core;
+const { invoke, convertFileSrc, Channel } = window.__TAURI__.core;
 let kind = new URLSearchParams(location.search).get("kind") || "region";
 document.body.dataset.kind = kind;
 
@@ -2410,7 +2410,8 @@ window.addEventListener("keydown", (e) => {
     // Esc 分层（C1）：AI 浮层（结果/进度/输入）开着 → 先关面板回选区编辑态，再 Esc 才退出截图
     if (aiPop && aiPop.style.display !== "none") {
       aiPop.style.display = "none";
-      if (aiBusyFlag) showToast("✦ AI 生成仍在后台进行，完成后自动处理");
+      if (aiStreaming) aiAskAbort(); // 流式问图：Esc=停止生成（丢弃已出部分）
+      else if (aiBusyFlag) showToast("✦ AI 生成仍在后台进行，完成后自动处理");
       return;
     }
     // AI 生成中（面板已收起=后台）按 Esc：请求无法中断仍在后台——明说，避免「以为取消成功」
@@ -2714,6 +2715,7 @@ const aiBtnTranslate = document.getElementById("tb-ai-translate");
 const aiBtnAsk = document.getElementById("tb-ai-ask");
 let aiBusyFlag = false;
 let aiTimer = null;
+let aiStreaming = false; // true while an ask request is actively streaming (deltas flowing)
 let aiResult = null; // 后台完成后的未读结果 { kind, text, meta }——点对应 AI 按钮查看
 // In-session multi-turn ask history {role:"user"|"assistant", text}; cleared on overlay exit.
 let aiChat = [];
@@ -2746,6 +2748,32 @@ function aiBubbleBusy() {
   d.className = "ai-msg ai"; d.textContent = "正在生成…";
   m.appendChild(d); m.style.display = "flex"; aiScrollMsgs();
   return d;
+}
+// Streaming bubble: placeholder replaced by a live region that is repainted
+// with throttled markdown while deltas arrive; finalized by removing it and
+// appending the canonical bubble (copy button included).
+function aiBubbleLive() {
+  const m = aiMsgsEl(); if (!m) return null;
+  const d = document.createElement("div");
+  d.className = "ai-msg ai";
+  d.innerHTML = "…";
+  m.appendChild(d); m.style.display = "flex"; aiScrollMsgs();
+  return d;
+}
+function aiPaintLive(el, buf) {
+  if (!el) return;
+  const m = aiMsgsEl();
+  const stick = m && (m.scrollHeight - m.scrollTop - m.clientHeight < 48); // autoscroll only while reading the tail
+  el.innerHTML = aiRenderMd(buf);
+  if (stick) aiScrollMsgs();
+}
+// Hard-abort the in-flight streaming ask (collapse/clear/Esc/exit). The pending
+// invoke still resolves with cancelled:true and its handler cleans up the UI.
+function aiAskAbort() {
+  if (!aiStreaming) return;
+  aiStreaming = false;
+  invoke("ai_ask_cancel").catch(() => {});
+  showToast("✦ 已停止生成");
 }
 function aiBubbleError(text) {
   const m = aiMsgsEl(); if (!m) return;
@@ -2845,17 +2873,19 @@ aiBtnAsk.addEventListener("click", () => {
 });
 
 // 点击工具条其他位置收起 AI 浮层（浮层内部点击不受影响——同在 #toolbar 内受分发器保护）。
-// 生成中收起 = 转入后台：请求继续，完成后照常贴出（提示一句话，用户随时可以走开）。
+// 生成中点面板外收起：流式问图=立即停止生成（丢弃部分回答）；翻译（无流式）=转后台完成后自动处理。
 // 两个 AI 按钮自身不触发收起（点翻译时浮层要切换执行态，点问图时浮层要开输入态）。
 document.getElementById("toolbar").addEventListener("mousedown", (e) => {
   if (e.target.closest("#tb-ai-translate") || e.target.closest("#tb-ai-ask") || e.target.closest("#ai-pop")) return;
   if (aiPop && aiPop.style.display !== "none") {
     aiPop.style.display = "none";
-    if (aiBusyFlag) showToast("✦ 已转入后台，完成后自动处理");
+    if (aiStreaming) aiAskAbort();
+    else if (aiBusyFlag) showToast("✦ 已转入后台，完成后自动处理");
   }
 });
 // 覆盖层每次退场（park）后复位 AI 界面状态
 window.__TAURI__.event.listen("overlay-cleared", () => {
+  aiAskAbort(); // 退场即停：流式问图不再后台续跑
   if (aiPop) aiPop.style.display = "none";
   aiPopFree = false; // 退场复位：下次拉起恢复自动避让定位（同工具栏把手语义）
   aiPop.style.top = ""; aiPop.style.left = ""; aiPop.style.bottom = "";
@@ -3031,6 +3061,7 @@ async function aiRun(kind, question) {
   if (aiBusyFlag) return; // 生成中所有触发路径（chip/回车/按钮/翻译）在此短路，杜绝重复请求
   const rect = { screen: 1, x: toPhys(sel.x), y: toPhys(sel.y), w: toPhys(sel.w), h: toPhys(sel.h) };
   let busyEl = null;
+  let liveEl = null; // streaming bubble (ask only)
   if (kind === "ask") {
     aiEnterBusy(question);
     aiBubbleUser(question);
@@ -3043,13 +3074,42 @@ async function aiRun(kind, question) {
   }
   try {
     const history = aiChat.slice(-12); // cap context: keep the latest 6 turns
-    const r = kind === "translate"
-      ? await invoke("ai_translate_region", rect)
-      : await invoke("ai_ask_region", { ...rect, question, history });
+    let r;
+    if (kind === "ask") {
+      // Streaming: deltas arrive via the IPC channel into a live bubble with
+      // throttled markdown repaints; abort (collapse/clear/Esc) discards it.
+      aiStreaming = true;
+      const ch = new Channel();
+      let buf = "";
+      let lastPaint = 0;
+      ch.onmessage = (piece) => {
+        if (busyEl) { busyEl.remove(); busyEl = null; }
+        if (!liveEl) liveEl = aiBubbleLive();
+        buf += piece;
+        const now = Date.now();
+        if (now - lastPaint >= 80) { lastPaint = now; aiPaintLive(liveEl, buf); }
+      };
+      try {
+        r = await invoke("ai_ask_region", { ...rect, question, history, onDelta: ch });
+      } finally { aiStreaming = false; }
+    } else {
+      r = await invoke("ai_translate_region", rect);
+    }
     // 成功（C1/D1/A1）：结果就地留在浮层内——不再关取景层、不再贴出。
     // 翻译=自动复制+面板标注「已复制」（A1）；问图=面板展示+手动复制（要读的内容）
     aiBusyFlag = false;
     if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
+    if (kind === "ask" && r.cancelled) {
+      // Hard-aborted: discard the partial answer, keep the question for retry.
+      if (liveEl) liveEl.remove();
+      if (busyEl) busyEl.remove();
+      aiExitBusy();
+      const st = document.getElementById("ai-status");
+      st.textContent = "已停止生成";
+      const qi = document.getElementById("ai-q");
+      if (qi) qi.value = question;
+      return;
+    }
     if (kind === "ask") {
       aiChat.push({ role: "user", text: question });
       aiChat.push({ role: "assistant", text: r.text });
@@ -3060,6 +3120,7 @@ async function aiRun(kind, question) {
         const ok = await copyText(r.text);
         aiShowResult(kind, r.text, r.meta, { copied: ok, error: ok ? "" : "复制失败，点「复制」重试", question: "" });
       } else {
+        if (liveEl) liveEl.remove();
         if (busyEl) busyEl.remove();
         aiBubbleAi(r.text);
         aiExitBusy(); // 解锁输入/发送（对话流不再接管面板，必须显式恢复交互态）
@@ -3083,6 +3144,7 @@ async function aiRun(kind, question) {
     if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
     const msg = typeof e === "string" ? e : (e && e.message) || String(e);
     if (kind === "ask") {
+      if (liveEl) liveEl.remove();
       if (busyEl) busyEl.remove();
       if (aiPop.style.display !== "none") {
         // 浮层还在：气泡流就地显示失败原因并恢复交互态，可改问题重试
@@ -3180,21 +3242,24 @@ document.getElementById("ai-result-close").addEventListener("click", () => {
 });
 
 // 问图浮层键盘：Enter 发送 / Shift+Enter 换行 / Esc 收起（INPUT/TEXTAREA 本就被全局热键过滤）。
-// 生成中 Esc = 转入后台而非取消（请求无法中断，收起后完成后自动处理）。
+// 流式问图生成中 Esc = 停止生成；翻译（无流式）生成中 Esc = 转入后台完成后自动处理。
 document.getElementById("ai-q").addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     e.stopPropagation();
     aiPop.style.display = "none";
-    if (aiBusyFlag) showToast("✦ 已转入后台，完成后自动处理");
+    if (aiStreaming) aiAskAbort();
+    else if (aiBusyFlag) showToast("✦ 已转入后台，完成后自动处理");
   }
   else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); aiSend(); }
 });
 document.getElementById("ai-send").addEventListener("click", () => aiSend());
 document.getElementById("ai-pop-min").addEventListener("click", () => {
   aiPop.style.display = "none";
-  if (aiBusyFlag) showToast("✦ 已转入后台，完成后自动处理");
+  if (aiStreaming) aiAskAbort();
+  else if (aiBusyFlag) showToast("✦ 已转入后台，完成后自动处理");
 });
 document.getElementById("ai-chat-clear").addEventListener("click", () => {
+  aiAskAbort(); // 清空=立即停止生成（丢弃流式中的部分回答）
   aiChatReset();
   document.getElementById("ai-chips").style.display = "flex";
   aiExitBusy();

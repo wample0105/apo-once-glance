@@ -302,6 +302,17 @@ pub async fn ai_translate_region(x: i32, y: i32, w: u32, h: u32) -> Result<serde
 }
 
 /// AI 问图：冻结帧区域图 → 问图功能位视觉模型 → 回答。
+/// Hard-abort flag for the streaming ask. The overlay's busy lock guarantees at
+/// most one in-flight ask; the cancel command sets it and the stream read loop
+/// breaks at the next chunk arrival.
+static ASK_CANCEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[tauri::command]
+pub async fn ai_ask_cancel() -> Result<(), String> {
+    ASK_CANCEL.store(true, std::sync::atomic::Ordering::Relaxed);
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn ai_ask_region(
     x: i32,
@@ -310,6 +321,7 @@ pub async fn ai_ask_region(
     h: u32,
     question: String,
     history: Option<Vec<once_core::ai::AskHistoryTurn>>,
+    on_delta: tauri::ipc::Channel<String>,
 ) -> Result<serde_json::Value, String> {
     let cfg = settings::load().ai;
     let q = question.trim().to_string();
@@ -322,23 +334,27 @@ pub async fn ai_ask_region(
         .resolve(&cfg)
         .map(|p| (p.name.clone(), a_fm.model.clone()))
         .unwrap_or_default();
-    let r = std::thread::spawn(move || -> Result<(once_core::ai::AiProfile, once_core::ai::GenOutcome), once_core::OnceError> {
+    ASK_CANCEL.store(false, std::sync::atomic::Ordering::Relaxed);
+    let r = std::thread::spawn(move || -> Result<(once_core::ai::AiProfile, once_core::ai::StreamOutcome), once_core::OnceError> {
         let (rgba, rw, rh) = crate::scrollcmd::freeze_region_rgba(x, y, w, h)
             .map_err(|e| once_core::OnceError::capture(format!("冻结画面已失效：{e}")))?;
         // 多轮：图挂在历史首条 user 轮，新问题纯文本；首问（无历史）图随问题
-        if history.is_empty() {
-            once_core::ai::ask_image_rgba(&cfg, &rgba, rw, rh, &q)
-        } else {
-            once_core::ai::ask_image_history(&cfg, &rgba, rw, rh, &q, &history)
-        }
+        once_core::ai::ask_image_history_stream(&cfg, &rgba, rw, rh, &q, &history, &ASK_CANCEL, &mut |s| {
+            let _ = on_delta.send(s.to_string());
+        })
     })
     .join()
     .map_err(|e| format!("问图线程异常：{e:?}"))?;
     match r {
         Ok((_, out)) => {
+            if out.cancelled {
+                // User aborted: neither a success nor a service failure — no audit entry.
+                return Ok(serde_json::json!({ "ok": true, "cancelled": true }));
+            }
             once_core::audit::record_ai("ai.ask", out.latency_ms as u64, 0, Some(&ap_name), Some(&ap_model), Some(true));
             Ok(serde_json::json!({
                 "ok": true,
+                "cancelled": false,
                 "text": out.text,
                 "latency_ms": out.latency_ms,
                 "meta": format!("{ap_name} · {ap_model}"),

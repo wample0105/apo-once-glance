@@ -588,6 +588,155 @@ pub fn chat_completion(req: &ChatReq) -> Result<GenOutcome> {
     Ok(GenOutcome { text, latency_ms: t0.elapsed().as_millis() })
 }
 
+/// Streamed completion result: accumulated text, latency, and whether the user
+/// aborted mid-stream (then `text` holds the partial received so far).
+pub struct StreamOutcome {
+    pub text: String,
+    pub latency_ms: u128,
+    pub cancelled: bool,
+}
+
+/// Extract the incremental text from one SSE `data:` payload (OpenAI-compatible
+/// chunk shape). None for keep-alive comments, role-only chunks and payloads
+/// without content; `[DONE]` is filtered by the caller.
+fn sse_delta(payload: &str) -> Option<String> {
+    let v: serde_json::Value = serde_json::from_str(payload).ok()?;
+    let piece = v["choices"][0]["delta"]["content"].as_str()?;
+    if piece.is_empty() { None } else { Some(piece.to_string()) }
+}
+
+/// Streamed chat completion (SSE, `stream: true`). Each incremental piece goes
+/// through `on_delta` as it arrives; setting `cancel` stops the read loop at the
+/// next chunk and returns `cancelled: true` with the partial text. Providers
+/// that ignore `stream` reply with plain JSON — detected via Content-Type and
+/// parsed one-shot, so callers never need a separate code path.
+pub fn chat_completion_stream(
+    req: &ChatReq,
+    cancel: &std::sync::atomic::AtomicBool,
+    mut on_delta: impl FnMut(&str),
+) -> Result<StreamOutcome> {
+    use std::io::BufRead;
+    let t0 = Instant::now();
+    let url = chat_url(req.base_url);
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(120))
+        .connect_timeout(Duration::from_secs(10))
+        .build()
+        .map_err(|e| OnceError::io(format!("HTTP 客户端初始化失败：{e}")))?;
+    let resp = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", req.api_key))
+        .json(&serde_json::json!({
+            "model": req.model,
+            "messages": req.messages,
+            "max_tokens": req.max_tokens,
+            "temperature": req.temperature,
+            "stream": true,
+        }))
+        .send();
+    let resp = match resp {
+        Ok(r) => r,
+        Err(e) => {
+            let msg = if e.is_timeout() {
+                "生成超时（120 秒无响应）——缩小选区或换更快的模型再试".to_string()
+            } else if e.is_connect() {
+                format!("无法连接服务（{url}）——检查网络与接口地址")
+            } else {
+                format!("网络错误：{e}")
+            };
+            return Err(OnceError::io(msg));
+        }
+    };
+    let status = resp.status();
+    if status.as_u16() != 200 {
+        let body = resp.text().unwrap_or_default();
+        return Err(api_error(status.as_u16(), &body, &url));
+    }
+    let ct = resp
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if !ct.contains("text/event-stream") {
+        // Provider skipped streaming: same one-shot parse as chat_completion.
+        let body = resp.text().unwrap_or_default();
+        let v: serde_json::Value =
+            serde_json::from_str(&body).map_err(|e| OnceError::io(format!("响应不是合法 JSON：{e}")))?;
+        let text = v["choices"][0]["message"]["content"]
+            .as_str()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| OnceError::io("服务返回 200 但没有回复内容"))?;
+        return Ok(StreamOutcome { text, latency_ms: t0.elapsed().as_millis(), cancelled: false });
+    }
+    let mut text = String::new();
+    let mut cancelled = false;
+    let mut reader = std::io::BufReader::new(resp);
+    let mut line = String::new();
+    loop {
+        line.clear();
+        let n = reader
+            .read_line(&mut line)
+            .map_err(|e| OnceError::io(format!("读取流式响应失败：{e}")))?;
+        if n == 0 {
+            break; // server closed the stream
+        }
+        if cancel.load(std::sync::atomic::Ordering::Relaxed) {
+            cancelled = true;
+            break;
+        }
+        let Some(payload) = line.trim().strip_prefix("data:") else { continue };
+        let payload = payload.trim();
+        if payload == "[DONE]" {
+            break;
+        }
+        if let Some(piece) = sse_delta(payload) {
+            text.push_str(&piece);
+            on_delta(&piece);
+        }
+    }
+    if text.is_empty() && !cancelled {
+        return Err(OnceError::io("服务返回 200 但没有回复内容"));
+    }
+    Ok(StreamOutcome { text, latency_ms: t0.elapsed().as_millis(), cancelled })
+}
+
+/// Multi-turn ask (streaming): increments go through `on_delta` as they arrive;
+/// setting `cancel` aborts the request (returns `cancelled: true`, `text` holds
+/// the partial — the caller decides whether to keep it).
+#[allow(clippy::too_many_arguments)]
+pub fn ask_image_history_stream(
+    cfg: &AiConfig,
+    rgba: &[u8],
+    w: u32,
+    h: u32,
+    question: &str,
+    history: &[AskHistoryTurn],
+    cancel: &std::sync::atomic::AtomicBool,
+    on_delta: &mut dyn FnMut(&str),
+) -> Result<(AiProfile, StreamOutcome)> {
+    let (p, key) = func_profile(cfg, &cfg.ask)?;
+    if cfg.ask.model.trim().is_empty() {
+        return Err(OnceError::usage("AI 问图未填模型名——到「模型配置」页「AI 问图」补齐"));
+    }
+    let data_url = prepare_image_data_url(rgba, w, h, 2048)?;
+    let msgs = ask_messages_history(question, &data_url, history);
+    let out = chat_completion_stream(
+        &ChatReq {
+            base_url: &p.base_url,
+            api_key: &key,
+            model: &cfg.ask.model,
+            messages: &msgs,
+            max_tokens: 4096,
+            temperature: 0.3,
+        },
+        cancel,
+        |s| on_delta(s),
+    )?;
+    Ok((p, out))
+}
+
 /// 截图翻译：本地提取的文本 → 截图翻译功能位的文本模型。
 pub fn translate_text(cfg: &AiConfig, text: &str, target_lang: &str) -> Result<(AiProfile, GenOutcome)> {
     let (p, key) = func_profile(cfg, &cfg.translate)?;
@@ -1122,6 +1271,45 @@ mod tests {
         let (_, out) = online_ocr_text(&cfg, &png).expect("online OCR failed");
         eprintln!("transcript chars: {} latency: {}ms", out.text.chars().count(), out.latency_ms);
         assert!(!out.text.trim().is_empty(), "expected non-empty transcript");
+    }
+
+    #[test]
+    fn sse_delta_parses_content_and_ignores_noise() {
+        assert_eq!(sse_delta(r#"{"choices":[{"delta":{"content":"你好"}}]}"#).as_deref(), Some("你好"));
+        assert_eq!(sse_delta(r#"{"choices":[{"delta":{"content":""}}]}"#), None);
+        assert_eq!(sse_delta(r#"{"choices":[{"delta":{"role":"assistant"}}]}"#), None);
+        assert_eq!(sse_delta(r#"{"choices":[]}"#), None);
+        assert_eq!(sse_delta("not json"), None);
+    }
+
+    #[test]
+    #[ignore]
+    fn chat_stream_real_provider_emits_multiple_deltas() {
+        // Live test against the locally configured translate slot (real key).
+        // Run: cargo test -p once-core chat_stream_real -- --ignored --nocapture
+        let cfg = crate::settings::load().ai;
+        let (p, key) = func_profile(&cfg, &cfg.translate).expect("translate slot not configured");
+        assert!(!cfg.translate.model.trim().is_empty(), "translate model empty");
+        let msgs = vec![serde_json::json!({"role":"user","content":"从 1 数到 8，每个数字单独一行，不要其他内容。"})];
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        let mut deltas = 0usize;
+        let out = chat_completion_stream(
+            &ChatReq {
+                base_url: &p.base_url,
+                api_key: &key,
+                model: &cfg.translate.model,
+                messages: &msgs,
+                max_tokens: 256,
+                temperature: 0.0,
+            },
+            &cancel,
+            |_| deltas += 1,
+        )
+        .expect("stream request failed");
+        eprintln!("deltas: {deltas} chars: {} latency: {}ms", out.text.chars().count(), out.latency_ms);
+        assert!(deltas > 1, "expected incremental streaming, got {deltas} delta(s)");
+        assert!(!out.cancelled);
+        assert!(out.text.contains('8'));
     }
 
     #[test]

@@ -1192,6 +1192,7 @@ pub fn run() {
             ai::ai_test,
             ai::ai_translate_region,
             ai::ai_ask_region,
+            ai::ai_ask_cancel,
             ai::ai_open_settings,
             ai::ai_templates_set,
             ai::ocr_pack_status,
